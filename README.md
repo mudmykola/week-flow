@@ -99,6 +99,15 @@ pnpm deploy
 
 Конфігурація Worker і D1 binding зберігається у `wrangler.toml`. Production-секрети Cloudflare не копіюються до локального `.env`.
 
+Push у гілку `main` автоматично запускає GitHub Actions workflow: встановлення залежностей, typecheck, production build, deploy Worker і перевірку production endpoint. Workflow також можна запустити вручну через **Actions → Deploy production → Run workflow**. D1 migrations залишаються окремим контрольованим кроком і мають застосовуватися командою `pnpm db:migrate:remote` перед push, який використовує нову схему.
+
+Для CI/CD у GitHub мають бути налаштовані repository secrets:
+
+```text
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_API_TOKEN
+```
+
 ## Структура проєкту
 
 ```text

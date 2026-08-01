@@ -2,7 +2,7 @@
 
 ## In Progress
 
-- None.
+- **[GH #1] Deployment: Automate Cloudflare release from main** — High — `core`, `Deployment`, `Improvement` — Assignee: mudmykola
 
 ## Done
 
