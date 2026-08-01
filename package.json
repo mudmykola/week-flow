@@ -12,10 +12,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "quality:gate": "node scripts/quality-gate.mjs",
+    "release:gate": "node scripts/release-gate.mjs",
     "ready": "pnpm quality:gate",
     "dev": "nuxt dev",
     "preview": "wrangler dev .output/server/index.mjs --assets .output/public",
     "deploy": "nuxt build && wrangler deploy",
+    "cf:login": "wrangler login",
     "postinstall": "nuxt prepare && simple-git-hooks",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply weekflow-db --local",
@@ -25,7 +27,8 @@
     "db:seed:remote": "wrangler d1 execute weekflow-db --remote --file=server/db/seed.sql"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm quality:gate"
+    "pre-commit": "pnpm quality:gate",
+    "pre-push": "pnpm release:gate"
   },
   "dependencies": {
     "@nuxt/icon": "^2.4.1",

@@ -2,7 +2,7 @@
 
 WeekFlow — персональний і командний планувальник, побудований навколо тижневого робочого циклу. Застосунок поєднує Kanban-дошку, календар, аналітику, повторювані задачі та спільні проєкти в одному швидкому інтерфейсі.
 
-**Production:** [weekflow.freelance-mud.workers.dev](https://weekflow.freelance-mud.workers.dev)
+**Production:** [weekflow.pp.ua](https://weekflow.pp.ua)
 
 ## Можливості
 
@@ -83,6 +83,12 @@ NUXT_SESSION_PASSWORD=unique-random-value-with-at-least-32-characters
 http://localhost:3000/auth/google
 ```
 
+Production callback:
+
+```text
+https://weekflow.pp.ua/auth/google
+```
+
 Якщо Nuxt стартував на іншому порту, наприклад `3210`, додайте також `http://localhost:3210/auth/google`. Після зміни `.env` повністю перезапустіть dev-сервер.
 
 > `.env`, локальна D1 і файли credentials ігноруються Git. У репозиторій можна додавати лише `.env.example` без реальних значень.
@@ -96,6 +102,16 @@ pnpm ready
 git add .
 git commit -m "..."
 ```
+
+Перед push у `main` виконується remote release gate. Він повторює локальні перевірки, перевіряє реальний доступ до production D1 та збирає Worker у `--dry-run` режимі:
+
+```bash
+pnpm cf:login
+pnpm release:gate
+git push
+```
+
+Git hook `pre-push` запускає `pnpm release:gate` автоматично та блокує push, якщо Cloudflare-сесія протермінована, токен не має доступу до D1 або Worker не проходить dry-run.
 
 Gate виводить branch, версії runtime, кількість staged/unstaged/untracked файлів і безпечний стан потрібних env-змінних без значень секретів. Далі він послідовно перевіряє форматування, TypeScript, тести з coverage та Cloudflare production build.
 

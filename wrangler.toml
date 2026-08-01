@@ -1,7 +1,9 @@
 name = "weekflow"
+account_id = "657ef9c8a4d956832aa095cb76db5fc0"
 compatibility_date = "2025-07-15"
 compatibility_flags = ["nodejs_compat"]
 main = ".output/server/index.mjs"
+routes = [{ pattern = "weekflow.pp.ua", custom_domain = true }]
 
 [assets]
 directory = ".output/public"
