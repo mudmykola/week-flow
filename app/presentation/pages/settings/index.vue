@@ -3,6 +3,7 @@ const colorMode = useColorMode()
 const { data: settings, status } = await useFetch('/api/settings')
 const saving = ref(false)
 const toast = useToast()
+const { report } = useApiFeedback()
 const { t, setLocale } = useI18n()
 async function save() {
   if (!settings.value) return
@@ -12,6 +13,8 @@ async function save() {
     colorMode.preference = settings.value.theme
     await setLocale(settings.value.locale === 'en' ? 'en' : 'uk')
     toast.add({ title: t('settings.saved'), color: 'success' })
+  } catch (error) {
+    report(error)
   } finally {
     saving.value = false
   }

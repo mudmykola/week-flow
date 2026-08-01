@@ -16,6 +16,17 @@
     "tryAgain": "Try again",
     "you": "You"
   },
+  "errors": {
+    "requestFailed": "Could not save the changes",
+    "network": "Check your internet connection and try again.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "unauthorized": "Your session has expired. Sign in again.",
+    "forbidden": "You do not have permission for this action.",
+    "not_found": "This record no longer exists.",
+    "conflict": "The data has changed. Refresh and try again.",
+    "server": "The service is temporarily unavailable. Try again.",
+    "unknown": "An unexpected error occurred. Try again."
+  },
   "language": { "uk": "Українська", "en": "English" },
   "server": { "copySuffix": "copy" },
   "seed": {

@@ -42,10 +42,19 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   async function patchTask(id: string, patch: UpdateTaskInput) {
-    const task = await updateTask(id, patch)
     const index = tasks.value.findIndex((t) => t.id === id)
-    if (index !== -1) tasks.value[index] = task
-    return task
+    const previous = index === -1 ? null : { ...tasks.value[index]! }
+    if (index !== -1) tasks.value[index] = { ...tasks.value[index]!, ...patch }
+    try {
+      const task = await updateTask(id, patch)
+      const currentIndex = tasks.value.findIndex((t) => t.id === id)
+      if (currentIndex !== -1) tasks.value[currentIndex] = task
+      return task
+    } catch (error) {
+      const currentIndex = tasks.value.findIndex((t) => t.id === id)
+      if (previous && currentIndex !== -1) tasks.value[currentIndex] = previous
+      throw error
+    }
   }
 
   async function cycleStatus(task: Task) {
@@ -53,8 +62,14 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   async function removeTask(id: string) {
-    await deleteTask(id)
+    const previous = tasks.value
     tasks.value = tasks.value.filter((t) => t.id !== id)
+    try {
+      await deleteTask(id)
+    } catch (error) {
+      tasks.value = previous
+      throw error
+    }
   }
 
   async function moveIncompleteToNextWeek(fromWeek: string) {

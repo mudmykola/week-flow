@@ -46,6 +46,17 @@ describe('Pinia stores', () => {
     expect(store.loading).toBe(false)
   })
 
+  it('restores a project when optimistic deletion fails', async () => {
+    const project = makeProject()
+    const store = useProjectsStore()
+    store.projects = [project]
+    projectApi.deleteProject.mockRejectedValue(new Error('network'))
+    const deletion = store.removeProject(project.id)
+    expect(store.projects).toEqual([])
+    await expect(deletion).rejects.toThrow('network')
+    expect(store.projects).toEqual([project])
+  })
+
   it('loads, filters and sorts tasks by status', async () => {
     const tasks = [
       makeTask({ id: 'b', sort: 2, projectId: 'p1' }),
@@ -83,6 +94,35 @@ describe('Pinia stores', () => {
     await expect(store.moveIncompleteToNextWeek('2026-W31')).resolves.toEqual({ moved: 1 })
     expect(taskApi.moveWeekTasks).toHaveBeenCalledWith('2026-W31', '2026-W32')
     expect(store.tasks.map((task) => task.id)).toEqual(['done'])
+  })
+
+  it('restores optimistic task edits and deletion after API failure', async () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.tasks = [task]
+    taskApi.updateTask.mockRejectedValue(new Error('network'))
+    const patch = store.patchTask(task.id, { status: 'done' })
+    expect(store.tasks[0]?.status).toBe('done')
+    await expect(patch).rejects.toThrow('network')
+    expect(store.tasks[0]).toEqual(task)
+
+    taskApi.deleteTask.mockRejectedValue(new Error('network'))
+    const deletion = store.removeTask(task.id)
+    expect(store.tasks).toEqual([])
+    await expect(deletion).rejects.toThrow('network')
+    expect(store.tasks).toEqual([task])
+  })
+
+  it('persists an edit safely when the task is not loaded locally', async () => {
+    const persisted = makeTask({ id: 'remote', status: 'done' })
+    const store = useTasksStore()
+    taskApi.updateTask.mockResolvedValue(persisted)
+    await expect(store.patchTask('remote', { status: 'done' })).resolves.toEqual(persisted)
+    expect(store.tasks).toEqual([])
+
+    taskApi.updateTask.mockRejectedValue(new Error('network'))
+    await expect(store.patchTask('missing', { status: 'done' })).rejects.toThrow('network')
+    expect(store.tasks).toEqual([])
   })
 
   it('only persists changed task order entries', async () => {

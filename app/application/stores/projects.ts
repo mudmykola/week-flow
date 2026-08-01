@@ -21,8 +21,14 @@ export const useProjectsStore = defineStore('projects', () => {
   }
 
   async function removeProject(id: string) {
-    await deleteProject(id)
+    const previous = projects.value
     projects.value = projects.value.filter((p) => p.id !== id)
+    try {
+      await deleteProject(id)
+    } catch (error) {
+      projects.value = previous
+      throw error
+    }
   }
 
   function getProject(id: string | null) {

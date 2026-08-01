@@ -5,6 +5,7 @@ if (user.value?.role !== 'pm' && user.value?.role !== 'admin')
   throw createError({ statusCode: 403, statusMessage: t('pages.team.forbidden') })
 
 const toast = useToast()
+const { report } = useApiFeedback()
 const selectedTeamId = ref<string | null>(null)
 const { data, status, refresh } = await useFetch('/api/team', {
   query: computed(() => ({ team: selectedTeamId.value || undefined }))
@@ -34,8 +35,8 @@ async function addMember() {
     memberEmail.value = ''
     await refresh()
     toast.add({ title: t('pages.team.memberAdded'), color: 'success' })
-  } catch (error: any) {
-    toast.add({ title: t('pages.team.addFailed'), description: error?.data?.statusMessage, color: 'error' })
+  } catch (error) {
+    report(error, t('pages.team.addFailed'))
   }
 }
 
