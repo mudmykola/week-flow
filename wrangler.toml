@@ -1,0 +1,14 @@
+name = "weekflow"
+compatibility_date = "2025-07-15"
+compatibility_flags = ["nodejs_compat"]
+main = ".output/server/index.mjs"
+
+[assets]
+directory = ".output/public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "weekflow-db"
+database_id = "11c8b63e-ef47-42b7-b667-b70b7e6edd64"
+migrations_dir = "server/db/migrations"

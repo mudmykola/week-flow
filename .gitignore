@@ -1,0 +1,55 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Cloudflare local dev state (local D1 emulation)
+.wrangler
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Credentials and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*credentials*.json
+*service-account*.json
+client_secret*.json
+
+# Local tooling and test artifacts
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+coverage
+playwright-report
+test-results
+.eslintcache
+*.tsbuildinfo
+
+# Local editor/AI state
+.vscode
+.history
+.claude
+.codex
+.agents

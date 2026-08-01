@@ -1,0 +1,9 @@
+INSERT INTO projects (id, name, color, created_at) VALUES ('b8fcb4c6-7bb2-4a1c-8175-cda9b1f8a526', 'Портфоліо', '#818cf8', 1785577434289);
+INSERT INTO projects (id, name, color, created_at) VALUES ('e3dea574-f981-47c9-a84b-927d5ac88499', 'Клієнтська робота', '#f59e0b', 1785577434289);
+INSERT INTO projects (id, name, color, created_at) VALUES ('6c9a0a35-98d4-4cff-ac61-902c4857aa4e', 'Навчання', '#64748b', 1785577434289);
+INSERT INTO tasks (id, title, note, status, project_id, week, sort, created_at, done_at) VALUES ('ff5f9c57-0a77-4db4-b1da-ab059a3089e2', 'Оновити дизайн головного екрана', NULL, 'in_progress', 'b8fcb4c6-7bb2-4a1c-8175-cda9b1f8a526', '2026-W31', 0, 1785577434289, NULL);
+INSERT INTO tasks (id, title, note, status, project_id, week, sort, created_at, done_at) VALUES ('318a733a-85b7-4f3c-afc5-9dabe8cc4369', 'Написати кейс-стаді', NULL, 'todo', 'b8fcb4c6-7bb2-4a1c-8175-cda9b1f8a526', '2026-W31', 1, 1785577434289, NULL);
+INSERT INTO tasks (id, title, note, status, project_id, week, sort, created_at, done_at) VALUES ('a940f85a-2d23-4dc4-92ab-9df822f9d0ab', 'Виправити баг у рахунках', NULL, 'done', 'e3dea574-f981-47c9-a84b-927d5ac88499', '2026-W31', 2, 1785577434289, 1785577434289);
+INSERT INTO tasks (id, title, note, status, project_id, week, sort, created_at, done_at) VALUES ('ce83ffd7-6772-4209-ba4a-c700507cb54a', 'Нотатки з дзвінка клієнту', NULL, 'todo', 'e3dea574-f981-47c9-a84b-927d5ac88499', '2026-W31', 3, 1785577434289, NULL);
+INSERT INTO tasks (id, title, note, status, project_id, week, sort, created_at, done_at) VALUES ('2e7b554a-4add-4c53-b2bd-358cf00ba9e4', 'Завершити курс з Drizzle', NULL, 'in_progress', '6c9a0a35-98d4-4cff-ac61-902c4857aa4e', '2026-W31', 4, 1785577434289, NULL);
+INSERT INTO tasks (id, title, note, status, project_id, week, sort, created_at, done_at) VALUES ('567e324e-4a92-4981-a7a2-b89cc1ddd117', 'Спланувати наступний тиждень', NULL, 'todo', NULL, '2026-W31', 5, 1785577434289, NULL);
