@@ -6,6 +6,7 @@
 
 ## Done
 
+- **[GH #2] Frontend: Rebuild dashboards and workspace experience** — High — `frontend`, `ui/ux`, `Feature`, `Mobile`, `Performance` — Assignee: mudmykola
 - **Core: Implement Google OAuth and per-user data isolation** — High — `core`, `backend`, `Feature` — Assignee: Codex
 - **UI/UX: Implement unified application shell and design system** — High — `frontend`, `ui/ux`, `Feature`, `Mobile` — Assignee: Codex
 - **Core: Add advanced task planning and recurring workflows** — High — `core`, `backend`, `Feature` — Assignee: Codex

@@ -13,6 +13,9 @@
   --color-status-todo: #9ca3af;
   --color-status-in-progress: #0f0f0f;
   --color-status-done: #fe5011;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
 }
 
 .dark {
@@ -51,6 +54,8 @@ body {
 
 button, a { cursor: pointer; }
 
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
 .app-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(128,128,128,.35) transparent; }
 
 .font-display {
@@ -63,6 +68,30 @@ button, a { cursor: pointer; }
   background-color: var(--color-panel-bg);
   box-shadow: inset 0 0 0 1px var(--color-panel-border);
   border-radius: 20px;
+}
+
+.app-container { width: 100%; max-width: 1536px; margin-inline: auto; padding: 1.5rem 1.25rem 3rem; }
+.page-header { margin-bottom: 1.5rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.page-icon { display: grid; width: 2.5rem; height: 2.5rem; flex: none; place-items: center; border-radius: .8rem; color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 11%, transparent); }
+.count-badge { border-radius: 999px; padding: .25rem .6rem; font-size: .75rem; color: var(--color-text-secondary); background: color-mix(in srgb, var(--color-text-primary) 7%, transparent); }
+.surface-card { border: 1px solid var(--color-panel-border); border-radius: 1rem; background: var(--color-panel-bg); box-shadow: 0 1px 2px rgba(0,0,0,.025); }
+.section-card { border: 1px solid var(--color-panel-border); border-radius: 1.15rem; background: var(--color-panel-bg); padding: 1.25rem; }
+.metric-card { min-height: 10.5rem; padding: 1.15rem; }
+.metric-icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: .75rem; color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 11%, transparent); }
+.metric-icon[data-tone='success'] { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 11%, transparent); }
+.metric-icon[data-tone='warning'] { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 11%, transparent); }
+.metric-icon[data-tone='danger'] { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 11%, transparent); }
+.trend-badge { border-radius: 999px; background: var(--color-bg-alt); padding: .25rem .5rem; font-size: .72rem; font-weight: 700; }
+
+@media (min-width: 640px) {
+  .app-container { padding-inline: 2rem; padding-top: 2rem; }
+  .page-header { flex-direction: row; align-items: center; }
+}
+
+@media (min-width: 1280px) { .app-container { padding-inline: 3rem; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
 
 .glass-card {

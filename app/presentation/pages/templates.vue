@@ -1,0 +1,18 @@
+<script setup lang="ts">
+import { createTask } from '~/data/repositories/tasksRepository'
+import { getCurrentWeek } from '~/domain/services/week'
+import type { TaskPriority, TaskRecurrence } from '~/domain/entities/task'
+type Template = { id:string; title:string; note:string; priority:TaskPriority; recurrence:TaskRecurrence|null; tags:string[] }
+const templates = useLocalStorage<Template[]>('weekflow-task-templates', [
+  { id:'weekly-review', title:'Провести тижневий огляд', note:'Перевірити результати, незавершені задачі та фокус наступного тижня.', priority:'medium', recurrence:'weekly', tags:['review'] },
+  { id:'client-call', title:'Підготуватися до дзвінка з клієнтом', note:'Порядок денний, питання, наступні кроки.', priority:'high', recurrence:null, tags:['client'] }
+])
+const form = reactive({ title:'', note:'', priority:'medium' as TaskPriority })
+const toast = useToast()
+function addTemplate(){if(!form.title.trim())return;templates.value.push({id:crypto.randomUUID(),title:form.title.trim(),note:form.note.trim(),priority:form.priority,recurrence:null,tags:[]});form.title='';form.note=''}
+async function useTemplate(template:Template){await createTask({title:template.title,note:template.note||null,priority:template.priority,recurrence:template.recurrence,tags:template.tags,week:getCurrentWeek()});toast.add({title:'Задачу створено',description:template.title,color:'success'})}
+function removeTemplate(id:string){templates.value=templates.value.filter(item=>item.id!==id)}
+</script>
+<template><div class="app-container max-w-6xl"><PageHeader title="Шаблони" description="Повторювані робочі сценарії без зайвого введення." icon="i-lucide-copy-plus" :count="templates.length" />
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"><section class="grid content-start gap-3 sm:grid-cols-2"><article v-for="template in templates" :key="template.id" class="surface-card group p-5"><div class="flex items-start justify-between gap-3"><span class="page-icon"><UIcon name="i-lucide-layout-template" class="size-5"/></span><button class="text-secondary opacity-0 group-hover:opacity-100" title="Видалити шаблон" @click="removeTemplate(template.id)"><UIcon name="i-lucide-trash-2"/></button></div><h2 class="font-display mt-5 text-lg">{{ template.title }}</h2><p class="mt-2 line-clamp-3 text-sm text-secondary">{{ template.note || 'Без опису' }}</p><div class="mt-5 flex items-center justify-between"><span class="count-badge capitalize">{{ template.priority }}</span><UButton size="sm" variant="soft" icon="i-lucide-plus" @click="useTemplate(template)">Створити</UButton></div></article></section><aside class="surface-card h-fit p-5"><h2 class="font-display text-lg">Новий шаблон</h2><div class="mt-5 space-y-4"><label class="block text-sm"><span class="mb-1.5 block text-secondary">Назва</span><input v-model="form.title" class="w-full rounded-xl border border-[var(--color-panel-border)] bg-transparent p-3 outline-none" /></label><label class="block text-sm"><span class="mb-1.5 block text-secondary">Опис</span><textarea v-model="form.note" rows="4" class="w-full resize-none rounded-xl border border-[var(--color-panel-border)] bg-transparent p-3 outline-none" /></label><label class="block text-sm"><span class="mb-1.5 block text-secondary">Пріоритет</span><select v-model="form.priority" class="w-full rounded-xl border border-[var(--color-panel-border)] bg-transparent p-3"><option value="low">Низький</option><option value="medium">Середній</option><option value="high">Високий</option><option value="urgent">Терміновий</option></select></label><UButton block icon="i-lucide-save" @click="addTemplate">Зберегти шаблон</UButton></div></aside></div>
+</div></template>

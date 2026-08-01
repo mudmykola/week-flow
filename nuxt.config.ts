@@ -19,6 +19,8 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxtjs/color-mode',
     '@nuxt/image',
+    '@nuxt/a11y',
+    '@nuxt/hints',
     '@vite-pwa/nuxt'
   ],
   css: ['~/presentation/assets/css/main.css'],
@@ -43,6 +45,7 @@ export default defineNuxtConfig({
   colorMode: { preference: 'system', fallback: 'light', classSuffix: '' },
   ui: { fonts: false },
   icon: { serverBundle: { collections: ['lucide'] } },
+  a11y: { defaultHighlight: false, logIssues: true },
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -55,14 +58,7 @@ export default defineNuxtConfig({
       start_url: '/',
       icons: [{ src: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }]
     },
-    workbox: {
-      navigateFallback: '/login',
-      runtimeCaching: [{
-        urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/api/'),
-        handler: 'NetworkFirst',
-        options: { cacheName: 'weekflow-api', networkTimeoutSeconds: 3, expiration: { maxEntries: 80, maxAgeSeconds: 86400 } }
-      }]
-    }
+    workbox: { navigateFallback: '/login' }
   },
   typescript: {
     strict: true,

@@ -110,12 +110,9 @@ async function saveView() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1800px] px-5 py-8 md:px-10 xl:px-12">
-    <header class="mb-8 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <div><h1 class="font-display text-3xl">Дошка тижня</h1><p class="mt-1 text-sm text-secondary">Плануйте, фокусуйтеся, завершуйте.</p></div>
-      </div>
-      <div class="flex items-center gap-3">
+  <div class="app-container max-w-[1800px]">
+    <PageHeader title="Дошка тижня" description="Плануйте, фокусуйтеся, завершуйте." icon="i-lucide-layout-dashboard">
+      <template #actions><div class="flex flex-wrap items-center gap-2">
         <select
           v-model="tasksStore.filterProjectId"
           class="rounded-full border border-black/10 bg-black/[0.02] px-4 py-2 text-sm outline-none"
@@ -133,8 +130,8 @@ async function saveView() {
         >
           Проєкти
         </button>
-      </div>
-    </header>
+      </div></template>
+    </PageHeader>
 
     <div class="mb-5 flex flex-wrap gap-3">
       <label class="flex min-w-64 flex-1 items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-4"><UIcon name="i-lucide-search" class="size-4 text-secondary"/><input v-model="search" class="h-11 flex-1 bg-transparent text-sm outline-none" placeholder="Пошук за назвою, нотаткою або тегом"></label>
