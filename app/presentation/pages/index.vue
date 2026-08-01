@@ -110,12 +110,13 @@ async function saveView() {
 </script>
 
 <template>
-  <div class="app-container max-w-[1800px]">
+  <div class="app-container board-workspace">
     <PageHeader title="Дошка тижня" description="Плануйте, фокусуйтеся, завершуйте." icon="i-lucide-layout-dashboard">
-      <template #actions><div class="flex flex-wrap items-center gap-2">
+      <template #actions><div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <select
           v-model="tasksStore.filterProjectId"
-          class="rounded-full border border-black/10 bg-black/[0.02] px-4 py-2 text-sm outline-none"
+          aria-label="Фільтр за проєктом"
+          class="h-10 min-w-40 flex-1 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm outline-none sm:flex-none"
         >
           <option :value="null">Усі проєкти</option>
           <option v-for="project in projectsStore.projects" :key="project.id" :value="project.id">
@@ -124,22 +125,23 @@ async function saveView() {
         </select>
         <button
           type="button"
-          class="rounded-full border border-black/10 px-4 py-2 text-sm text-secondary hover:text-black"
+          class="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm font-semibold text-secondary hover:text-[var(--color-text-primary)]"
           title="Керування проєктами"
           @click="projectEditorOpen = true"
         >
-          Проєкти
+          <UIcon name="i-lucide-folder-kanban" class="size-4" />Проєкти
         </button>
       </div></template>
     </PageHeader>
 
-    <div class="mb-5 flex flex-wrap gap-3">
-      <label class="flex min-w-64 flex-1 items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-4"><UIcon name="i-lucide-search" class="size-4 text-secondary"/><input v-model="search" class="h-11 flex-1 bg-transparent text-sm outline-none" placeholder="Пошук за назвою, нотаткою або тегом"></label>
-      <select v-model="priorityFilter" class="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-4 text-sm"><option :value="null">Усі пріоритети</option><option value="urgent">Термінові</option><option value="high">Високі</option><option value="medium">Середні</option><option value="low">Низькі</option></select>
-      <button class="inline-flex items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-4 text-sm" @click="saveView"><UIcon name="i-lucide-bookmark-plus"/>Зберегти view</button>
+    <div class="board-toolbar mb-4">
+      <label class="flex min-w-0 flex-1 items-center gap-2.5 px-3.5"><UIcon name="i-lucide-search" class="size-4 text-secondary"/><input v-model="search" class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Знайти задачу…"><kbd class="hidden rounded-md border border-[var(--color-panel-border)] px-1.5 py-0.5 text-[10px] text-secondary md:inline">⌘ K</kbd></label>
+      <div class="h-6 w-px bg-[var(--color-panel-border)]" />
+      <select v-model="priorityFilter" aria-label="Фільтр за пріоритетом" class="h-11 bg-transparent px-3 text-sm outline-none"><option :value="null">Усі пріоритети</option><option value="urgent">Термінові</option><option value="high">Високі</option><option value="medium">Середні</option><option value="low">Низькі</option></select>
+      <button class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-secondary hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]" @click="saveView"><UIcon name="i-lucide-bookmark-plus" class="size-4"/><span class="hidden sm:inline">Зберегти вигляд</span></button>
     </div>
 
-    <div class="mb-6 flex flex-col gap-4 lg:flex-row">
+    <div class="mb-4 grid gap-3 lg:grid-cols-[minmax(24rem,.9fr)_minmax(28rem,1.1fr)]">
       <WeekSwitcher
         class="flex-1"
         :week="week"

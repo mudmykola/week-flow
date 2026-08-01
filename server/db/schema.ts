@@ -6,7 +6,7 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   avatarUrl: text('avatar_url'),
-  role: text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
+  role: text('role', { enum: ['user', 'pm', 'admin'] }).notNull().default('user'),
   disabledAt: integer('disabled_at'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull()
@@ -107,9 +107,38 @@ export const userSettings = sqliteTable('user_settings', {
   updatedAt: integer('updated_at').notNull()
 })
 
+export const teams = sqliteTable('teams', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  managerId: text('manager_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull()
+}, table => [index('teams_manager_idx').on(table.managerId)])
+
+export const teamMembers = sqliteTable('team_members', {
+  teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull()
+}, table => [primaryKey({ columns: [table.teamId, table.userId] }), index('team_members_user_idx').on(table.userId)])
+
+export const goals = sqliteTable('goals', {
+  id: text('id').primaryKey(),
+  teamId: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  progress: integer('progress').notNull().default(0),
+  status: text('status', { enum: ['active', 'done'] }).notNull().default('active'),
+  dueDate: text('due_date'),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+}, table => [index('goals_team_idx').on(table.teamId), index('goals_assignee_idx').on(table.assigneeId)])
+
 export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
 export type Task = typeof tasks.$inferSelect
 export type NewTask = typeof tasks.$inferInsert
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
+export type Team = typeof teams.$inferSelect
+export type Goal = typeof goals.$inferSelect

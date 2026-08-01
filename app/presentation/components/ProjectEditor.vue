@@ -47,10 +47,10 @@ async function invite() {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       @click.self="emit('close')"
     >
-      <div class="glass-panel w-full max-w-lg p-8">
-        <h2 class="font-display mb-6 text-2xl">Проєкти</h2>
+      <div class="glass-panel max-h-[90vh] w-full max-w-lg overflow-y-auto p-5 sm:p-6">
+        <h2 class="font-display mb-4 text-xl">Проєкти</h2>
 
-        <div v-if="projects.length" class="mb-6 flex flex-col gap-2">
+        <div v-if="projects.length" class="mb-4 flex flex-col gap-2">
           <div
             v-for="project in projects"
             :key="project.id"
@@ -73,13 +73,13 @@ async function invite() {
         </div>
         <p v-else class="mb-6 text-sm text-secondary">Ще немає жодного проєкту</p>
 
-        <div v-if="projects.length" class="mb-6 rounded-xl border border-black/10 p-4">
+        <div v-if="projects.length" class="mb-4 rounded-lg border border-black/10 p-3">
           <h3 class="mb-3 flex items-center gap-2 font-medium"><UIcon name="i-lucide-user-plus" /> Запросити учасника</h3>
           <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><select v-model="inviteProjectId" class="rounded-lg border border-black/10 bg-transparent px-3 py-2"><option :value="null">Оберіть проєкт</option><option v-for="project in projects" :key="project.id" :value="project.id">{{ project.name }}</option></select><input v-model="inviteEmail" type="email" placeholder="email@gmail.com" class="rounded-lg border border-black/10 bg-transparent px-3 py-2"><button class="rounded-lg bg-[var(--color-accent)] px-3 py-2 text-sm text-white" @click="invite">Копіювати invite</button></div>
           <p v-if="inviteUrl" class="mt-2 truncate text-xs text-secondary">{{ inviteUrl }}</p>
         </div>
 
-        <div class="flex gap-4">
+        <div class="flex gap-3">
           <div class="flex-1">
             <label class="mb-1.5 block text-sm text-secondary">Назва</label>
             <input
@@ -101,7 +101,7 @@ async function invite() {
           </div>
         </div>
 
-        <div class="mt-7 flex justify-end gap-3">
+        <div class="mt-5 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-lg px-4 py-2.5 text-base text-secondary hover:text-black"

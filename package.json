@@ -6,6 +6,9 @@
   "scripts": {
     "build": "nuxt build",
     "typecheck": "nuxi typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "dev": "nuxt dev",
     "preview": "wrangler dev .output/server/index.mjs --assets .output/public",
     "deploy": "nuxt build && wrangler deploy",
@@ -42,12 +45,17 @@
     "@iconify-json/lucide": "^1.2.121",
     "@nuxt/a11y": "1.0.0-alpha.1",
     "@nuxt/hints": "^1.1.4",
+    "@nuxt/test-utils": "^4.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/d3-force": "^3.0.10",
     "@types/node": "^26.1.2",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vue/test-utils": "^2.4.11",
     "drizzle-kit": "^0.31.10",
+    "happy-dom": "^20.11.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.9",
     "wrangler": "4.118.0"
   }

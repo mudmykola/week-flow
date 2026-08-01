@@ -16,6 +16,7 @@ const navigation = computed(() => [
   { label: 'Дошка', icon: 'i-lucide-layout-dashboard', to: '/' },
   { label: 'Фокус', icon: 'i-lucide-timer', to: '/focus' },
   { label: 'Inbox', icon: 'i-lucide-inbox', to: '/inbox' },
+  { label: 'Мої цілі', icon: 'i-lucide-target', to: '/goals' },
   { label: 'Сьогодні', icon: 'i-lucide-sun', to: '/today' },
   { label: 'Майбутні', icon: 'i-lucide-clock-3', to: '/upcoming' },
   { label: 'Прострочені', icon: 'i-lucide-triangle-alert', to: '/overdue' },
@@ -28,6 +29,7 @@ const navigation = computed(() => [
   { label: 'Активність', icon: 'i-lucide-activity', to: '/activity' },
   { label: 'Архів', icon: 'i-lucide-archive', to: '/archive' },
   { label: 'Налаштування', icon: 'i-lucide-settings-2', to: '/settings' },
+  ...(user.value?.role === 'pm' || user.value?.role === 'admin' ? [{ label: 'Команда', icon: 'i-lucide-users-round', to: '/team' }] : []),
   ...(user.value?.role === 'admin' ? [{ label: 'Адмін', icon: 'i-lucide-shield-check', to: '/admin' }] : [])
 ])
 
@@ -63,10 +65,10 @@ onKeyStroke('k', (event) => {
 <template>
   <div class="min-h-screen bg-[var(--color-bg-alt)] text-[var(--color-text-primary)]">
     <aside
-      class="fixed inset-y-0 left-0 z-40 w-64 border-r border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-3 transition-[transform,width] lg:translate-x-0"
+      class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-3 transition-[transform,width] lg:translate-x-0"
       :class="[mobileOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:w-20' : 'lg:w-64']"
     >
-      <div class="mb-7 flex items-center justify-between px-2 py-2">
+      <div class="mb-5 flex shrink-0 items-center justify-between px-2 py-2">
         <NuxtLink to="/" class="flex items-center gap-3" @click="mobileOpen = false">
           <span class="grid size-9 place-items-center rounded-xl bg-[var(--color-accent)] text-white"><UIcon name="i-lucide-check-check" class="size-5" /></span>
           <span class="font-display text-xl" :class="sidebarCollapsed ? 'lg:hidden' : ''">WeekFlow</span>
@@ -74,12 +76,12 @@ onKeyStroke('k', (event) => {
         <button class="lg:hidden" aria-label="Закрити меню" @click="mobileOpen = false"><UIcon name="i-lucide-x" class="size-5" /></button>
       </div>
 
-      <button class="mb-4 flex w-full items-center gap-3 rounded-xl border border-[var(--color-panel-border)] px-3 py-2.5 text-left text-sm text-secondary hover:bg-black/[0.04] dark:hover:bg-white/[0.05]" @click="openCommand">
+      <button class="mb-3 flex w-full shrink-0 items-center gap-3 rounded-xl border border-[var(--color-panel-border)] px-3 py-2.5 text-left text-sm text-secondary hover:bg-black/[0.04] dark:hover:bg-white/[0.05]" @click="openCommand">
         <UIcon name="i-lucide-search" class="size-4" />
         <span class="flex-1" :class="sidebarCollapsed ? 'lg:hidden' : ''">Пошук</span><kbd class="text-xs" :class="sidebarCollapsed ? 'lg:hidden' : ''">⌘K</kbd>
       </button>
 
-      <nav class="app-scrollbar flex max-h-[calc(100vh-13rem)] flex-col gap-1 overflow-y-auto">
+      <nav class="app-scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         <NuxtLink
           v-for="item in navigation" :key="item.to" :to="item.to"
           class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-secondary hover:bg-black/[0.04] hover:text-[var(--color-text-primary)] dark:hover:bg-white/[0.05]"
@@ -91,8 +93,8 @@ onKeyStroke('k', (event) => {
         </NuxtLink>
       </nav>
 
-      <button class="absolute bottom-20 right-3 hidden size-7 place-items-center rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] text-secondary lg:grid" :title="sidebarCollapsed ? 'Розгорнути меню' : 'Згорнути меню'" @click="sidebarCollapsed = !sidebarCollapsed"><UIcon :name="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'" class="size-4" /></button>
-      <div class="absolute inset-x-3 bottom-3 flex items-center gap-3 rounded-xl border border-[var(--color-panel-border)] p-3">
+      <button class="ml-auto mt-2 hidden size-7 shrink-0 place-items-center rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] text-secondary lg:grid" :title="sidebarCollapsed ? 'Розгорнути меню' : 'Згорнути меню'" @click="sidebarCollapsed = !sidebarCollapsed"><UIcon :name="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'" class="size-4" /></button>
+      <div class="mt-2 flex shrink-0 items-center gap-3 rounded-xl border border-[var(--color-panel-border)] p-3">
         <NuxtImg v-if="user?.avatarUrl" :src="user.avatarUrl" width="32" height="32" class="size-8 rounded-full" alt="" />
         <div class="min-w-0 flex-1" :class="sidebarCollapsed ? 'lg:hidden' : ''"><p class="truncate text-sm font-medium">{{ user?.name }}</p><p class="truncate text-xs text-secondary">{{ user?.email }}</p></div>
         <button title="Вийти" @click="logout"><UIcon name="i-lucide-log-out" class="size-4" /></button>
@@ -100,7 +102,7 @@ onKeyStroke('k', (event) => {
     </aside>
 
     <div class="transition-[padding]" :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'">
-      <header class="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-[var(--color-panel-border)] bg-[color:var(--color-bg-alt)]/90 px-4 backdrop-blur-xl md:px-8">
+      <header class="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[var(--color-panel-border)] bg-[color:var(--color-bg-alt)]/90 px-3 backdrop-blur-xl md:px-5">
         <button class="lg:hidden" aria-label="Відкрити меню" @click="mobileOpen = true"><UIcon name="i-lucide-menu" class="size-5" /></button>
         <div class="flex-1" />
         <span v-if="!online" class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-600"><UIcon name="i-lucide-wifi-off"/>Offline</span>

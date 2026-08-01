@@ -18,3 +18,13 @@ export async function requireAppUser(event: H3Event) {
 export function isAdmin(user: { role: string }) {
   return user.role === 'admin'
 }
+
+export function isManager(user: { role: string }) {
+  return user.role === 'pm' || user.role === 'admin'
+}
+
+export async function requireManager(event: H3Event) {
+  const user = await requireAppUser(event)
+  if (!isManager(user)) throw createError({ statusCode: 403, statusMessage: 'PM access required' })
+  return user
+}

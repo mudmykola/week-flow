@@ -3,7 +3,7 @@ defineProps<{ title: string; description: string; icon?: string }>()
 </script>
 
 <template>
-  <div class="surface-card grid min-h-56 place-items-center p-8 text-center">
+  <div class="surface-card grid min-h-40 place-items-center p-5 text-center">
     <div>
       <span class="page-icon mx-auto mb-4"><UIcon :name="icon || 'i-lucide-inbox'" class="size-5" /></span>
       <p class="font-display text-lg">{{ title }}</p>

@@ -6,6 +6,10 @@
 
 ## Done
 
+- **[GH #6] Core: Add PM teams, goals and progress management** — High — `core`, `backend`, `frontend`, `Feature` — Assignee: mudmykola
+- **[GH #5] UI/UX: Normalize compact density across workspace** — High — `frontend`, `ui/ux`, `Improvement` — Assignee: mudmykola
+- **[GH #4] UI/UX: Refine weekly board workspace hierarchy** — High — `frontend`, `ui/ux`, `Improvement` — Assignee: mudmykola
+- **[GH #3] DX: Add comprehensive automated test suite** — High — `core`, `Refactor` — Assignee: mudmykola
 - **[GH #2] Frontend: Rebuild dashboards and workspace experience** — High — `frontend`, `ui/ux`, `Feature`, `Mobile`, `Performance` — Assignee: mudmykola
 - **Core: Implement Google OAuth and per-user data isolation** — High — `core`, `backend`, `Feature` — Assignee: Codex
 - **UI/UX: Implement unified application shell and design system** — High — `frontend`, `ui/ux`, `Feature`, `Mobile` — Assignee: Codex
@@ -21,4 +25,4 @@
 ## Backlog
 
 - Frontend: Add centralized API error feedback — High — `frontend`, `UI`, `Improvement`
-- DX: Add typecheck, lint, formatter, and tests — High — `core`, `Refactor`
+- DX: Add lint and formatter — Medium — `core`, `Refactor`

@@ -93,7 +93,7 @@ async function addComment() {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       @click.self="emit('close')"
     >
-      <div class="glass-panel w-full max-w-xl p-8">
+      <div class="glass-panel max-h-[90vh] w-full max-w-xl overflow-y-auto p-5 sm:p-6">
         <h2 class="font-display mb-6 text-2xl">{{ task ? 'Редагувати задачу' : 'Нова задача' }}</h2>
 
         <div class="space-y-4">
@@ -118,7 +118,7 @@ async function addComment() {
             />
           </div>
 
-          <div class="flex gap-4">
+          <div class="flex gap-3">
             <div class="flex-1">
               <label class="mb-1.5 block text-sm text-secondary">Статус</label>
               <select
@@ -142,13 +142,13 @@ async function addComment() {
               </select>
             </div>
           </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-3 sm:grid-cols-2">
             <div><label class="mb-1.5 block text-sm text-secondary">Пріоритет</label><select v-model="priority" class="w-full rounded-lg border border-black/10 bg-black/[0.02] px-4 py-3 outline-none"><option value="low">Низький</option><option value="medium">Середній</option><option value="high">Високий</option><option value="urgent">Терміновий</option></select></div>
             <div><label class="mb-1.5 block text-sm text-secondary">Дедлайн</label><input v-model="dueDate" type="date" class="w-full rounded-lg border border-black/10 bg-black/[0.02] px-4 py-3 outline-none"></div>
             <div><label class="mb-1.5 block text-sm text-secondary">Повторення</label><select v-model="recurrence" class="w-full rounded-lg border border-black/10 bg-black/[0.02] px-4 py-3 outline-none"><option :value="null">Не повторювати</option><option value="daily">Щодня</option><option value="weekly">Щотижня</option><option value="monthly">Щомісяця</option></select></div>
             <div><label class="mb-1.5 block text-sm text-secondary">Теги</label><input v-model="tags" placeholder="робота, дизайн" class="w-full rounded-lg border border-black/10 bg-black/[0.02] px-4 py-3 outline-none"></div>
           </div>
-          <div v-if="task" class="grid gap-4 border-t border-black/10 pt-4 sm:grid-cols-2">
+          <div v-if="task" class="grid gap-3 border-t border-black/10 pt-3 sm:grid-cols-2">
             <div><label class="mb-2 block text-sm text-secondary">Підзадачі</label><div class="space-y-2"><label v-for="item in subtasks" :key="item.id" class="flex items-center gap-2 text-sm"><input :checked="item.done" type="checkbox" class="accent-[var(--color-accent)]" @change="toggleSubtask(item)"><span :class="item.done ? 'line-through text-secondary' : ''">{{ item.title }}</span></label></div><div class="mt-2 flex gap-2"><input v-model="newSubtask" class="min-w-0 flex-1 rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm" placeholder="Нова підзадача" @keyup.enter="addSubtask"><button class="rounded-lg border border-black/10 px-3" @click="addSubtask"><UIcon name="i-lucide-plus"/></button></div></div>
             <div><label class="mb-2 block text-sm text-secondary">Коментарі</label><div class="max-h-32 space-y-2 overflow-y-auto"><div v-for="comment in comments" :key="comment.id" class="rounded-lg bg-black/[0.03] p-2 text-sm"><p>{{ comment.body }}</p><span class="text-xs text-secondary">{{ comment.authorName }}</span></div></div><div class="mt-2 flex gap-2"><input v-model="newComment" class="min-w-0 flex-1 rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm" placeholder="Коментар" @keyup.enter="addComment"><button class="rounded-lg border border-black/10 px-3" @click="addComment"><UIcon name="i-lucide-send"/></button></div></div>
           </div>

@@ -48,25 +48,28 @@ function toggleDensity() {
 
 <template>
   <div>
-    <div class="mb-3 flex justify-end gap-2">
-      <button class="inline-flex items-center gap-2 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 py-2 text-xs text-secondary" @click="toggleDensity"><UIcon :name="density === 'comfortable' ? 'i-lucide-rows-3' : 'i-lucide-rows-4'" />{{ density === 'comfortable' ? 'Компактно' : 'Зручно' }}</button>
-      <button class="inline-flex items-center gap-2 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 py-2 text-xs text-secondary" @click="collapsedDone = !collapsedDone"><UIcon :name="collapsedDone ? 'i-lucide-panel-right-open' : 'i-lucide-panel-right-close'" />{{ collapsedDone ? 'Показати готові' : 'Згорнути готові' }}</button>
+    <div class="mb-3 flex items-center justify-between gap-3">
+      <p class="hidden text-xs text-secondary sm:block"><UIcon name="i-lucide-grip-vertical" class="mr-1 inline size-3.5" />Перетягуйте задачі між колонками</p>
+      <div class="ml-auto flex rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-1">
+      <button class="inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs text-secondary hover:bg-[var(--color-bg-alt)]" @click="toggleDensity"><UIcon :name="density === 'comfortable' ? 'i-lucide-rows-3' : 'i-lucide-rows-4'" />{{ density === 'comfortable' ? 'Компактно' : 'Зручно' }}</button>
+      <button class="inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs text-secondary hover:bg-[var(--color-bg-alt)]" @click="collapsedDone = !collapsedDone"><UIcon :name="collapsedDone ? 'i-lucide-panel-right-open' : 'i-lucide-panel-right-close'" />{{ collapsedDone ? 'Показати готові' : 'Сховати готові' }}</button>
+      </div>
     </div>
-    <div class="app-scrollbar flex snap-x gap-4 overflow-x-auto pb-3">
-    <div v-for="column in columns" v-show="column.status !== 'done' || !collapsedDone" :key="column.status" class="surface-card flex min-h-[26rem] w-[86vw] max-w-[25rem] shrink-0 snap-start flex-col p-4 sm:w-[22rem] xl:min-w-[19rem] xl:flex-1">
-      <div class="sticky top-16 z-10 mb-4 flex items-center justify-between bg-[var(--color-panel-bg)] px-1 py-1">
-        <h3 class="font-display text-xl">
-          {{ column.title }}
-          <span class="ml-1.5 text-secondary">{{ localLists[column.status].length }}</span>
-        </h3>
+    <div class="app-scrollbar flex snap-x gap-3 overflow-x-auto pb-2">
+    <section v-for="column in columns" v-show="column.status !== 'done' || !collapsedDone" :key="column.status" class="board-column flex w-[86vw] max-w-[25rem] shrink-0 snap-start flex-col p-2.5 sm:w-[22rem] xl:min-w-[18rem] xl:flex-1">
+      <div class="mb-2 flex items-center justify-between px-1 py-1">
+        <h2 class="flex items-center gap-2 font-display text-base">
+          <span class="size-2 rounded-full" :data-status="column.status" />{{ column.title }}
+          <span class="count-badge">{{ localLists[column.status].length }}</span>
+        </h2>
         <button
           type="button"
-          class="text-xl text-secondary hover:text-black"
+          class="grid size-8 place-items-center rounded-lg text-secondary hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]"
           title="Додати задачу"
           :aria-label="`Додати задачу у ${column.title}`"
           @click="emit('addTask', column.status)"
         >
-          +
+          <UIcon name="i-lucide-plus" class="size-4" />
         </button>
       </div>
 
@@ -78,7 +81,7 @@ function toggleDensity() {
         :force-fallback="true"
         :fallback-tolerance="4"
         item-key="id"
-        class="flex min-h-[3rem] flex-1 flex-col gap-3"
+        class="flex min-h-[3rem] flex-1 flex-col gap-2.5"
         ghost-class="opacity-30"
         drag-class="cursor-grabbing"
         @change="handleChange(column.status)"
@@ -94,12 +97,10 @@ function toggleDensity() {
           />
         </template>
       </draggable>
-      <p v-if="localLists[column.status].length === 0" class="px-1 py-3 text-sm text-secondary">
-        Немає задач
-      </p>
-      <button class="mt-3 flex items-center gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] px-3 py-2.5 text-sm text-secondary hover:bg-black/[0.03] dark:hover:bg-white/[0.04]" :aria-label="`Додати задачу у ${column.title}`" @click="emit('addTask', column.status)"><UIcon name="i-lucide-plus" />Додати задачу</button>
-    </div>
-    <button v-if="collapsedDone" class="surface-card grid min-h-[26rem] w-16 shrink-0 place-items-center text-secondary" title="Показати готові" @click="collapsedDone = false"><span class="flex -rotate-90 items-center gap-2 whitespace-nowrap"><UIcon name="i-lucide-circle-check-big" />Готово · {{ localLists.done.length }}</span></button>
+      <div v-if="localLists[column.status].length === 0" class="grid place-items-center px-3 py-3 text-center"><div><UIcon :name="column.status === 'done' ? 'i-lucide-circle-check-big' : 'i-lucide-inbox'" class="mx-auto mb-1.5 size-4 text-secondary" /><p class="text-xs font-semibold">Поки порожньо</p><p class="mt-0.5 text-[11px] text-secondary">Додайте або перетягніть задачу</p></div></div>
+      <button class="mt-2 flex h-9 items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] text-xs font-semibold text-secondary hover:border-[var(--color-accent)] hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]" :aria-label="`Додати задачу у ${column.title}`" @click="emit('addTask', column.status)"><UIcon name="i-lucide-plus" class="size-4" />Додати задачу</button>
+    </section>
+    <button v-if="collapsedDone" class="board-column grid min-h-36 w-12 shrink-0 place-items-center text-secondary" title="Показати готові" @click="collapsedDone = false"><span class="flex -rotate-90 items-center gap-2 whitespace-nowrap"><UIcon name="i-lucide-circle-check-big" />Готово · {{ localLists.done.length }}</span></button>
     </div>
   </div>
 </template>
