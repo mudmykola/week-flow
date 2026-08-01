@@ -13,6 +13,12 @@ export default defineEventHandler(async (event) => {
   const access = eq(tasks.id, id)
   const result = await db.delete(tasks).where(access)
   if (!result.meta.changes) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
-  await logActivity(event, { ownerId: task.ownerId!, actorId: user.id, action: 'task.deleted', entityType: 'task', entityId: id })
+  await logActivity(event, {
+    ownerId: task.ownerId!,
+    actorId: user.id,
+    action: 'task.deleted',
+    entityType: 'task',
+    entityId: id
+  })
   return { ok: true }
 })

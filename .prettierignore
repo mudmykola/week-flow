@@ -1,0 +1,8 @@
+.nuxt
+.output
+.wrangler
+coverage
+dist
+node_modules
+pnpm-lock.yaml
+server/db/migrations/meta/*.json

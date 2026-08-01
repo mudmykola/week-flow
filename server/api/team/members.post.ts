@@ -12,7 +12,10 @@ export default defineEventHandler(async (event) => {
   const db = useDb(event)
   const [account] = await db.select({ id: users.id }).from(users).where(eq(users.email, body.email.toLowerCase()))
   if (!account) throw createError({ statusCode: 404, statusMessage: 'User must sign in to WeekFlow first' })
-  const [existing] = await db.select().from(teamMembers).where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, account.id)))
+  const [existing] = await db
+    .select()
+    .from(teamMembers)
+    .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, account.id)))
   if (existing) throw createError({ statusCode: 409, statusMessage: 'Already a team member' })
   await db.insert(teamMembers).values({ teamId: team.id, userId: account.id, createdAt: Date.now() })
   return { ok: true }

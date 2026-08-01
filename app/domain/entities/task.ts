@@ -17,6 +17,8 @@ export interface Task {
   tags: string[]
   recurrence: TaskRecurrence | null
   archivedAt: number | null
+  assigneeId: string | null
+  stageId: string | null
 }
 
 export interface CreateTaskInput {
@@ -30,6 +32,8 @@ export interface CreateTaskInput {
   dueDate?: string | null
   tags?: string[]
   recurrence?: TaskRecurrence | null
+  assigneeId?: string | null
+  stageId?: string | null
 }
 
 export interface UpdateTaskInput {
@@ -44,6 +48,15 @@ export interface UpdateTaskInput {
   tags?: string[]
   recurrence?: TaskRecurrence | null
   archivedAt?: number | null
+  assigneeId?: string | null
+  stageId?: string | null
+}
+
+export interface AssignableUser {
+  id: string
+  name: string
+  email: string
+  avatarUrl: string | null
 }
 
 export interface Subtask {

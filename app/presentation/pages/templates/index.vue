@@ -1,0 +1,141 @@
+<script setup lang="ts">
+import { createTask } from '~/data/repositories/tasksRepository'
+import { getCurrentWeek } from '~/domain/services/week'
+import type { TaskPriority, TaskRecurrence } from '~/domain/entities/task'
+type Template = {
+  id: string
+  title: string
+  note: string
+  priority: TaskPriority
+  recurrence: TaskRecurrence | null
+  tags: string[]
+}
+const { t } = useI18n()
+const templates = useLocalStorage<Template[]>('weekflow-task-templates', [
+  {
+    id: 'weekly-review',
+    title: t('pages.templates.defaultReview'),
+    note: t('pages.templates.defaultReviewNote'),
+    priority: 'medium',
+    recurrence: 'weekly',
+    tags: ['review']
+  },
+  {
+    id: 'client-call',
+    title: t('pages.templates.defaultCall'),
+    note: t('pages.templates.defaultCallNote'),
+    priority: 'high',
+    recurrence: null,
+    tags: ['client']
+  }
+])
+const form = reactive({ title: '', note: '', priority: 'medium' as TaskPriority })
+const toast = useToast()
+function addTemplate() {
+  if (!form.title.trim()) return
+  templates.value.push({
+    id: crypto.randomUUID(),
+    title: form.title.trim(),
+    note: form.note.trim(),
+    priority: form.priority,
+    recurrence: null,
+    tags: []
+  })
+  form.title = ''
+  form.note = ''
+}
+async function useTemplate(template: Template) {
+  await createTask({
+    title: template.title,
+    note: template.note || null,
+    priority: template.priority,
+    recurrence: template.recurrence,
+    tags: template.tags,
+    week: getCurrentWeek()
+  })
+  toast.add({ title: t('pages.templates.created'), description: template.title, color: 'success' })
+}
+function removeTemplate(id: string) {
+  templates.value = templates.value.filter((item) => item.id !== id)
+}
+</script>
+<template>
+  <div class="templates-page app-container max-w-6xl">
+    <PageHeader
+      :title="$t('nav.templates')"
+      :description="$t('pages.templates.description')"
+      icon="i-lucide-copy-plus"
+      :count="templates.length"
+    />
+    <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <section class="grid content-start gap-3 sm:grid-cols-2">
+        <article
+          v-for="template in templates"
+          :key="template.id"
+          class="surface-card group p-4"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <span class="page-icon"
+              ><UIcon
+                name="i-lucide-layout-template"
+                class="size-4" /></span
+            ><button
+              class="text-secondary opacity-0 group-hover:opacity-100"
+              :title="$t('pages.templates.delete')"
+              @click="removeTemplate(template.id)"
+            >
+              <UIcon name="i-lucide-trash-2" />
+            </button>
+          </div>
+          <h2 class="font-display mt-3 text-base">{{ template.title }}</h2>
+          <p class="text-secondary mt-1.5 line-clamp-2 text-sm">{{ template.note || $t('common.noDescription') }}</p>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="count-badge capitalize">{{ template.priority }}</span
+            ><UButton
+              size="sm"
+              variant="soft"
+              icon="i-lucide-plus"
+              @click="useTemplate(template)"
+              >{{ $t('common.create') }}</UButton
+            >
+          </div>
+        </article>
+      </section>
+      <aside class="surface-card h-fit p-4">
+        <h2 class="font-display text-base">{{ $t('pages.templates.new') }}</h2>
+        <div class="mt-3 space-y-3">
+          <label class="block text-sm"
+            ><span class="text-secondary mb-1 block">{{ $t('task.name') }}</span
+            ><input
+              v-model="form.title"
+              class="h-10 w-full rounded-lg border border-[var(--color-panel-border)] bg-transparent px-3 outline-none" /></label
+          ><label class="block text-sm"
+            ><span class="text-secondary mb-1 block">{{ $t('pages.templates.descriptionLabel') }}</span
+            ><textarea
+              v-model="form.note"
+              rows="3"
+              class="w-full resize-none rounded-lg border border-[var(--color-panel-border)] bg-transparent p-3 outline-none"
+            /></label
+          ><label class="block text-sm"
+            ><span class="text-secondary mb-1 block">{{ $t('task.priority') }}</span
+            ><select
+              v-model="form.priority"
+              class="h-10 w-full rounded-lg border border-[var(--color-panel-border)] bg-transparent px-3"
+            >
+              <option value="low">{{ $t('task.priorityValue.low') }}</option>
+              <option value="medium">{{ $t('task.priorityValue.medium') }}</option>
+              <option value="high">{{ $t('task.priorityValue.high') }}</option>
+              <option value="urgent">{{ $t('task.priorityValue.urgent') }}</option>
+            </select></label
+          ><UButton
+            block
+            size="sm"
+            icon="i-lucide-save"
+            @click="addTemplate"
+            >{{ $t('pages.templates.save') }}</UButton
+          >
+        </div>
+      </aside>
+    </div>
+  </div>
+</template>

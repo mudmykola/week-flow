@@ -9,45 +9,70 @@ export default defineOAuthGoogleEventHandler({
     const email = googleUser.email.toLowerCase()
     const db = useDb(event)
     const now = Date.now()
-    const role: 'user' | 'admin' = email === ADMIN_EMAIL ? 'admin' : 'user'
+    const defaultRole: 'user' | 'admin' = email === ADMIN_EMAIL ? 'admin' : 'user'
     const name = googleUser.name || email.split('@')[0]!
 
-    const [existing] = await db.select().from(users).where(
-      or(eq(users.googleId, googleUser.sub), eq(users.email, email))
-    )
+    const [existing] = await db
+      .select()
+      .from(users)
+      .where(or(eq(users.googleId, googleUser.sub), eq(users.email, email)))
     const user = existing
-      ? { ...existing, googleId: googleUser.sub, email, name, avatarUrl: googleUser.picture ?? null, role }
+      ? {
+          ...existing,
+          googleId: googleUser.sub,
+          email,
+          name,
+          avatarUrl: googleUser.picture ?? null,
+          role: email === ADMIN_EMAIL ? ('admin' as const) : existing.role
+        }
       : {
           id: crypto.randomUUID(),
           googleId: googleUser.sub,
           email,
           name,
           avatarUrl: googleUser.picture ?? null,
-          role,
+          role: defaultRole,
           createdAt: now,
           updatedAt: now
         }
 
     if (existing) {
-      await db.update(users).set({ googleId: googleUser.sub, email, name: user.name, avatarUrl: user.avatarUrl, role, updatedAt: now })
+      await db
+        .update(users)
+        .set({
+          googleId: googleUser.sub,
+          email,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          role: user.role,
+          updatedAt: now
+        })
         .where(eq(users.id, existing.id))
     } else {
       await db.insert(users).values(user)
     }
 
-    if (role === 'admin') {
+    if (user.role === 'admin') {
       const legacyProjects = await db.select({ id: projects.id }).from(projects).where(isNull(projects.ownerId))
       await db.batch([
         db.update(projects).set({ ownerId: user.id }).where(isNull(projects.ownerId)),
         db.update(tasks).set({ ownerId: user.id }).where(isNull(tasks.ownerId)),
-        ...legacyProjects.map(project => db.insert(projectMembers).values({
-          projectId: project.id, userId: user.id, role: 'owner', createdAt: now
-        }).onConflictDoNothing())
+        ...legacyProjects.map((project) =>
+          db
+            .insert(projectMembers)
+            .values({
+              projectId: project.id,
+              userId: user.id,
+              role: 'owner',
+              createdAt: now
+            })
+            .onConflictDoNothing()
+        )
       ])
     }
 
     await setUserSession(event, {
-      user: { id: user.id, email, name: user.name, avatarUrl: user.avatarUrl, role }
+      user: { id: user.id, email, name: user.name, avatarUrl: user.avatarUrl, role: user.role }
     })
     return sendRedirect(event, '/')
   },

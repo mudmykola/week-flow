@@ -37,14 +37,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Run merge and deployment quality gate
+        run: pnpm quality:gate
 
-      - name: Test with coverage
-        run: pnpm test:coverage
-
-      - name: Build production bundle
-        run: pnpm build
+      - name: Apply D1 migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          wranglerVersion: 4.118.0
+          command: d1 migrations apply weekflow-db --remote
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3

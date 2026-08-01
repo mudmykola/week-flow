@@ -11,7 +11,15 @@ export default defineEventHandler(async (event) => {
   if (!isAdmin(actor)) throw createError({ statusCode: 403 })
   const id = getRouterParam(event, 'id')!
   const body = await readValidatedBody(event, schema.parse)
-  if (id === actor.id && (body.role === 'user' || body.role === 'pm' || body.disabled)) throw createError({ statusCode: 400, statusMessage: 'Cannot remove own admin access' })
-  await useDb(event).update(users).set({ role: body.role, disabledAt: body.disabled === undefined ? undefined : body.disabled ? Date.now() : null, updatedAt: Date.now() }).where(eq(users.id, id))
+  if (id === actor.id && (body.role === 'user' || body.role === 'pm' || body.disabled))
+    throw createError({ statusCode: 400, statusMessage: 'Cannot remove own admin access' })
+  await useDb(event)
+    .update(users)
+    .set({
+      role: body.role,
+      disabledAt: body.disabled === undefined ? undefined : body.disabled ? Date.now() : null,
+      updatedAt: Date.now()
+    })
+    .where(eq(users.id, id))
   return { ok: true }
 })

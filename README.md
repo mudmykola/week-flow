@@ -10,13 +10,15 @@ WeekFlow — персональний і командний планувальн
 - Тижнева дошка з drag-and-drop, компактним режимом, WIP-сигналами та швидким перенесенням задач.
 - Пріоритети, дедлайни, теги, повторення, підзадачі та коментарі.
 - Представлення «Сьогодні», «Майбутні», «Прострочені», календар і таймлайн.
-- Dashboard із KPI та легкими графіками, тижневий огляд, граф зв’язків, активність та архів.
+- Dashboard із KPI та легкими графіками, тижневий огляд, персональна дошка датованих checklist-стікерів, активність та архів.
 - Focus-таймер, Inbox для швидкого захоплення задач і персональні шаблони.
 - Спільні проєкти із запрошеннями та ролями `editor` і `viewer`.
 - Збережені фільтри, глобальний пошук `⌘/Ctrl + K`, JSON/CSV-експорт.
 - Адаптивний інтерфейс, світла й темна теми, Lucide-іконки та installable PWA.
 - Адміністративне керування ролями й доступом до акаунтів.
 - PM-команди: учасники, персональні й командні цілі, task progress та загальний dashboard.
+- Гнучка робота із задачами: drawer деталей, inline editing, виконавці, масові операції, дублювання, undo та табличний вигляд.
+- Проєктні workflow-етапи з WIP-лімітами й автоматизації для створення задач і зміни статусів.
 
 ## Ролі та доступ
 
@@ -51,6 +53,11 @@ data/          репозиторії й запити до Nitro API
 
 Компоненти працюють зі станом через application layer, а мережеві запити зосереджені в data layer. Серверні маршрути розташовані в `server/api/`, схема бази — у `server/db/schema.ts`, а SQL-міграції — у `server/db/migrations/`.
 
+UI primitives розділені на `base`, `form`, `layout` і `overlay`; правила повторного використання описані в [`docs/ui-components.md`](docs/ui-components.md).
+Сторінки використовують directory-first Nuxt routing (`<route>/index.vue`, `[param]/index.vue`); конвенції описані в [`docs/page-routing.md`](docs/page-routing.md).
+
+UI-тексти локалізуються через Nuxt i18n; правила та структура словників описані в [`docs/localization.md`](docs/localization.md).
+
 ## Локальний запуск
 
 Потрібні Node.js, pnpm і Google OAuth Web credentials.
@@ -82,8 +89,21 @@ http://localhost:3000/auth/google
 
 ## Перевірка та збірка
 
+Перед `git add .` завжди запускайте єдиний локальний quality gate:
+
+```bash
+pnpm ready
+git add .
+git commit -m "..."
+```
+
+Gate виводить branch, версії runtime, кількість staged/unstaged/untracked файлів і безпечний стан потрібних env-змінних без значень секретів. Далі він послідовно перевіряє форматування, TypeScript, тести з coverage та Cloudflare production build.
+
+Pre-commit hook автоматично повторює `pnpm quality:gate` і блокує commit при будь-якій помилці. GitHub Actions використовує ту саму команду перед deploy, тому локальна та CI-перевірки не розходяться.
+
 ```bash
 pnpm typecheck
+pnpm format:check
 pnpm test
 pnpm test:coverage
 pnpm build
@@ -95,6 +115,12 @@ pnpm build
 
 ```bash
 pnpm test:watch
+```
+
+Для автоматичного форматування Vue, TypeScript, CSS, Markdown та конфігурацій:
+
+```bash
+pnpm format
 ```
 
 ## Міграції D1

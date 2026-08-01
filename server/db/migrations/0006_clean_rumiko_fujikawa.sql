@@ -1,0 +1,1 @@
+ALTER TABLE `sticky_notes` ADD `checked_items` text DEFAULT '[]' NOT NULL;

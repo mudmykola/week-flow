@@ -9,8 +9,18 @@ export default defineEventHandler(async (event) => {
   const db = useDb(event)
   const [taskSubtasks, taskComments] = await Promise.all([
     db.select().from(subtasks).where(eq(subtasks.taskId, id)).orderBy(asc(subtasks.sort)),
-    db.select({ id: comments.id, body: comments.body, createdAt: comments.createdAt, authorName: users.name, authorAvatar: users.avatarUrl })
-      .from(comments).innerJoin(users, eq(comments.authorId, users.id)).where(eq(comments.taskId, id)).orderBy(asc(comments.createdAt))
+    db
+      .select({
+        id: comments.id,
+        body: comments.body,
+        createdAt: comments.createdAt,
+        authorName: users.name,
+        authorAvatar: users.avatarUrl
+      })
+      .from(comments)
+      .innerJoin(users, eq(comments.authorId, users.id))
+      .where(eq(comments.taskId, id))
+      .orderBy(asc(comments.createdAt))
   ])
   return { task, subtasks: taskSubtasks, comments: taskComments }
 })

@@ -1,15 +1,50 @@
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { describe, expect, it } from 'vitest'
-import EmptyState from '~/presentation/components/EmptyState.vue'
-import MetricCard from '~/presentation/components/MetricCard.vue'
-import TaskCard from '~/presentation/components/TaskCard.vue'
+import { beforeEach, describe, expect, it } from 'vitest'
+import EmptyState from '~/presentation/components/common/EmptyState.vue'
+import MetricCard from '~/presentation/components/analytics/MetricCard.vue'
+import TaskCard from '~/presentation/components/task/TaskCard.vue'
+import AppButton from '~/presentation/components/base/AppButton.vue'
+import IconButton from '~/presentation/components/base/IconButton.vue'
+import DropdownMenu from '~/presentation/components/overlay/DropdownMenu.vue'
+import ProjectEditor from '~/presentation/components/project/ProjectEditor.vue'
+import TaskEditor from '~/presentation/components/task/TaskEditor.vue'
+import Modal from '~/presentation/components/overlay/Modal.vue'
+import FormField from '~/presentation/components/form/FormField.vue'
+import FormInput from '~/presentation/components/form/FormInput.vue'
+import FormSelect from '~/presentation/components/form/FormSelect.vue'
+import AppShell from '~/presentation/components/shell/AppShell.vue'
 import { makeTask } from '../fixtures'
 
-const stubs = { UIcon: { template: '<span class="icon" />' }, UButton: { template: '<button><slot /></button>' } }
+const stubs = {
+  UIcon: { template: '<span class="icon" />' },
+  UButton: { template: '<button><slot /></button>' },
+  Teleport: true
+}
 
 describe('shared UI components', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('keeps global task creation on the current route', async () => {
+    await navigateTo('/calendar')
+    const wrapper = await mountSuspended(AppShell, {
+      slots: { default: '<div>Calendar content</div>' },
+      global: {
+        stubs: {
+          ...stubs,
+          TaskEditor: { props: ['open'], template: '<div data-task-editor :data-open="open" />' }
+        }
+      }
+    })
+    const createButton = wrapper.findAll('header button').find((button) => button.attributes('type') === 'button')!
+    expect(createButton.element.tagName).toBe('BUTTON')
+    expect(createButton.attributes('href')).toBeUndefined()
+  })
+
   it('renders metric content and trend', async () => {
-    const wrapper = await mountSuspended(MetricCard, { props: { label: 'Виконано', value: 12, icon: 'i-lucide-check', trend: '+4', hint: 'За тиждень' }, global: { stubs } })
+    const wrapper = await mountSuspended(MetricCard, {
+      props: { label: 'Виконано', value: 12, icon: 'i-lucide-check', trend: '+4', hint: 'За тиждень' },
+      global: { stubs }
+    })
     expect(wrapper.text()).toContain('Виконано')
     expect(wrapper.text()).toContain('12')
     expect(wrapper.text()).toContain('+4')
@@ -17,27 +52,97 @@ describe('shared UI components', () => {
   })
 
   it('renders empty state and its action slot', async () => {
-    const wrapper = await mountSuspended(EmptyState, { props: { title: 'Порожньо', description: 'Додайте задачу', icon: 'i-lucide-inbox' }, slots: { default: '<button>Створити</button>' }, global: { stubs } })
+    const wrapper = await mountSuspended(EmptyState, {
+      props: { title: 'Порожньо', description: 'Додайте задачу', icon: 'i-lucide-inbox' },
+      slots: { default: '<button>Створити</button>' },
+      global: { stubs }
+    })
     expect(wrapper.text()).toContain('Порожньо')
     expect(wrapper.text()).toContain('Створити')
   })
 
   it('emits task interactions by mouse and keyboard', async () => {
     const task = makeTask({ note: 'Details', tags: ['one'], priority: 'urgent' })
-    const wrapper = await mountSuspended(TaskCard, { props: { task }, global: { stubs } })
+    const wrapper = await mountSuspended(TaskCard, {
+      props: { task, project: null },
+      global: {
+        stubs,
+        components: { AppButton, IconButton, DropdownMenu }
+      }
+    })
     await wrapper.get('article').trigger('click')
     await wrapper.get('article').trigger('keydown', { key: 'Enter' })
     expect(wrapper.emitted('edit')).toHaveLength(2)
-    const buttons = wrapper.findAll('button')
-    await buttons[0]!.trigger('click')
-    await buttons.at(-1)!.trigger('click')
+    await wrapper.findAll('button')[0]!.trigger('click')
+    await wrapper.find('button.ui-icon-button').trigger('click')
+    await wrapper.get('button.ui-button--danger').trigger('click')
     expect(wrapper.emitted('cycleStatus')?.[0]).toEqual([task])
     expect(wrapper.emitted('delete')?.[0]).toEqual([task.id])
   })
 
   it('hides secondary task details in compact mode', async () => {
-    const wrapper = await mountSuspended(TaskCard, { props: { task: makeTask({ note: 'Hidden note', tags: ['hidden'] }), compact: true }, global: { stubs } })
+    const wrapper = await mountSuspended(TaskCard, {
+      props: { task: makeTask({ note: 'Hidden note', tags: ['hidden'] }), project: null, compact: true },
+      global: { stubs }
+    })
     expect(wrapper.text()).not.toContain('Hidden note')
     expect(wrapper.text()).not.toContain('hidden')
+  })
+
+  it('creates a project from the reusable modal controls', async () => {
+    const wrapper = await mountSuspended(ProjectEditor, {
+      props: { open: true, projects: [] },
+      global: { stubs, components: { Modal, AppButton, IconButton, FormField, FormInput, FormSelect } }
+    })
+    await wrapper.get('input[type="text"]').setValue('Новий проєкт')
+    await wrapper.findAll('footer button').at(-1)!.trigger('click')
+    expect(wrapper.emitted('save')?.[0]).toEqual([{ name: 'Новий проєкт', color: '#fe5011' }])
+  })
+
+  it('reuses saved task tags and persists practical creation defaults', async () => {
+    const wrapper = await mountSuspended(TaskEditor, {
+      props: {
+        open: true,
+        task: null,
+        projects: [{ id: 'project-1', name: 'Робота', color: '#fe5011', createdAt: 1, ownerId: 'user-1' }],
+        assignees: [],
+        tagOptions: ['клієнт']
+      },
+      global: {
+        stubs: {
+          ...stubs,
+          AppDrawer: { template: '<div><slot /><slot name="footer" /></div>' }
+        }
+      }
+    })
+    await wrapper.findAll('input[type="text"]')[0]!.setValue('Підготувати звіт')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('клієнт'))!
+      .trigger('click')
+    await wrapper.findAll('button').at(-1)!.trigger('click')
+    expect(wrapper.emitted('save')?.[0]?.[0]).toMatchObject({ title: 'Підготувати звіт', tags: ['клієнт'] })
+    expect(JSON.parse(localStorage.getItem('weekflow-reusable-tags') ?? '[]')).toContain('клієнт')
+    expect(localStorage.getItem('weekflow-task-defaults')).toBeTruthy()
+  })
+
+  it('adds and removes reusable tags as interactive chips', async () => {
+    const wrapper = await mountSuspended(TaskEditor, {
+      props: { open: true, task: null, projects: [], assignees: [], tagOptions: ['focus'] },
+      global: {
+        stubs: {
+          ...stubs,
+          AppDrawer: { template: '<div><slot /><slot name="footer" /></div>' }
+        }
+      }
+    })
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('focus'))!
+      .trigger('click')
+    const removeChip = wrapper.findAll('button[aria-label]').find((button) => button.text().includes('#focus'))!
+    expect(removeChip.exists()).toBe(true)
+    await removeChip.trigger('click')
+    expect(wrapper.findAll('input[type="text"]').at(-1)!.element.value).toBe('')
   })
 })

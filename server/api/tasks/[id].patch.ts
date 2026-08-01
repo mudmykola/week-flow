@@ -6,6 +6,8 @@ import { isAdmin, requireAppUser } from '../../utils/auth'
 import { addDays, addMonths, addWeeks, format, getISOWeek, getISOWeekYear } from 'date-fns'
 import { logActivity } from '../../utils/activity'
 import { requireTaskAccess } from '../../utils/taskAccess'
+import { runTaskAutomations } from '../../utils/automations'
+import { requireAssignableUser } from '../../utils/assigneeAccess'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
@@ -19,15 +21,20 @@ export default defineEventHandler(async (event) => {
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
 
   if (body.projectId) {
-    const [project] = await db.select({ id: projects.id }).from(projects).leftJoin(
-      projectMembers,
-      and(eq(projectMembers.projectId, projects.id), eq(projectMembers.userId, user.id))
-    ).where(and(
-      eq(projects.id, body.projectId),
-      isAdmin(user) ? undefined : or(eq(projects.ownerId, user.id), eq(projectMembers.role, 'editor'))
-    ))
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .leftJoin(projectMembers, and(eq(projectMembers.projectId, projects.id), eq(projectMembers.userId, user.id)))
+      .where(
+        and(
+          eq(projects.id, body.projectId),
+          isAdmin(user) ? undefined : or(eq(projects.ownerId, user.id), eq(projectMembers.role, 'editor'))
+        )
+      )
     if (!project) throw createError({ statusCode: 400, statusMessage: 'Invalid project' })
   }
+
+  await requireAssignableUser(event, body.assigneeId)
 
   const patch: Record<string, unknown> = { ...body }
   if (body.status === 'done') {
@@ -44,7 +51,12 @@ export default defineEventHandler(async (event) => {
   }
   if (body.status === 'done' && existing.status !== 'done' && existing.recurrence && existing.dueDate) {
     const base = new Date(`${existing.dueDate}T12:00:00`)
-    const nextDate = existing.recurrence === 'daily' ? addDays(base, 1) : existing.recurrence === 'weekly' ? addWeeks(base, 1) : addMonths(base, 1)
+    const nextDate =
+      existing.recurrence === 'daily'
+        ? addDays(base, 1)
+        : existing.recurrence === 'weekly'
+          ? addWeeks(base, 1)
+          : addMonths(base, 1)
     const year = getISOWeekYear(nextDate)
     const week = `${year}-W${String(getISOWeek(nextDate)).padStart(2, '0')}`
     await db.insert(tasks).values({
@@ -58,6 +70,13 @@ export default defineEventHandler(async (event) => {
       createdAt: Date.now()
     })
   }
-  await logActivity(event, { ownerId: task.ownerId!, actorId: user.id, action: 'task.updated', entityType: 'task', entityId: task.id, metadata: body })
-  return task
+  await logActivity(event, {
+    ownerId: task.ownerId!,
+    actorId: user.id,
+    action: 'task.updated',
+    entityType: 'task',
+    entityId: task.id,
+    metadata: body
+  })
+  return body.status && body.status !== existing.status ? runTaskAutomations(event, task, 'status_changed') : task
 })

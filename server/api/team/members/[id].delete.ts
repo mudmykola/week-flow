@@ -8,6 +8,8 @@ export default defineEventHandler(async (event) => {
   const { manager, team } = await requireManagedTeam(event, teamId)
   const userId = getRouterParam(event, 'id')!
   if (userId === manager.id) throw createError({ statusCode: 400, statusMessage: 'Manager cannot leave own team' })
-  await useDb(event).delete(teamMembers).where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, userId)))
+  await useDb(event)
+    .delete(teamMembers)
+    .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, userId)))
   return { ok: true }
 })

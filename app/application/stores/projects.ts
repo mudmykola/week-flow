@@ -16,18 +16,18 @@ export const useProjectsStore = defineStore('projects', () => {
 
   async function addProject(input: CreateProjectInput) {
     const project = await createProject(input)
-    projects.value.push(project)
+    projects.value = [...projects.value, project]
     return project
   }
 
   async function removeProject(id: string) {
     await deleteProject(id)
-    projects.value = projects.value.filter(p => p.id !== id)
+    projects.value = projects.value.filter((p) => p.id !== id)
   }
 
   function getProject(id: string | null) {
     if (!id) return null
-    return projects.value.find(p => p.id === id) ?? null
+    return projects.value.find((p) => p.id === id) ?? null
   }
 
   return { projects, loading, loadProjects, addProject, removeProject, getProject }

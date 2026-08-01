@@ -28,3 +28,11 @@ export function moveWeekTasks(fromWeek: string, toWeek: string) {
     body: { fromWeek, toWeek }
   })
 }
+
+export function bulkUpdateTasks(ids: string[], patch: UpdateTaskInput) {
+  return $fetch<Task[]>('/api/tasks/bulk', { method: 'PATCH', body: { ids, patch } })
+}
+
+export function duplicateTask(id: string) {
+  return $fetch<Task>(`/api/tasks/${id}/duplicate`, { method: 'POST' })
+}

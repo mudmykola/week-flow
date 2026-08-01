@@ -11,8 +11,12 @@ export async function requireTaskAccess(event: H3Event, taskId: string, options:
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
   if (!isAdmin(user) && task.ownerId !== user.id) {
     if (!task.projectId) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
-    const [member] = await db.select().from(projectMembers).where(and(eq(projectMembers.projectId, task.projectId), eq(projectMembers.userId, user.id)))
-    if (!member || (options.write && member.role === 'viewer')) throw createError({ statusCode: 403, statusMessage: 'Insufficient project access' })
+    const [member] = await db
+      .select()
+      .from(projectMembers)
+      .where(and(eq(projectMembers.projectId, task.projectId), eq(projectMembers.userId, user.id)))
+    if (!member || (options.write && member.role === 'viewer'))
+      throw createError({ statusCode: 403, statusMessage: 'Insufficient project access' })
   }
   return { user, task }
 }

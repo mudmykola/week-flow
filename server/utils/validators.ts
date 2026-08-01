@@ -17,7 +17,9 @@ export const createTaskSchema = z.object({
   priority: taskPrioritySchema.optional().default('medium'),
   dueDate: dateSchema.nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
-  recurrence: taskRecurrenceSchema.nullable().optional()
+  recurrence: taskRecurrenceSchema.nullable().optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  stageId: z.string().uuid().nullable().optional()
 })
 
 export const updateTaskSchema = z.object({
@@ -31,13 +33,28 @@ export const updateTaskSchema = z.object({
   dueDate: dateSchema.nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional(),
   recurrence: taskRecurrenceSchema.nullable().optional(),
-  archivedAt: z.number().int().nullable().optional()
+  archivedAt: z.number().int().nullable().optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  stageId: z.string().uuid().nullable().optional()
+})
+
+export const bulkTaskSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100),
+  patch: updateTaskSchema
+    .pick({ status: true, projectId: true, week: true, priority: true, assigneeId: true, archivedAt: true })
+    .strict()
 })
 
 export const createSubtaskSchema = z.object({ title: z.string().trim().min(1).max(200) })
-export const updateSubtaskSchema = z.object({ title: z.string().trim().min(1).max(200).optional(), done: z.boolean().optional() })
+export const updateSubtaskSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  done: z.boolean().optional()
+})
 export const createCommentSchema = z.object({ body: z.string().trim().min(1).max(2000) })
-export const createInvitationSchema = z.object({ email: z.string().email(), role: z.enum(['editor', 'viewer']).default('viewer') })
+export const createInvitationSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(['editor', 'viewer']).default('viewer')
+})
 export const updateSettingsSchema = z.object({
   theme: z.enum(['system', 'light', 'dark']).optional(),
   locale: z.enum(['uk', 'en']).optional(),
@@ -54,6 +71,24 @@ export const createProjectSchema = z.object({
   name: z.string().min(1).max(100),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected hex color')
 })
+
+export const stickyNoteColorSchema = z.enum(['yellow', 'pink', 'blue', 'green'])
+export const createStickyNoteSchema = z.object({
+  content: z.string().trim().min(1).max(1000),
+  color: stickyNoteColorSchema.optional().default('yellow'),
+  positionX: z.number().int().min(0).max(4000).optional().default(24),
+  positionY: z.number().int().min(0).max(4000).optional().default(24)
+})
+export const updateStickyNoteSchema = z
+  .object({
+    content: z.string().trim().min(1).max(1000).optional(),
+    color: stickyNoteColorSchema.optional(),
+    positionX: z.number().int().min(0).max(4000).optional(),
+    positionY: z.number().int().min(0).max(4000).optional(),
+    checkedItems: z.array(z.number().int().min(0).max(99)).max(100).optional(),
+    done: z.boolean().optional()
+  })
+  .refine((value) => Object.keys(value).length > 0)
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>

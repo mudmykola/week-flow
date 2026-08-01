@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
+import type { AssignableUser, Task, TaskPriority, TaskRecurrence, UpdateTaskInput } from '~/domain/entities/task'
 
 const { week, label, isCurrentWeek, next, prev, goToCurrent } = useWeek()
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
 const route = useRoute()
 const { user, clear } = useUserSession()
+const { t } = useI18n()
 
 if (typeof route.query.week === 'string') {
   week.value = route.query.week
@@ -21,15 +22,38 @@ const editorDefaultStatus = ref<Task['status']>('todo')
 const projectEditorOpen = ref(false)
 const search = ref('')
 const priorityFilter = ref<TaskPriority | null>(null)
+const viewMode = useLocalStorage<'board' | 'table'>('weekflow-task-view', 'board')
+const selectedIds = ref<string[]>([])
+const assignees = ref<AssignableUser[]>([])
+const undoAction = ref<null | { label: string; run: () => Promise<void> }>(null)
+const workspaceReady = ref(false)
+const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
+let undoTimer: ReturnType<typeof setTimeout> | undefined
+
+taskCreatedBus.on((task) => {
+  if (task.week === week.value && !tasksStore.tasks.some((item) => item.id === task.id)) {
+    tasksStore.tasks.push(task)
+  }
+})
+
+const reusableTags = computed(() =>
+  [...new Set(tasksStore.tasks.flatMap((task) => task.tags ?? []))].sort((a, b) => a.localeCompare(b, 'uk'))
+)
 
 const boardTasks = computed(() => {
   const term = search.value.trim().toLowerCase()
   const source = tasksStore.tasksByStatus
-  return Object.fromEntries(Object.entries(source).map(([status, tasks]) => [status, tasks.filter(task =>
-    (!term || `${task.title} ${task.note ?? ''} ${(task.tags ?? []).join(' ')}`.toLowerCase().includes(term))
-    && (!priorityFilter.value || task.priority === priorityFilter.value)
-    && !task.archivedAt
-  )])) as Record<Task['status'], Task[]>
+  return Object.fromEntries(
+    Object.entries(source).map(([status, tasks]) => [
+      status,
+      tasks.filter(
+        (task) =>
+          (!term || `${task.title} ${task.note ?? ''} ${(task.tags ?? []).join(' ')}`.toLowerCase().includes(term)) &&
+          (!priorityFilter.value || task.priority === priorityFilter.value) &&
+          !task.archivedAt
+      )
+    ])
+  ) as Record<Task['status'], Task[]>
 })
 
 async function loadWeek() {
@@ -37,11 +61,18 @@ async function loadWeek() {
 }
 
 onMounted(async () => {
-  await Promise.all([projectsStore.loadProjects(), loadWeek()])
-  if (route.query.new === '1') openCreate('todo')
+  await Promise.all([
+    projectsStore.loadProjects(),
+    loadWeek(),
+    $fetch<AssignableUser[]>('/api/users/assignable').then((value) => {
+      assignees.value = value
+    })
+  ])
+  workspaceReady.value = true
 })
 
 watch(week, loadWeek)
+useQueryTrigger('new', '1', workspaceReady, () => openCreate('todo'))
 
 function openCreate(status: Task['status']) {
   editingTask.value = null
@@ -59,7 +90,18 @@ function closeEditor() {
   editingTask.value = null
 }
 
-async function handleSave(payload: { title: string; note: string | null; status: Task['status']; projectId: string | null; priority: TaskPriority; dueDate: string | null; tags: string[]; recurrence: TaskRecurrence | null }) {
+async function handleSave(payload: {
+  title: string
+  note: string | null
+  status: Task['status']
+  projectId: string | null
+  priority: TaskPriority
+  dueDate: string | null
+  tags: string[]
+  recurrence: TaskRecurrence | null
+  assigneeId: string | null
+  stageId: string | null
+}) {
   if (editingTask.value) {
     await tasksStore.patchTask(editingTask.value.id, payload)
   } else {
@@ -78,7 +120,60 @@ async function handleReorder(status: Task['status'], orderedTasks: Task[]) {
 }
 
 async function handleDelete(id: string) {
-  await tasksStore.removeTask(id)
+  const previous = tasksStore.tasks.find((task) => task.id === id)
+  if (!previous) return
+  await tasksStore.patchTask(id, { archivedAt: Date.now() })
+  offerUndo(t('board.taskArchived'), async () => {
+    await tasksStore.patchTask(id, { archivedAt: null })
+  })
+}
+
+function toggleSelected(id: string, selected: boolean) {
+  selectedIds.value = selected
+    ? [...new Set([...selectedIds.value, id])]
+    : selectedIds.value.filter((item) => item !== id)
+}
+function getAssigneeName(id: string | null) {
+  return assignees.value.find((person) => person.id === id)?.name ?? ''
+}
+async function patchTask(id: string, patch: UpdateTaskInput) {
+  await tasksStore.patchTask(id, patch)
+}
+async function duplicate(id: string) {
+  const task = await tasksStore.duplicate(id)
+  offerUndo(t('board.copyCreated'), async () => {
+    await tasksStore.removeTask(task.id)
+  })
+}
+function offerUndo(label: string, run: () => Promise<void>) {
+  undoAction.value = { label, run }
+  clearTimeout(undoTimer)
+  undoTimer = setTimeout(() => {
+    undoAction.value = null
+  }, 8000)
+}
+async function undo() {
+  const action = undoAction.value
+  undoAction.value = null
+  if (action) await action.run()
+}
+async function bulkPatch(patch: UpdateTaskInput) {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  const before = tasksStore.tasks
+    .filter((task) => ids.includes(task.id))
+    .map((task) => ({
+      id: task.id,
+      status: task.status,
+      priority: task.priority,
+      assigneeId: task.assigneeId,
+      archivedAt: task.archivedAt
+    }))
+  await tasksStore.bulkPatch(ids, patch)
+  selectedIds.value = []
+  offerUndo(t('board.tasksChanged', { count: ids.length }), async () => {
+    await Promise.all(before.map((item) => tasksStore.patchTask(item.id, item)))
+  })
 }
 
 async function handleMoveIncomplete() {
@@ -87,6 +182,7 @@ async function handleMoveIncomplete() {
 
 async function handleSaveProject(payload: { name: string; color: string }) {
   await projectsStore.addProject(payload)
+  projectEditorOpen.value = false
 }
 
 async function handleDeleteProject(id: string) {
@@ -103,42 +199,108 @@ async function logout() {
 }
 
 async function saveView() {
-  const name = window.prompt('Назва представлення')?.trim()
+  const name = window.prompt(t('board.viewName'))?.trim()
   if (!name) return
-  await $fetch('/api/views', { method: 'POST', body: { name, filters: { search: search.value, priority: priorityFilter.value, projectId: tasksStore.filterProjectId } } })
+  await $fetch('/api/views', {
+    method: 'POST',
+    body: {
+      name,
+      filters: { search: search.value, priority: priorityFilter.value, projectId: tasksStore.filterProjectId }
+    }
+  })
 }
 </script>
 
 <template>
-  <div class="app-container board-workspace">
-    <PageHeader title="Дошка тижня" description="Плануйте, фокусуйтеся, завершуйте." icon="i-lucide-layout-dashboard">
-      <template #actions><div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-        <select
-          v-model="tasksStore.filterProjectId"
-          aria-label="Фільтр за проєктом"
-          class="h-10 min-w-40 flex-1 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm outline-none sm:flex-none"
-        >
-          <option :value="null">Усі проєкти</option>
-          <option v-for="project in projectsStore.projects" :key="project.id" :value="project.id">
-            {{ project.name }}
-          </option>
-        </select>
-        <button
-          type="button"
-          class="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm font-semibold text-secondary hover:text-[var(--color-text-primary)]"
-          title="Керування проєктами"
-          @click="projectEditorOpen = true"
-        >
-          <UIcon name="i-lucide-folder-kanban" class="size-4" />Проєкти
-        </button>
-      </div></template>
+  <div class="week-board-page app-container board-workspace">
+    <PageHeader
+      :title="$t('board.title')"
+      :description="$t('board.description')"
+      icon="i-lucide-layout-dashboard"
+    >
+      <template #actions
+        ><div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <select
+            v-model="tasksStore.filterProjectId"
+            :aria-label="$t('board.projectFilter')"
+            class="h-10 min-w-40 flex-1 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm outline-none sm:flex-none"
+          >
+            <option :value="null">{{ $t('board.allProjects') }}</option>
+            <option
+              v-for="project in projectsStore.projects"
+              :key="project.id"
+              :value="project.id"
+            >
+              {{ project.name }}
+            </option>
+          </select>
+          <button
+            type="button"
+            class="text-secondary inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm font-semibold hover:text-[var(--color-text-primary)]"
+            :title="$t('board.manageProjects')"
+            @click="projectEditorOpen = true"
+          >
+            <UIcon
+              name="i-lucide-folder-kanban"
+              class="size-4"
+            />{{ $t('board.projects') }}
+          </button>
+        </div></template
+      >
     </PageHeader>
 
     <div class="board-toolbar mb-4">
-      <label class="flex min-w-0 flex-1 items-center gap-2.5 px-3.5"><UIcon name="i-lucide-search" class="size-4 text-secondary"/><input v-model="search" class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Знайти задачу…"><kbd class="hidden rounded-md border border-[var(--color-panel-border)] px-1.5 py-0.5 text-[10px] text-secondary md:inline">⌘ K</kbd></label>
+      <label class="flex min-w-0 flex-1 items-center gap-2.5 px-3.5"
+        ><UIcon
+          name="i-lucide-search"
+          class="text-secondary size-4"
+        /><input
+          v-model="search"
+          class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none"
+          :placeholder="$t('board.findTask')"
+        /><kbd
+          class="text-secondary hidden rounded-md border border-[var(--color-panel-border)] px-1.5 py-0.5 text-[10px] md:inline"
+          >⌘ K</kbd
+        ></label
+      >
       <div class="h-6 w-px bg-[var(--color-panel-border)]" />
-      <select v-model="priorityFilter" aria-label="Фільтр за пріоритетом" class="h-11 bg-transparent px-3 text-sm outline-none"><option :value="null">Усі пріоритети</option><option value="urgent">Термінові</option><option value="high">Високі</option><option value="medium">Середні</option><option value="low">Низькі</option></select>
-      <button class="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-secondary hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]" @click="saveView"><UIcon name="i-lucide-bookmark-plus" class="size-4"/><span class="hidden sm:inline">Зберегти вигляд</span></button>
+      <select
+        v-model="priorityFilter"
+        :aria-label="$t('board.priorityFilter')"
+        class="h-11 bg-transparent px-3 text-sm outline-none"
+      >
+        <option :value="null">{{ $t('board.allPriorities') }}</option>
+        <option value="urgent">{{ $t('task.priorityValue.urgent') }}</option>
+        <option value="high">{{ $t('task.priorityValue.high') }}</option>
+        <option value="medium">{{ $t('task.priorityValue.medium') }}</option>
+        <option value="low">{{ $t('task.priorityValue.low') }}</option>
+      </select>
+      <button
+        class="text-secondary inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]"
+        @click="saveView"
+      >
+        <UIcon
+          name="i-lucide-bookmark-plus"
+          class="size-4"
+        /><span class="hidden sm:inline">{{ $t('board.saveView') }}</span>
+      </button>
+      <div class="flex rounded-lg bg-[var(--color-bg-alt)] p-1">
+        <button
+          class="grid size-8 place-items-center rounded-md"
+          :class="viewMode === 'board' ? 'bg-[var(--color-panel-bg)] shadow-sm' : 'text-secondary'"
+          :title="$t('nav.board')"
+          @click="viewMode = 'board'"
+        >
+          <UIcon name="i-lucide-columns-3" /></button
+        ><button
+          class="grid size-8 place-items-center rounded-md"
+          :class="viewMode === 'table' ? 'bg-[var(--color-panel-bg)] shadow-sm' : 'text-secondary'"
+          :title="$t('board.table')"
+          @click="viewMode = 'table'"
+        >
+          <UIcon name="i-lucide-table-2" />
+        </button>
+      </div>
     </div>
 
     <div class="mb-4 grid gap-3 lg:grid-cols-[minmax(24rem,.9fr)_minmax(28rem,1.1fr)]">
@@ -160,20 +322,84 @@ async function saveView() {
     </div>
 
     <WeekBoard
+      v-if="viewMode === 'board'"
       :tasks-by-status="boardTasks"
       :get-project="projectsStore.getProject"
+      :selected-ids="selectedIds"
+      :get-assignee-name="getAssigneeName"
       @edit="openEdit"
       @delete="handleDelete"
       @cycle-status="handleCycleStatus"
       @add-task="openCreate"
       @reorder="handleReorder"
+      @select="toggleSelected"
+      @duplicate="duplicate"
+      @inline-title="(id, title) => patchTask(id, { title })"
     />
+    <TaskTable
+      v-else
+      :tasks="Object.values(boardTasks).flat()"
+      :selected-ids="selectedIds"
+      :assignees="assignees"
+      @edit="openEdit"
+      @select="toggleSelected"
+      @patch="patchTask"
+    />
+
+    <div
+      v-if="selectedIds.length"
+      class="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center gap-2 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-2 shadow-2xl"
+    >
+      <strong class="px-2 text-sm">{{ selectedIds.length }} {{ $t('board.selected') }}</strong
+      ><button
+        class="rounded-lg px-3 py-2 text-xs hover:bg-[var(--color-bg-alt)]"
+        @click="bulkPatch({ status: 'done' })"
+      >
+        {{ $t('board.complete') }}</button
+      ><select
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        @change="bulkPatch({ assigneeId: ($event.target as HTMLSelectElement).value || null })"
+      >
+        <option value="">{{ $t('board.assign') }}</option>
+        <option
+          v-for="person in assignees"
+          :key="person.id"
+          :value="person.id"
+        >
+          {{ person.name }}
+        </option></select
+      ><button
+        class="rounded-lg px-3 py-2 text-xs text-[var(--color-danger)] hover:bg-[var(--color-bg-alt)]"
+        @click="bulkPatch({ archivedAt: Date.now() })"
+      >
+        {{ $t('common.archive') }}</button
+      ><button
+        class="grid size-8 place-items-center"
+        @click="selectedIds = []"
+      >
+        <UIcon name="i-lucide-x" />
+      </button>
+    </div>
+    <div
+      v-if="undoAction"
+      class="fixed right-5 bottom-5 z-50 flex items-center gap-3 rounded-xl bg-slate-950 px-4 py-3 text-sm text-white shadow-2xl"
+    >
+      <span>{{ undoAction.label }}</span
+      ><button
+        class="font-semibold text-orange-400"
+        @click="undo"
+      >
+        {{ $t('common.cancel') }}
+      </button>
+    </div>
 
     <TaskEditor
       :open="editorOpen"
       :task="editingTask"
       :default-status="editorDefaultStatus"
       :projects="projectsStore.projects"
+      :assignees="assignees"
+      :tag-options="reusableTags"
       @close="closeEditor"
       @save="handleSave"
     />

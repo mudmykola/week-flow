@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeProject, makeTask } from '../fixtures'
 
 const projectApi = vi.hoisted(() => ({ fetchProjects: vi.fn(), createProject: vi.fn(), deleteProject: vi.fn() }))
-const taskApi = vi.hoisted(() => ({ fetchTasks: vi.fn(), createTask: vi.fn(), updateTask: vi.fn(), deleteTask: vi.fn(), moveWeekTasks: vi.fn() }))
+const taskApi = vi.hoisted(() => ({
+  fetchTasks: vi.fn(),
+  createTask: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
+  moveWeekTasks: vi.fn()
+}))
 
 vi.mock('~/data/repositories/projectsRepository', () => projectApi)
 vi.mock('~/data/repositories/tasksRepository', () => taskApi)
@@ -30,7 +36,7 @@ describe('Pinia stores', () => {
     await store.addProject({ name: 'New', color: '#112233' })
     expect(store.projects).toHaveLength(2)
     await store.removeProject(project.id)
-    expect(store.projects.map(item => item.id)).toEqual(['project-2'])
+    expect(store.projects.map((item) => item.id)).toEqual(['project-2'])
   })
 
   it('always resets project loading after API failure', async () => {
@@ -41,14 +47,18 @@ describe('Pinia stores', () => {
   })
 
   it('loads, filters and sorts tasks by status', async () => {
-    const tasks = [makeTask({ id: 'b', sort: 2, projectId: 'p1' }), makeTask({ id: 'a', sort: 1, projectId: 'p1' }), makeTask({ id: 'done', status: 'done', projectId: 'p2' })]
+    const tasks = [
+      makeTask({ id: 'b', sort: 2, projectId: 'p1' }),
+      makeTask({ id: 'a', sort: 1, projectId: 'p1' }),
+      makeTask({ id: 'done', status: 'done', projectId: 'p2' })
+    ]
     taskApi.fetchTasks.mockResolvedValue(tasks)
     const store = useTasksStore()
     await store.loadTasks('2026-W31')
     expect(store.loading).toBe(false)
-    expect(store.tasksByStatus.todo.map(task => task.id)).toEqual(['a', 'b'])
+    expect(store.tasksByStatus.todo.map((task) => task.id)).toEqual(['a', 'b'])
     store.filterProjectId = 'p2'
-    expect(store.filteredTasks.map(task => task.id)).toEqual(['done'])
+    expect(store.filteredTasks.map((task) => task.id)).toEqual(['done'])
   })
 
   it('adds, patches, cycles and removes tasks', async () => {
@@ -72,7 +82,7 @@ describe('Pinia stores', () => {
     taskApi.moveWeekTasks.mockResolvedValue({ moved: 1 })
     await expect(store.moveIncompleteToNextWeek('2026-W31')).resolves.toEqual({ moved: 1 })
     expect(taskApi.moveWeekTasks).toHaveBeenCalledWith('2026-W31', '2026-W32')
-    expect(store.tasks.map(task => task.id)).toEqual(['done'])
+    expect(store.tasks.map((task) => task.id)).toEqual(['done'])
   })
 
   it('only persists changed task order entries', async () => {
@@ -80,7 +90,10 @@ describe('Pinia stores', () => {
     const unchanged = makeTask({ id: 'a', sort: 0 })
     const changed = makeTask({ id: 'b', sort: 5 })
     store.tasks = [unchanged, changed]
-    taskApi.updateTask.mockImplementation(async (id: string, patch: object) => ({ ...(id === 'a' ? unchanged : changed), ...patch }))
+    taskApi.updateTask.mockImplementation(async (id: string, patch: object) => ({
+      ...(id === 'a' ? unchanged : changed),
+      ...patch
+    }))
     await store.reorderColumn('todo', [unchanged, changed])
     expect(taskApi.updateTask).toHaveBeenCalledTimes(1)
     expect(taskApi.updateTask).toHaveBeenCalledWith('b', { status: 'todo', sort: 1 })

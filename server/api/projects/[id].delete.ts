@@ -8,9 +8,10 @@ export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
   const id = getRouterParam(event, 'id')!
 
-  const [project] = await db.select().from(projects).where(
-    isAdmin(user) ? eq(projects.id, id) : and(eq(projects.id, id), eq(projects.ownerId, user.id))
-  )
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(isAdmin(user) ? eq(projects.id, id) : and(eq(projects.id, id), eq(projects.ownerId, user.id)))
   if (!project) throw createError({ statusCode: 404, statusMessage: 'Project not found' })
 
   await db.batch([

@@ -13,6 +13,7 @@ export default defineNuxtConfig({
   },
   modules: [
     '@pinia/nuxt',
+    '@nuxtjs/i18n',
     '@vueuse/nuxt',
     'nuxt-auth-utils',
     '@nuxt/ui',
@@ -20,7 +21,6 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@nuxt/image',
     '@nuxt/a11y',
-    '@nuxt/hints',
     '@vite-pwa/nuxt'
   ],
   css: ['~/presentation/assets/css/main.css'],
@@ -30,9 +30,7 @@ export default defineNuxtConfig({
   dir: {
     pages: 'presentation/pages'
   },
-  components: [
-    { path: '~/presentation/components', pathPrefix: false }
-  ],
+  components: [{ path: '~/presentation/components', pathPrefix: false }],
   imports: {
     dirs: ['~/application/composables']
   },
@@ -43,6 +41,21 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()]
   },
   colorMode: { preference: 'system', fallback: 'light', classSuffix: '' },
+  i18n: {
+    strategy: 'no_prefix',
+    defaultLocale: 'uk',
+    locales: [
+      { code: 'uk', name: 'Українська', language: 'uk-UA', file: 'uk.json' },
+      { code: 'en', name: 'English', language: 'en-US', file: 'en.json' }
+    ],
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'weekflow-locale',
+      redirectOn: 'root',
+      fallbackLocale: 'uk'
+    },
+    experimental: { prerenderMessages: true }
+  },
   ui: { fonts: false },
   icon: { serverBundle: { collections: ['lucide'] } },
   a11y: { defaultHighlight: false, logIssues: true },
