@@ -85,8 +85,4 @@ jobs:
         run: curl --fail --silent --show-error --retry 6 --retry-delay 10 https://weekflow.pp.ua/ > /dev/null
 
       - name: Verify production API and D1
-        run: |
-          curl --fail --silent --show-error --retry 6 --retry-delay 10 \
-            --header "x-request-id: deploy-${{ github.run_id }}" \
-            https://weekflow.pp.ua/api/health \
-            | jq --exit-status '.status == "ok" and .database == "ok"' > /dev/null
+        run: node scripts/verify-production-health.mjs
