@@ -95,23 +95,31 @@ https://weekflow.pp.ua/auth/google
 
 ## Перевірка та збірка
 
-Перед `git add .` завжди запускайте єдиний локальний quality gate:
+Для швидкої перевірки перед `git add .` запускайте локальний quality gate:
 
 ```bash
-pnpm ready
+pnpm quality:gate
 git add .
 git commit -m "..."
 ```
 
-Перед push у `main` виконується remote release gate. Він повторює локальні перевірки, перевіряє реальний доступ до production D1 та збирає Worker у `--dry-run` режимі:
+Перед push у `main` команда `pnpm ready` запускає повний remote release gate. Вона повторює локальні перевірки, перевіряє реальний доступ до production D1 та збирає Worker у `--dry-run` режимі:
 
 ```bash
 pnpm cf:login
-pnpm release:gate
+pnpm ready
 git push
 ```
 
 Git hook `pre-push` запускає `pnpm release:gate` автоматично та блокує push, якщо Cloudflare-сесія протермінована, токен не має доступу до D1 або Worker не проходить dry-run.
+
+CI окремо перевіряє формат `CLOUDFLARE_API_TOKEN` до першого виклику Wrangler. У GitHub Secret потрібно вставляти лише саме значення token: без пробілів, переносів рядків, команди `curl` чи тексту зі сторінки Cloudflare. Значення секрету під час перевірки ніколи не виводиться.
+
+Якщо workflow повідомляє `invalid header value`, перевипустіть token у Cloudflare, скопіюйте тільки рядок token і повторно збережіть `CLOUDFLARE_API_TOKEN` у GitHub Actions Secrets. Локально формат env-token можна перевірити без мережевого запиту:
+
+```bash
+pnpm cloudflare:token:check
+```
 
 Gate виводить branch, версії runtime, кількість staged/unstaged/untracked файлів і безпечний стан потрібних env-змінних без значень секретів. Далі він послідовно перевіряє форматування, TypeScript, тести з coverage та Cloudflare production build.
 

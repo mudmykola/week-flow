@@ -1,19 +1,35 @@
 <script setup lang="ts">
-import { fetchAllTasks } from '~/data/repositories/tasksRepository'
 import { fetchProjects } from '~/data/repositories/projectsRepository'
-import type { Task } from '~/domain/entities/task'
+import { fetchAllTasks } from '~/data/repositories/tasksRepository'
 import type { Project } from '~/domain/entities/project'
+import type { AssignableUser, Task, TaskPriority, TaskStatus } from '~/domain/entities/task'
+import {
+  analyticsWeeks,
+  buildAnalyticsTrend,
+  completionRate,
+  countByStatus,
+  filterAnalyticsTasks,
+  type AnalyticsPeriod
+} from '~/domain/services/analytics'
 import { getCurrentWeek, getPrevWeek } from '~/domain/services/week'
 import { priorityColors, priorityLabels, statusLabels } from '~/domain/services/taskLabels'
 
 const { t } = useI18n()
-
 const tasks = ref<Task[]>([])
 const projects = ref<Project[]>([])
+const assignees = ref<AssignableUser[]>([])
 const loading = ref(true)
 const error = ref('')
-const period = ref<'8w' | 'all'>('8w')
+const filters = reactive<{
+  period: AnalyticsPeriod
+  projectId: string | null
+  assigneeId: string | null
+  priority: TaskPriority | null
+}>({ period: '8w', projectId: null, assigneeId: null, priority: null })
+
 const today = new Date().toISOString().slice(0, 10)
+const currentWeek = getCurrentWeek()
+const previousWeek = getPrevWeek(currentWeek)
 
 onMounted(loadDashboard)
 
@@ -21,7 +37,11 @@ async function loadDashboard() {
   loading.value = true
   error.value = ''
   try {
-    ;[tasks.value, projects.value] = await Promise.all([fetchAllTasks(), fetchProjects()])
+    ;[tasks.value, projects.value, assignees.value] = await Promise.all([
+      fetchAllTasks(),
+      fetchProjects(),
+      $fetch<AssignableUser[]>('/api/users/assignable')
+    ])
   } catch {
     error.value = t('pages.analytics.error')
   } finally {
@@ -29,61 +49,42 @@ async function loadDashboard() {
   }
 }
 
-const active = computed(() => tasks.value.filter((task) => !task.archivedAt))
-const currentWeek = getCurrentWeek()
-const previousWeek = getPrevWeek(currentWeek)
-const currentTasks = computed(() => active.value.filter((task) => task.week === currentWeek))
-const previousTasks = computed(() => active.value.filter((task) => task.week === previousWeek))
+const filteredTasks = computed(() => filterAnalyticsTasks(tasks.value, filters))
+const weeks = computed(() => analyticsWeeks(filteredTasks.value, currentWeek, filters.period))
+const periodTasks = computed(() => filteredTasks.value.filter((task) => weeks.value.includes(task.week)))
+const currentTasks = computed(() => filteredTasks.value.filter((task) => task.week === currentWeek))
+const previousTasks = computed(() => filteredTasks.value.filter((task) => task.week === previousWeek))
 const currentDone = computed(() => currentTasks.value.filter((task) => task.status === 'done').length)
 const previousDone = computed(() => previousTasks.value.filter((task) => task.status === 'done').length)
+const currentCompletion = computed(() => completionRate(currentTasks.value))
+const previousCompletion = computed(() => completionRate(previousTasks.value))
+const completionDelta = computed(() => currentCompletion.value - previousCompletion.value)
 const overdue = computed(() =>
-  active.value.filter((task) => task.dueDate && task.dueDate < today && task.status !== 'done')
+  periodTasks.value.filter((task) => task.dueDate && task.dueDate < today && task.status !== 'done')
 )
-const completion = computed(() =>
-  currentTasks.value.length ? Math.round((currentDone.value / currentTasks.value.length) * 100) : 0
-)
-const previousCompletion = computed(() =>
-  previousTasks.value.length ? Math.round((previousDone.value / previousTasks.value.length) * 100) : 0
-)
-const completionTrend = computed(() => completion.value - previousCompletion.value)
-const trendLabel = computed(
-  () => `${completionTrend.value > 0 ? '+' : completionTrend.value < 0 ? '−' : ''}${Math.abs(completionTrend.value)}%`
-)
+const trendData = computed(() => buildAnalyticsTrend(filteredTasks.value, weeks.value, today))
+const statusCounts = computed(() => countByStatus(periodTasks.value))
+const velocity = computed(() => trendData.value.slice(-4).reduce((sum, point) => sum + point.done, 0))
 
-const weeks = computed(() => {
-  if (period.value === 'all') return [...new Set(active.value.map((task) => task.week))].sort()
-  const result: string[] = []
-  let cursor = currentWeek
-  for (let i = 0; i < 8; i++) {
-    result.unshift(cursor)
-    cursor = getPrevWeek(cursor)
-  }
-  return result
-})
-const trendData = computed(() =>
-  weeks.value.map((week) => ({
-    label: week.replace(/^\d{4}-W/, 'W'),
-    done: active.value.filter((task) => task.week === week && task.status === 'done').length,
-    total: active.value.filter((task) => task.week === week).length
+const statusItems = computed(() =>
+  (
+    [
+      ['todo', '#94a3b8'],
+      ['in_progress', '#3b82f6'],
+      ['done', '#fe5011']
+    ] as const
+  ).map(([status, color]) => ({
+    key: status,
+    label: t(statusLabels[status]),
+    value: statusCounts.value[status],
+    color
   }))
 )
-const statusItems = computed(() => [
-  {
-    label: t(statusLabels.todo),
-    value: active.value.filter((task) => task.status === 'todo').length,
-    color: '#94a3b8'
-  },
-  {
-    label: t(statusLabels.in_progress),
-    value: active.value.filter((task) => task.status === 'in_progress').length,
-    color: '#3b82f6'
-  },
-  { label: t(statusLabels.done), value: active.value.filter((task) => task.status === 'done').length, color: '#fe5011' }
-])
 const priorityItems = computed(() =>
   (['urgent', 'high', 'medium', 'low'] as const).map((priority) => ({
+    key: priority,
     label: t(priorityLabels[priority]),
-    value: active.value.filter((task) => task.priority === priority).length,
+    value: periodTasks.value.filter((task) => task.priority === priority).length,
     color: priorityColors[priority]
   }))
 )
@@ -91,21 +92,42 @@ const projectWorkload = computed(() =>
   projects.value
     .map((project) => ({
       ...project,
-      count: active.value.filter((task) => task.projectId === project.id && task.status !== 'done').length
+      count: periodTasks.value.filter((task) => task.projectId === project.id && task.status !== 'done').length,
+      done: periodTasks.value.filter((task) => task.projectId === project.id && task.status === 'done').length
     }))
-    .filter((item) => item.count)
+    .filter((item) => item.count || item.done)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 )
 const attention = computed(() =>
   [
     ...overdue.value,
-    ...active.value.filter(
+    ...periodTasks.value.filter(
       (task) =>
         task.priority === 'urgent' && task.status !== 'done' && !overdue.value.some((item) => item.id === task.id)
     )
   ].slice(0, 6)
 )
+const hasFilters = computed(() => Boolean(filters.projectId || filters.assigneeId || filters.priority))
+
+function resetFilters() {
+  filters.projectId = null
+  filters.assigneeId = null
+  filters.priority = null
+}
+
+function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskPriority; project?: string } = {}) {
+  return navigateTo({
+    path: '/',
+    query: {
+      week: extra.week,
+      project: extra.project ?? filters.projectId ?? undefined,
+      assignee: filters.assigneeId ?? undefined,
+      priority: extra.priority ?? filters.priority ?? undefined,
+      status: extra.status
+    }
+  })
+}
 </script>
 
 <template>
@@ -115,26 +137,89 @@ const attention = computed(() =>
       :description="$t('pages.analytics.description')"
       icon="i-lucide-chart-no-axes-combined"
     >
-      <template #actions
-        ><USelect
-          v-model="period"
+      <template #actions>
+        <UButton
+          variant="soft"
+          color="neutral"
+          icon="i-lucide-refresh-cw"
+          :loading="loading"
+          @click="loadDashboard"
+        >
+          {{ $t('pages.analytics.refresh') }}
+        </UButton>
+      </template>
+    </PageHeader>
+
+    <section
+      class="analytics-page__filters section-card mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
+    >
+      <UFormField :label="$t('pages.analytics.period')">
+        <USelect
+          v-model="filters.period"
           :items="[
             { label: $t('pages.analytics.eightWeeks'), value: '8w' },
             { label: $t('pages.analytics.allTime'), value: 'all' }
           ]"
           value-key="value"
-          class="w-36"
-      /></template>
-    </PageHeader>
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="$t('task.project')">
+        <USelect
+          v-model="filters.projectId"
+          :items="[
+            { label: $t('board.allProjects'), value: null },
+            ...projects.map((project) => ({ label: project.name, value: project.id }))
+          ]"
+          value-key="value"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="$t('task.assignee')">
+        <USelect
+          v-model="filters.assigneeId"
+          :items="[
+            { label: $t('pages.analytics.allAssignees'), value: null },
+            ...assignees.map((person) => ({ label: person.name, value: person.id }))
+          ]"
+          value-key="value"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="$t('task.priority')">
+        <USelect
+          v-model="filters.priority"
+          :items="[
+            { label: $t('board.allPriorities'), value: null },
+            ...(['urgent', 'high', 'medium', 'low'] as const).map((priority) => ({
+              label: $t(priorityLabels[priority]),
+              value: priority
+            }))
+          ]"
+          value-key="value"
+          class="w-full"
+        />
+      </UFormField>
+      <UButton
+        v-if="hasFilters"
+        class="self-end"
+        variant="ghost"
+        color="neutral"
+        icon="i-lucide-filter-x"
+        @click="resetFilters"
+      >
+        {{ $t('pages.analytics.reset') }}
+      </UButton>
+    </section>
 
     <div
       v-if="loading"
       class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       <USkeleton
-        v-for="i in 4"
-        :key="i"
-        class="h-44 rounded-2xl"
+        v-for="index in 4"
+        :key="index"
+        class="h-40 rounded-2xl"
       />
     </div>
     <EmptyState
@@ -142,14 +227,16 @@ const attention = computed(() =>
       :title="$t('pages.analytics.unavailable')"
       :description="error"
       icon="i-lucide-cloud-off"
-      ><UButton
+    >
+      <UButton
         variant="soft"
         @click="loadDashboard"
-        >{{ $t('common.tryAgain') }}</UButton
-      ></EmptyState
-    >
+      >
+        {{ $t('common.tryAgain') }}
+      </UButton>
+    </EmptyState>
     <template v-else>
-      <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section class="analytics-page__metrics grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           :label="$t('pages.analytics.weekTasks')"
           :value="currentTasks.length"
@@ -165,44 +252,68 @@ const attention = computed(() =>
           :hint="$t('pages.analytics.comparison')"
         />
         <MetricCard
-          :label="$t('pages.analytics.overdue')"
-          :value="overdue.length"
-          icon="i-lucide-triangle-alert"
-          tone="danger"
-          :hint="$t('pages.analytics.overdueHint')"
+          :label="$t('pages.analytics.velocity')"
+          :value="velocity"
+          icon="i-lucide-gauge"
+          :hint="$t('pages.analytics.velocityHint')"
         />
         <MetricCard
           :label="$t('pages.analytics.weekProgress')"
-          :value="`${completion}%`"
+          :value="`${currentCompletion}%`"
           icon="i-lucide-trending-up"
-          :tone="completion >= 70 ? 'success' : 'accent'"
-          :trend="trendLabel"
-          hint="Completion rate"
+          :tone="currentCompletion >= 70 ? 'success' : 'accent'"
+          :trend="`${completionDelta > 0 ? '+' : completionDelta < 0 ? '−' : ''}${Math.abs(completionDelta)}%`"
+          :hint="$t('pages.analytics.completionHint')"
         />
       </section>
 
-      <section class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(19rem,.75fr)]">
+      <section class="analytics-page__primary mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(19rem,.75fr)]">
         <article class="section-card min-w-0">
-          <div class="mb-5">
-            <h2 class="font-display text-lg">{{ $t('pages.analytics.trend') }}</h2>
-            <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.trendHint') }}</p>
+          <div class="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-lg">{{ $t('pages.analytics.trend') }}</h2>
+              <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.trendHintV2') }}</p>
+            </div>
+            <UBadge
+              color="neutral"
+              variant="soft"
+              >{{ weeks.length }} {{ $t('pages.analytics.weeks') }}</UBadge
+            >
           </div>
           <TrendChart :data="trendData" />
+          <div class="mt-2 flex flex-wrap gap-2">
+            <UButton
+              v-for="point in trendData.slice(-4)"
+              :key="point.week"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-arrow-up-right"
+              @click="openTasks({ week: point.week })"
+            >
+              {{ point.label }} · {{ point.done }}/{{ point.created }}
+            </UButton>
+          </div>
         </article>
-        <article class="section-card">
+        <article class="section-card min-w-0">
           <h2 class="font-display text-lg">{{ $t('pages.analytics.statuses') }}</h2>
           <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.activeTasks') }}</p>
-          <div class="mt-5"><DonutBreakdown :items="statusItems" /></div>
+          <DonutBreakdown
+            class="mt-3"
+            :items="statusItems"
+            @select="openTasks({ status: $event.key as TaskStatus })"
+          />
         </article>
       </section>
 
-      <section class="mt-4 grid gap-4 lg:grid-cols-2">
+      <section class="analytics-page__secondary mt-4 grid gap-4 lg:grid-cols-2">
         <article class="section-card min-w-0">
           <h2 class="font-display text-lg">{{ $t('pages.analytics.priorities') }}</h2>
           <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.prioritiesHint') }}</p>
           <BarBreakdown
-            class="mt-6"
+            class="mt-3"
             :items="priorityItems"
+            @select="openTasks({ priority: $event.key as TaskPriority })"
           />
         </article>
         <article class="section-card">
@@ -210,30 +321,37 @@ const attention = computed(() =>
           <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.activeProjectsHint') }}</p>
           <div
             v-if="projectWorkload.length"
-            class="mt-6 space-y-5"
+            class="mt-5 space-y-3"
           >
-            <div
+            <button
               v-for="project in projectWorkload"
               :key="project.id"
+              type="button"
+              class="w-full rounded-xl border border-transparent p-2 text-left transition hover:border-[var(--color-panel-border)] hover:bg-[var(--color-bg-alt)]"
+              @click="openTasks({ project: project.id })"
             >
-              <div class="mb-2 flex items-center justify-between text-sm">
-                <span class="flex items-center gap-2"
-                  ><span
-                    class="size-2.5 rounded-full"
+              <span class="mb-2 flex items-center justify-between gap-3 text-sm">
+                <span class="flex min-w-0 items-center gap-2 font-medium">
+                  <span
+                    class="size-2.5 shrink-0 rounded-full"
                     :style="{ background: project.color }"
-                  />{{ project.name }}</span
-                ><strong>{{ project.count }}</strong>
-              </div>
-              <div class="h-2 overflow-hidden rounded-full bg-[var(--color-bg-alt)]">
-                <div
-                  class="h-full rounded-full"
+                  />
+                  <span class="truncate">{{ project.name }}</span>
+                </span>
+                <span class="text-secondary shrink-0 text-xs"
+                  >{{ project.done }} / {{ project.count + project.done }}</span
+                >
+              </span>
+              <span class="block h-2 overflow-hidden rounded-full bg-[var(--color-bg-alt)]">
+                <span
+                  class="block h-full rounded-full"
                   :style="{
-                    width: `${(project.count / Math.max(...projectWorkload.map((item) => item.count), 1)) * 100}%`,
+                    width: `${(project.done / Math.max(project.count + project.done, 1)) * 100}%`,
                     background: project.color
                   }"
                 />
-              </div>
-            </div>
+              </span>
+            </button>
           </div>
           <p
             v-else
@@ -244,37 +362,44 @@ const attention = computed(() =>
         </article>
       </section>
 
-      <section class="section-card mt-4">
-        <div class="mb-4 flex items-center justify-between">
+      <section class="analytics-page__attention section-card mt-4">
+        <div class="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 class="font-display text-lg">{{ $t('pages.analytics.attention') }}</h2>
             <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.attentionHint') }}</p>
           </div>
-          <NuxtLink
+          <UButton
             to="/overdue"
-            class="text-sm font-semibold text-[var(--color-accent)]"
-            >{{ $t('pages.analytics.viewAll') }}</NuxtLink
+            size="sm"
+            variant="soft"
+            color="error"
+            icon="i-lucide-triangle-alert"
           >
+            {{ overdue.length }} {{ $t('pages.analytics.viewAll') }}
+          </UButton>
         </div>
         <div
           v-if="attention.length"
           class="divide-y divide-[var(--color-panel-border)]"
         >
-          <NuxtLink
+          <button
             v-for="task in attention"
             :key="task.id"
-            :to="`/?week=${task.week}`"
-            class="flex items-center gap-3 py-3"
-            ><span
+            type="button"
+            class="flex w-full items-center gap-3 py-3 text-left"
+            @click="openTasks({ week: task.week, priority: task.priority })"
+          >
+            <span
               class="size-2 rounded-full"
-              :style="{ background: priorityColors[task.priority] }" /><span
-              class="min-w-0 flex-1 truncate text-sm font-medium"
-              >{{ task.title }}</span
-            ><span class="text-secondary text-xs">{{ task.dueDate || priorityLabels[task.priority] }}</span
-            ><UIcon
+              :style="{ background: priorityColors[task.priority] }"
+            />
+            <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ task.title }}</span>
+            <span class="text-secondary text-xs">{{ task.dueDate || $t(priorityLabels[task.priority]) }}</span>
+            <UIcon
               name="i-lucide-chevron-right"
               class="text-secondary size-4"
-          /></NuxtLink>
+            />
+          </button>
         </div>
         <p
           v-else

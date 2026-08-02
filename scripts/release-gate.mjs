@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { validateCloudflareApiToken } from './cloudflare-token.mjs'
 
 const green = '\x1b[32m'
 const red = '\x1b[31m'
@@ -29,6 +30,16 @@ if (!/^account_id = "657ef9c8a4d956832aa095cb76db5fc0"$/m.test(config)) {
 console.log(`${orange}╭────────────────────────────────────────────╮${reset}`)
 console.log(`${orange}│      WeekFlow · Remote Release Gate        │${reset}`)
 console.log(`${orange}╰────────────────────────────────────────────╯${reset}`)
+
+if (process.env.CLOUDFLARE_API_TOKEN) {
+  const tokenResult = validateCloudflareApiToken(process.env.CLOUDFLARE_API_TOKEN)
+  if (!tokenResult.valid) {
+    console.error(`${red}✗ CLOUDFLARE_API_TOKEN має невалідний формат (${tokenResult.reason}).${reset}`)
+    console.error('Push заблоковано до звернення до Cloudflare; значення секрету не виводиться.')
+    process.exit(1)
+  }
+  console.log(`${green}✓ Формат CLOUDFLARE_API_TOKEN валідний; значення приховано.${reset}`)
+}
 
 run('Локальний quality gate', 'pnpm', ['quality:gate'])
 run('Доступ до production D1', 'pnpm', [

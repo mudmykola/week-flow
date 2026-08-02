@@ -21,10 +21,7 @@ describe('localized calendar', () => {
       }
     })
     await flushPromises()
-    const headings = wrapper
-      .findAll('.grid-cols-7 > div')
-      .slice(0, 7)
-      .map((item) => item.text())
+    const headings = wrapper.findAll('.calendar-month__weekdays > div').map((item) => item.text())
     expect(headings).toHaveLength(7)
     expect(headings.every((day) => day.length > 0 && day !== '[object Object]')).toBe(true)
   })

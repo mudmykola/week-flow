@@ -61,6 +61,15 @@ describe('shared UI components', () => {
     expect(wrapper.text()).toContain('Створити')
   })
 
+  it('renders a stable placeholder for an empty disabled select', async () => {
+    const wrapper = await mountSuspended(FormSelect, {
+      props: { modelValue: null, placeholder: 'Немає доступних варіантів', disabled: true }
+    })
+    expect(wrapper.get('select').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('option').text()).toBe('Немає доступних варіантів')
+    expect(wrapper.get('option').attributes('disabled')).toBeDefined()
+  })
+
   it('emits task interactions by mouse and keyboard', async () => {
     const task = makeTask({ note: 'Details', tags: ['one'], priority: 'urgent' })
     const wrapper = await mountSuspended(TaskCard, {

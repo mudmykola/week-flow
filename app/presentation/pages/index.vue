@@ -21,7 +21,17 @@ const editorDefaultStatus = ref<Task['status']>('todo')
 
 const projectEditorOpen = ref(false)
 const search = ref('')
-const priorityFilter = ref<TaskPriority | null>(null)
+const priorityFilter = ref<TaskPriority | null>(
+  typeof route.query.priority === 'string' && ['low', 'medium', 'high', 'urgent'].includes(route.query.priority)
+    ? (route.query.priority as TaskPriority)
+    : null
+)
+const assigneeFilter = ref<string | null>(typeof route.query.assignee === 'string' ? route.query.assignee : null)
+const statusFilter = ref<Task['status'] | null>(
+  typeof route.query.status === 'string' && ['todo', 'in_progress', 'done'].includes(route.query.status)
+    ? (route.query.status as Task['status'])
+    : null
+)
 const viewMode = useLocalStorage<'board' | 'table'>('weekflow-task-view', 'board')
 const selectedIds = ref<string[]>([])
 const assignees = ref<AssignableUser[]>([])
@@ -50,6 +60,8 @@ const boardTasks = computed(() => {
         (task) =>
           (!term || `${task.title} ${task.note ?? ''} ${(task.tags ?? []).join(' ')}`.toLowerCase().includes(term)) &&
           (!priorityFilter.value || task.priority === priorityFilter.value) &&
+          (!assigneeFilter.value || task.assigneeId === assigneeFilter.value) &&
+          (!statusFilter.value || task.status === statusFilter.value) &&
           !task.archivedAt
       )
     ])
@@ -263,7 +275,7 @@ async function saveView() {
           >⌘ K</kbd
         ></label
       >
-      <div class="h-6 w-px bg-[var(--color-panel-border)]" />
+      <div class="hidden h-6 w-px bg-[var(--color-panel-border)] md:block" />
       <select
         v-model="priorityFilter"
         :aria-label="$t('board.priorityFilter')"
@@ -275,6 +287,30 @@ async function saveView() {
         <option value="medium">{{ $t('task.priorityValue.medium') }}</option>
         <option value="low">{{ $t('task.priorityValue.low') }}</option>
       </select>
+      <select
+        v-model="assigneeFilter"
+        :aria-label="$t('task.assignee')"
+        class="h-11 bg-transparent px-3 text-sm outline-none"
+      >
+        <option :value="null">{{ $t('pages.analytics.allAssignees') }}</option>
+        <option
+          v-for="person in assignees"
+          :key="person.id"
+          :value="person.id"
+        >
+          {{ person.name }}
+        </option>
+      </select>
+      <UButton
+        v-if="statusFilter"
+        size="xs"
+        color="neutral"
+        variant="soft"
+        icon="i-lucide-filter-x"
+        @click="statusFilter = null"
+      >
+        {{ $t(`task.statusValue.${statusFilter}`) }}
+      </UButton>
       <button
         class="text-secondary inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]"
         @click="saveView"
