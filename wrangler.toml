@@ -5,6 +5,15 @@ compatibility_flags = ["nodejs_compat"]
 main = ".output/server/index.mjs"
 routes = [{ pattern = "weekflow.pp.ua", custom_domain = true }]
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+head_sampling_rate = 1
+
 [assets]
 directory = ".output/public"
 binding = "ASSETS"

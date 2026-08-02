@@ -1,6 +1,6 @@
 # WeekFlow
 
-WeekFlow — персональний і командний планувальник, побудований навколо тижневого робочого циклу. Застосунок поєднує Kanban-дошку, календар, аналітику, повторювані задачі та спільні проєкти в одному швидкому інтерфейсі.
+WeekFlow — персональний і командний workspace для планування навколо тижневого робочого циклу. Він поєднує задачі, календар, процеси, цілі, щоденні нотатки та командне керування в одному адаптивному PWA.
 
 **Production:** [weekflow.pp.ua](https://weekflow.pp.ua)
 
@@ -10,15 +10,17 @@ WeekFlow — персональний і командний планувальн
 - Тижнева дошка з drag-and-drop, компактним режимом, WIP-сигналами та швидким перенесенням задач.
 - Пріоритети, дедлайни, теги, повторення, підзадачі та коментарі.
 - Представлення «Сьогодні», «Майбутні», «Прострочені», календар і таймлайн.
-- Dashboard із KPI та легкими графіками, тижневий огляд, персональна дошка датованих checklist-стікерів, активність та архів.
+- Інтерактивна аналітика з KPI, трендами, фільтрами й переходами від графіка до відповідних задач.
+- Інтерактивний календар із місячним та agenda-представленнями, фільтрами й оцінкою навантаження.
+- Тижневий огляд, персональна дошка датованих checklist-стікерів, журнал активності та архів.
 - Focus-таймер, Inbox для швидкого захоплення задач і персональні шаблони.
 - Спільні проєкти із запрошеннями та ролями `editor` і `viewer`.
 - Збережені фільтри, глобальний пошук `⌘/Ctrl + K`, JSON/CSV-експорт.
 - Адаптивний інтерфейс, світла й темна теми, Lucide-іконки та installable PWA.
-- Адміністративне керування ролями й доступом до акаунтів.
+- Admin Control Center із системними метриками, пошуком, bulk actions, аудитом, керуванням ролями, доступом і PM-командами.
 - PM-команди: учасники, персональні й командні цілі, task progress та загальний dashboard.
 - Гнучка робота із задачами: drawer деталей, inline editing, виконавці, масові операції, дублювання, undo та табличний вигляд.
-- Проєктні workflow-етапи з WIP-лімітами й автоматизації для створення задач і зміни статусів.
+- Візуальний workflow builder: перевпорядкування етапів, WIP-ліміти та керовані автоматизації для створення задач і зміни статусів.
 
 ## Ролі та доступ
 
@@ -34,33 +36,33 @@ WeekFlow — персональний і командний планувальн
 - Nuxt UI, Tailwind CSS 4, Nuxt Icon, Nuxt Color Mode та Nuxt Image.
 - Nitro API на Cloudflare Workers.
 - Cloudflare D1 і Drizzle ORM.
-- Zod, date-fns, VueUse, Nuxt A11y, Nuxt Hints та Vite PWA.
+- Unovis, Zod, date-fns, VueUse, Nuxt A11y, Nuxt Hints та Vite PWA.
 - pnpm і Wrangler.
 
 ## Архітектура
 
-Клієнтська частина в `app/` розділена на чотири шари:
+Клієнтська частина використовує шарову архітектуру:
 
 ```text
-presentation/  сторінки та Vue-компоненти
+app/presentation/  сторінки та Vue-компоненти
       ↓
-application/   Pinia stores, composables і сценарії використання
+app/application/   Pinia stores, composables і сценарії використання
       ↓
-domain/        сутності та чисті бізнес-правила
+app/domain/        сутності та чисті бізнес-правила
       ↓
-data/          репозиторії й запити до Nitro API
+app/data/          репозиторії й типізовані запити до Nitro API
 ```
 
-Компоненти працюють зі станом через application layer, а мережеві запити зосереджені в data layer. Серверні маршрути розташовані в `server/api/`, схема бази — у `server/db/schema.ts`, а SQL-міграції — у `server/db/migrations/`.
+Компоненти працюють зі станом через application layer, а мережеві запити зосереджені в data layer. Серверні маршрути розташовані в `server/api/`, авторизація та правила доступу — у `server/utils/`, схема бази — у `server/db/schema.ts`, а SQL-міграції — у `server/db/migrations/`.
 
 UI primitives розділені на `base`, `form`, `layout` і `overlay`; правила повторного використання описані в [`docs/ui-components.md`](docs/ui-components.md).
 Сторінки використовують directory-first Nuxt routing (`<route>/index.vue`, `[param]/index.vue`); конвенції описані в [`docs/page-routing.md`](docs/page-routing.md).
 
 UI-тексти локалізуються через Nuxt i18n; правила та структура словників описані в [`docs/localization.md`](docs/localization.md).
 
-## Локальний запуск
+## Вимоги й локальний запуск
 
-Потрібні Node.js, pnpm і Google OAuth Web credentials.
+Потрібні Node.js 24, pnpm 10, Cloudflare Wrangler і Google OAuth Web credentials.
 
 ```bash
 pnpm install
@@ -147,21 +149,31 @@ pnpm test:watch
 pnpm format
 ```
 
-## Міграції D1
+## База даних і міграції D1
 
 Після зміни `server/db/schema.ts`:
 
 ```bash
 pnpm db:generate
 pnpm db:migrate:local
+```
+
+Локальну міграцію потрібно застосувати й перевірити до commit. Після push у `main` production workflow:
+
+1. перевіряє список remote migrations;
+2. зберігає D1 Time Travel recovery bookmark і metadata релізу на 30 днів;
+3. застосовує pending migrations до production D1;
+4. лише після цього публікує Worker та виконує smoke checks.
+
+Ручну production-міграцію використовуйте лише для контрольованих операцій поза CI:
+
+```bash
 pnpm db:migrate:remote
 ```
 
-Міграції не запускаються автоматично під час deploy і мають застосовуватися окремо для кожного середовища.
-
 ## Deployment
 
-Production secrets налаштовуються у Cloudflare Worker, після чого застосунок публікується командою:
+Production secrets OAuth і session налаштовуються безпосередньо у Cloudflare Worker. Для контрольованого ручного deploy доступна команда:
 
 ```bash
 pnpm deploy
@@ -169,25 +181,50 @@ pnpm deploy
 
 Конфігурація Worker і D1 binding зберігається у `wrangler.toml`. Production-секрети Cloudflare не копіюються до локального `.env`.
 
-Push у гілку `main` автоматично запускає GitHub Actions workflow: встановлення залежностей, typecheck, production build, deploy Worker і перевірку production endpoint. Workflow також можна запустити вручну через **Actions → Deploy production → Run workflow**. D1 migrations залишаються окремим контрольованим кроком і мають застосовуватися командою `pnpm db:migrate:remote` перед push, який використовує нову схему.
+Push у гілку `main` автоматично запускає GitHub Actions workflow: frozen install, повний quality gate, перевірку Cloudflare credentials, recovery metadata, D1 migrations, Worker deploy, перевірку сайту та D1-aware API health check. Workflow також можна запустити вручну через **Actions → Deploy production → Run workflow**.
 
 Для CI/CD у GitHub мають бути налаштовані repository secrets:
 
 ```text
-CLOUDFLARE_ACCOUNT_ID
 CLOUDFLARE_API_TOKEN
 ```
+
+`account_id`, Worker route і D1 binding зберігаються у `wrangler.toml`; дублювати account ID у GitHub Secrets не потрібно.
+
+## Спостережуваність
+
+- `GET /api/health` перевіряє доступність Worker і production D1 та повертає `requestId` для діагностики.
+- API й OAuth-виклики отримують `x-request-id`; безпечний ID від клієнта зберігається, некоректний замінюється.
+- Структуровані JSON-логи містять метод, шлях без query-параметрів, HTTP-статус і тривалість запиту.
+- Cloudflare Workers Logs та invocation logs увімкнені у `wrangler.toml`.
+- Після deploy CI перевіряє і канонічну сторінку, і `/api/health` з реальним D1-запитом.
 
 ## Структура проєкту
 
 ```text
-app/                    клієнтський застосунок
-server/api/             Nitro API
+app/presentation/       Nuxt pages, layouts і reusable UI
+app/application/        composables, Pinia stores і use cases
+app/domain/             сутності та чисті бізнес-правила
+app/data/               HTTP client і API repositories
+server/api/             Nitro API routes
+server/middleware/      request observability
+server/utils/           authorization, validation і server helpers
 server/db/              D1 schema, migrations і seed
-updates/                журнал змін
-nuxt.config.ts          Nuxt, UI, icons і PWA
-wrangler.toml           Cloudflare Worker та D1 bindings
+tests/                  domain, data, server і component coverage
+docs/                   архітектурні конвенції та upgrade roadmap
+updates/                журнал реалізованих змін
+.github/workflows/      production delivery pipeline
+nuxt.config.ts          Nuxt modules, i18n, UI, icons і PWA
+wrangler.toml           Cloudflare Worker, observability та D1 bindings
 ```
+
+## Документація
+
+- [UI components](docs/ui-components.md) — структура primitives і правила повторного використання.
+- [Page routing](docs/page-routing.md) — directory-first Nuxt routing.
+- [Localization](docs/localization.md) — правила i18n та словників.
+- [Upgrade roadmap](docs/upgrade-roadmap-2026-08.md) — технічний аудит і послідовність розвитку.
+- [Dev Log](updates/2026-08-01.md) — реалізовані зміни, issue references та перевірки.
 
 ## Безпека
 

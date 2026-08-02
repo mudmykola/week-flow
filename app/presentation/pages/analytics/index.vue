@@ -280,7 +280,12 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
               >{{ weeks.length }} {{ $t('pages.analytics.weeks') }}</UBadge
             >
           </div>
-          <TrendChart :data="trendData" />
+          <ClientOnly>
+            <LazyTrendChart :data="trendData" />
+            <template #fallback>
+              <USkeleton class="h-[300px] rounded-xl" />
+            </template>
+          </ClientOnly>
           <div class="mt-2 flex flex-wrap gap-2">
             <UButton
               v-for="point in trendData.slice(-4)"
@@ -298,11 +303,16 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
         <article class="section-card min-w-0">
           <h2 class="font-display text-lg">{{ $t('pages.analytics.statuses') }}</h2>
           <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.activeTasks') }}</p>
-          <DonutBreakdown
-            class="mt-3"
-            :items="statusItems"
-            @select="openTasks({ status: $event.key as TaskStatus })"
-          />
+          <ClientOnly>
+            <LazyDonutBreakdown
+              class="mt-3"
+              :items="statusItems"
+              @select="openTasks({ status: $event.key as TaskStatus })"
+            />
+            <template #fallback>
+              <USkeleton class="mt-3 h-[250px] rounded-xl" />
+            </template>
+          </ClientOnly>
         </article>
       </section>
 
@@ -310,11 +320,16 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
         <article class="section-card min-w-0">
           <h2 class="font-display text-lg">{{ $t('pages.analytics.priorities') }}</h2>
           <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.prioritiesHint') }}</p>
-          <BarBreakdown
-            class="mt-3"
-            :items="priorityItems"
-            @select="openTasks({ priority: $event.key as TaskPriority })"
-          />
+          <ClientOnly>
+            <LazyBarBreakdown
+              class="mt-3"
+              :items="priorityItems"
+              @select="openTasks({ priority: $event.key as TaskPriority })"
+            />
+            <template #fallback>
+              <USkeleton class="mt-3 h-[280px] rounded-xl" />
+            </template>
+          </ClientOnly>
         </article>
         <article class="section-card">
           <h2 class="font-display text-lg">{{ $t('pages.analytics.activeProjects') }}</h2>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
 import { createTask, fetchAllTasks } from '~/data/repositories/tasksRepository'
+import { navigationForRole } from '~/domain/services/navigation'
 import { getCurrentWeek } from '~/domain/services/week'
 
 const route = useRoute()
@@ -23,29 +24,9 @@ const reusableTags = computed(() =>
   [...new Set(allTasks.value.flatMap((task) => task.tags ?? []))].sort((a, b) => a.localeCompare(b, 'uk'))
 )
 
-const navigation = computed(() => [
-  { label: t('nav.board'), icon: 'i-lucide-layout-dashboard', to: '/' },
-  { label: t('nav.focus'), icon: 'i-lucide-timer', to: '/focus' },
-  { label: t('nav.inbox'), icon: 'i-lucide-inbox', to: '/inbox' },
-  { label: t('nav.goals'), icon: 'i-lucide-target', to: '/goals' },
-  { label: t('nav.today'), icon: 'i-lucide-sun', to: '/today' },
-  { label: t('nav.upcoming'), icon: 'i-lucide-clock-3', to: '/upcoming' },
-  { label: t('nav.overdue'), icon: 'i-lucide-triangle-alert', to: '/overdue' },
-  { label: t('nav.calendar'), icon: 'i-lucide-calendar-days', to: '/calendar' },
-  { label: t('nav.timeline'), icon: 'i-lucide-gantt-chart', to: '/timeline' },
-  { label: t('nav.analytics'), icon: 'i-lucide-chart-no-axes-combined', to: '/analytics' },
-  { label: t('nav.review'), icon: 'i-lucide-sparkles', to: '/review' },
-  { label: t('nav.templates'), icon: 'i-lucide-copy-plus', to: '/templates' },
-  { label: t('nav.notes'), icon: 'i-lucide-sticky-note', to: '/notes' },
-  { label: t('nav.activity'), icon: 'i-lucide-activity', to: '/activity' },
-  { label: t('nav.workflows'), icon: 'i-lucide-workflow', to: '/workflows' },
-  { label: t('nav.archive'), icon: 'i-lucide-archive', to: '/archive' },
-  { label: t('nav.settings'), icon: 'i-lucide-settings-2', to: '/settings' },
-  ...(user.value?.role === 'pm' || user.value?.role === 'admin'
-    ? [{ label: t('nav.team'), icon: 'i-lucide-users-round', to: '/team' }]
-    : []),
-  ...(user.value?.role === 'admin' ? [{ label: t('nav.admin'), icon: 'i-lucide-shield-check', to: '/admin' }] : [])
-])
+const navigation = computed(() =>
+  navigationForRole(user.value?.role).map((item) => ({ ...item, label: t(item.label) }))
+)
 
 const results = computed(() => {
   const term = query.value.trim().toLowerCase()

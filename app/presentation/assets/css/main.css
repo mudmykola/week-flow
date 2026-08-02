@@ -8,6 +8,8 @@
   --color-panel-bg: #ffffff;
   --color-panel-border: rgba(0, 0, 0, 0.08);
   --color-card-bg: #ffffff;
+  --color-skeleton: #e9e9e9;
+  --color-skeleton-highlight: rgba(255, 255, 255, 0.72);
   --color-text-primary: #0f0f0f;
   --color-text-secondary: #808080;
   --color-status-todo: #9ca3af;
@@ -33,6 +35,8 @@
   --color-panel-bg: #151515;
   --color-panel-border: rgba(255, 255, 255, 0.1);
   --color-card-bg: #1b1b1b;
+  --color-skeleton: #242424;
+  --color-skeleton-highlight: rgba(255, 255, 255, 0.055);
   --color-text-primary: #f7f7f7;
   --color-text-secondary: #999999;
 }
@@ -66,6 +70,35 @@ body {
     'Segoe UI',
     sans-serif;
   font-weight: 500;
+}
+
+.weekflow-skeleton {
+  position: relative;
+  overflow: hidden;
+  animation: none;
+  background: var(--color-skeleton);
+}
+
+.weekflow-skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(100deg, transparent 22%, var(--color-skeleton-highlight) 46%, transparent 70%);
+  transform: translateX(-100%);
+  animation: weekflow-skeleton-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes weekflow-skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekflow-skeleton::after {
+    animation: none;
+    opacity: 0.45;
+  }
 }
 
 button,

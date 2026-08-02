@@ -12,6 +12,7 @@ import Modal from '~/presentation/components/overlay/Modal.vue'
 import FormField from '~/presentation/components/form/FormField.vue'
 import FormInput from '~/presentation/components/form/FormInput.vue'
 import FormSelect from '~/presentation/components/form/FormSelect.vue'
+import FormCheckbox from '~/presentation/components/form/FormCheckbox.vue'
 import AppShell from '~/presentation/components/shell/AppShell.vue'
 import { makeTask } from '../fixtures'
 
@@ -68,6 +69,14 @@ describe('shared UI components', () => {
     expect(wrapper.get('select').attributes('disabled')).toBeDefined()
     expect(wrapper.get('option').text()).toBe('Немає доступних варіантів')
     expect(wrapper.get('option').attributes('disabled')).toBeDefined()
+  })
+
+  it('supports compact icon-only checkboxes without losing an accessible name', async () => {
+    const wrapper = await mountSuspended(FormCheckbox, {
+      props: { modelValue: false, 'aria-label': 'Вибрати користувача' }
+    })
+    expect(wrapper.text()).toBe('')
+    expect(wrapper.get('input').attributes('aria-label')).toBe('Вибрати користувача')
   })
 
   it('emits task interactions by mouse and keyboard', async () => {

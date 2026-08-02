@@ -44,7 +44,7 @@ describe('BEM presentation contract', () => {
   const files = vueFiles(presentationRoot)
 
   it('assigns a route or component block to every Vue template', () => {
-    expect(files).toHaveLength(48)
+    expect(files).toHaveLength(49)
     for (const file of files) {
       const opening = rootOpeningTag(readFileSync(file, 'utf8'))
       const classes = opening.match(/\bclass="([^"]*)"/)?.[1]?.split(/\s+/) ?? []
