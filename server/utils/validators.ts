@@ -41,14 +41,40 @@ export const updateTaskSchema = z.object({
 export const bulkTaskSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(100),
   patch: updateTaskSchema
-    .pick({ status: true, projectId: true, week: true, priority: true, assigneeId: true, archivedAt: true })
+    .pick({
+      status: true,
+      projectId: true,
+      week: true,
+      priority: true,
+      dueDate: true,
+      assigneeId: true,
+      archivedAt: true
+    })
     .strict()
 })
 
-export const createSubtaskSchema = z.object({ title: z.string().trim().min(1).max(200) })
+export const createSubtaskSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  note: z.string().max(2000).nullable().optional(),
+  status: taskStatusSchema.optional().default('todo'),
+  priority: taskPrioritySchema.optional().default('medium'),
+  dueDate: dateSchema.nullable().optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  sort: z.number().int().min(0).optional()
+})
 export const updateSubtaskSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
-  done: z.boolean().optional()
+  note: z.string().max(2000).nullable().optional(),
+  done: z.boolean().optional(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueDate: dateSchema.nullable().optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  sort: z.number().int().min(0).optional()
+})
+export const bulkSubtaskSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100),
+  patch: updateSubtaskSchema.pick({ done: true, status: true }).strict()
 })
 export const createCommentSchema = z.object({ body: z.string().trim().min(1).max(2000) })
 export const createInvitationSchema = z.object({
@@ -89,6 +115,20 @@ export const updateStickyNoteSchema = z
     done: z.boolean().optional()
   })
   .refine((value) => Object.keys(value).length > 0)
+
+export const focusKindSchema = z.enum(['focus', 'short_break', 'long_break'])
+export const createFocusSessionSchema = z.object({
+  taskId: z.string().uuid().nullable().optional(),
+  kind: focusKindSchema,
+  plannedSeconds: z.number().int().min(60).max(14_400),
+  note: z.string().max(1000).nullable().optional()
+})
+export const updateFocusSessionSchema = z.object({
+  status: z.enum(['active', 'completed', 'interrupted']).optional(),
+  elapsedSeconds: z.number().int().min(0).max(14_400).optional(),
+  note: z.string().max(1000).nullable().optional(),
+  result: z.string().max(1000).nullable().optional()
+})
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>

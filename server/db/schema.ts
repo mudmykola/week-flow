@@ -72,6 +72,9 @@ export const workflowStages = sqliteTable(
     category: text('category', { enum: ['todo', 'in_progress', 'done'] }).notNull(),
     position: integer('position').notNull().default(0),
     wipLimit: integer('wip_limit'),
+    wipPolicy: text('wip_policy', { enum: ['warn', 'block'] })
+      .notNull()
+      .default('warn'),
     createdAt: integer('created_at').notNull()
   },
   (table) => [index('workflow_stages_project_idx').on(table.projectId, table.position)]
@@ -89,10 +92,33 @@ export const automationRules = sqliteTable(
     triggerValue: text('trigger_value'),
     action: text('action', { enum: ['set_priority', 'assign_user', 'add_tag'] }).notNull(),
     actionValue: text('action_value').notNull(),
+    conditions: text('conditions', { mode: 'json' })
+      .$type<Array<{ field: string; operator: string; value: string }>>()
+      .notNull()
+      .default([]),
+    actions: text('actions', { mode: 'json' }).$type<Array<{ type: string; value: string }>>().notNull().default([]),
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
     createdAt: integer('created_at').notNull()
   },
   (table) => [index('automation_rules_project_idx').on(table.projectId)]
+)
+
+export const automationExecutions = sqliteTable(
+  'automation_executions',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    ruleId: text('rule_id').references(() => automationRules.id, { onDelete: 'set null' }),
+    taskId: text('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+    status: text('status', { enum: ['success', 'skipped', 'failed'] }).notNull(),
+    trigger: text('trigger').notNull(),
+    changes: text('changes', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
+    error: text('error'),
+    createdAt: integer('created_at').notNull()
+  },
+  (table) => [index('automation_execution_owner_created_idx').on(table.ownerId, table.createdAt)]
 )
 
 export const subtasks = sqliteTable(
@@ -103,11 +129,20 @@ export const subtasks = sqliteTable(
       .notNull()
       .references(() => tasks.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    note: text('note'),
     done: integer('done', { mode: 'boolean' }).notNull().default(false),
+    status: text('status', { enum: ['todo', 'in_progress', 'done'] })
+      .notNull()
+      .default('todo'),
+    priority: text('priority', { enum: ['low', 'medium', 'high', 'urgent'] })
+      .notNull()
+      .default('medium'),
+    dueDate: text('due_date'),
+    assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
     sort: integer('sort').notNull().default(0),
     createdAt: integer('created_at').notNull()
   },
-  (table) => [index('subtasks_task_id_idx').on(table.taskId)]
+  (table) => [index('subtasks_task_id_idx').on(table.taskId), index('subtasks_assignee_id_idx').on(table.assigneeId)]
 )
 
 export const comments = sqliteTable(
@@ -184,6 +219,33 @@ export const activityLogs = sqliteTable(
     createdAt: integer('created_at').notNull()
   },
   (table) => [index('activity_owner_created_idx').on(table.ownerId, table.createdAt)]
+)
+
+export const focusSessions = sqliteTable(
+  'focus_sessions',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: text('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+    kind: text('kind', { enum: ['focus', 'short_break', 'long_break'] })
+      .notNull()
+      .default('focus'),
+    status: text('status', { enum: ['active', 'completed', 'interrupted'] })
+      .notNull()
+      .default('active'),
+    plannedSeconds: integer('planned_seconds').notNull(),
+    elapsedSeconds: integer('elapsed_seconds').notNull().default(0),
+    note: text('note'),
+    result: text('result'),
+    startedAt: integer('started_at').notNull(),
+    endedAt: integer('ended_at')
+  },
+  (table) => [
+    index('focus_sessions_owner_started_idx').on(table.ownerId, table.startedAt),
+    index('focus_sessions_owner_status_idx').on(table.ownerId, table.status)
+  ]
 )
 
 export const savedViews = sqliteTable(

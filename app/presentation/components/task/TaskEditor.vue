@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Project } from '~/domain/entities/project'
-import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
-import { getStatusLabel, TASK_STATUSES } from '~/domain/services/taskStatus'
+import type { AssignableUser, Task, TaskPriority, TaskRecurrence, UpdateTaskInput } from '~/domain/entities/task'
 
 const props = defineProps<{
   open: boolean
@@ -11,16 +10,14 @@ const props = defineProps<{
   assignees?: AssignableUser[]
   tagOptions?: string[]
 }>()
-
 const emit = defineEmits<{
   close: []
+  updated: [task: Task]
+  promoted: [task: Task]
   save: [
-    payload: {
-      title: string
+    payload: Required<Pick<Task, 'title' | 'status' | 'priority'>> & {
       note: string | null
-      status: Task['status']
       projectId: string | null
-      priority: TaskPriority
       dueDate: string | null
       tags: string[]
       recurrence: TaskRecurrence | null
@@ -30,6 +27,9 @@ const emit = defineEmits<{
   ]
 }>()
 const { t } = useI18n()
+const taskRef = toRef(props, 'task')
+const { subtasks, comments, activity, loading: detailsLoading } = useTaskDetails(taskRef)
+const titleEditor = useTemplateRef<{ focus: () => void }>('titleEditor')
 
 const title = ref('')
 const note = ref('')
@@ -37,414 +37,307 @@ const status = ref<Task['status']>('todo')
 const projectId = ref<string | null>(null)
 const priority = ref<TaskPriority>('medium')
 const dueDate = ref('')
-const tags = ref('')
 const recurrence = ref<TaskRecurrence | null>(null)
 const assigneeId = ref<string | null>(null)
 const stageId = ref<string | null>(null)
+const tags = ref<string[]>([])
 const workflowStages = ref<Array<{ id: string; name: string; category: Task['status'] }>>([])
-const subtasks = ref<Array<{ id: string; title: string; done: boolean }>>([])
-const comments = ref<Array<{ id: string; body: string; authorName: string; createdAt: number }>>([])
-const newSubtask = ref('')
-const newComment = ref('')
+const hydrated = ref(false)
+const submitting = ref(false)
+const draft = useLocalStorage<Record<string, unknown> | null>('weekflow-task-draft-v2', null)
 const recentTags = useLocalStorage<string[]>('weekflow-reusable-tags', [])
 const taskDefaults = useLocalStorage<{
   projectId: string | null
   priority: TaskPriority
   recurrence: TaskRecurrence | null
   assigneeId: string | null
-}>('weekflow-task-defaults', {
-  projectId: null,
-  priority: 'medium',
-  recurrence: null,
-  assigneeId: null
-})
-
-const selectedTags = computed(() =>
-  tags.value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-)
+}>('weekflow-task-defaults', { projectId: null, priority: 'medium', recurrence: null, assigneeId: null })
 const availableTags = computed(() =>
   [...new Set([...(props.tagOptions ?? []), ...recentTags.value])]
-    .filter((tag) => !selectedTags.value.includes(tag))
-    .sort((a, b) => a.localeCompare(b, 'uk'))
+    .filter((tag) => !tags.value.includes(tag))
     .slice(0, 12)
 )
-
-watch(
-  () => [props.open, props.task] as const,
-  ([isOpen, task]) => {
-    if (!isOpen) return
-    title.value = task?.title ?? ''
-    note.value = task?.note ?? ''
-    status.value = task?.status ?? props.defaultStatus ?? 'todo'
-    const reusableProjectId = props.projects.some((project) => project.id === taskDefaults.value.projectId)
-      ? taskDefaults.value.projectId
-      : null
-    const reusableAssigneeId = props.assignees?.some((person) => person.id === taskDefaults.value.assigneeId)
-      ? taskDefaults.value.assigneeId
-      : null
-    projectId.value = task?.projectId ?? reusableProjectId
-    priority.value = task?.priority ?? taskDefaults.value.priority
-    dueDate.value = task?.dueDate ?? ''
-    tags.value = task?.tags?.join(', ') ?? ''
-    recurrence.value = task?.recurrence ?? taskDefaults.value.recurrence
-    assigneeId.value = task?.assigneeId ?? reusableAssigneeId
-    stageId.value = task?.stageId ?? null
-    subtasks.value = []
-    comments.value = []
-    if (task) {
-      $fetch<{ subtasks: typeof subtasks.value; comments: typeof comments.value }>(
-        `/api/tasks/${task.id}/details`
-      ).then((details) => {
-        subtasks.value = details.subtasks
-        comments.value = details.comments
-      })
-    }
-  },
-  { immediate: true }
-)
-
-function submit() {
-  if (!title.value.trim()) return
-  const normalizedTags = [...new Set(selectedTags.value)].slice(0, 10)
-  recentTags.value = [...new Set([...normalizedTags, ...recentTags.value])].slice(0, 30)
-  taskDefaults.value = {
-    projectId: projectId.value,
-    priority: priority.value,
-    recurrence: recurrence.value,
-    assigneeId: assigneeId.value
+function readStoredDraft() {
+  if (!import.meta.client) return draft.value
+  try {
+    return JSON.parse(localStorage.getItem('weekflow-task-draft-v2') ?? 'null') as Record<string, unknown> | null
+  } catch {
+    return draft.value
   }
-  emit('save', {
+}
+
+const {
+  state: saveState,
+  error: saveError,
+  schedule: scheduleSave,
+  cancel: cancelSave
+} = useTaskAutosave(async (patch) => {
+  if (!props.task) return
+  const updated = await $fetch<Task>(`/api/tasks/${props.task.id}`, { method: 'PATCH', body: patch })
+  emit('updated', updated)
+})
+
+function payload() {
+  return {
     title: title.value.trim(),
     note: note.value.trim() || null,
     status: status.value,
     projectId: projectId.value,
     priority: priority.value,
     dueDate: dueDate.value || null,
-    tags: normalizedTags,
+    tags: tags.value,
     recurrence: recurrence.value,
     assigneeId: assigneeId.value,
     stageId: stageId.value
-  })
+  }
 }
 
-function reuseTag(tag: string) {
-  tags.value = [...new Set([...selectedTags.value, tag])].slice(0, 10).join(', ')
-}
+watch(
+  () => [props.open, props.task] as const,
+  ([open, task]) => {
+    if (!open) return
+    hydrated.value = false
+    cancelSave()
+    const savedDraft = !task ? readStoredDraft() : null
+    title.value = task?.title ?? String(savedDraft?.title ?? '')
+    note.value = task?.note ?? String(savedDraft?.note ?? '')
+    status.value = task?.status ?? (savedDraft?.status as Task['status']) ?? props.defaultStatus ?? 'todo'
+    projectId.value = task?.projectId ?? (savedDraft?.projectId as string | null) ?? taskDefaults.value.projectId
+    priority.value = task?.priority ?? (savedDraft?.priority as TaskPriority) ?? taskDefaults.value.priority
+    dueDate.value = task?.dueDate ?? String(savedDraft?.dueDate ?? '')
+    recurrence.value =
+      task?.recurrence ?? (savedDraft?.recurrence as TaskRecurrence | null) ?? taskDefaults.value.recurrence
+    assigneeId.value = task?.assigneeId ?? (savedDraft?.assigneeId as string | null) ?? taskDefaults.value.assigneeId
+    stageId.value = task?.stageId ?? null
+    tags.value = task?.tags ? [...task.tags] : []
+    hydrated.value = true
+    void nextTick(() => titleEditor.value?.focus())
+  },
+  { immediate: true }
+)
 
-function removeTag(tag: string) {
-  tags.value = selectedTags.value.filter((item) => item !== tag).join(', ')
-}
+watch(
+  [title, note, status, projectId, priority, dueDate, recurrence, assigneeId, stageId, tags],
+  () => {
+    if (!hydrated.value || !props.open) return
+    const value = payload()
+    if (props.task) scheduleSave(value as UpdateTaskInput)
+    else draft.value = value
+  },
+  { deep: true }
+)
 
 watch(projectId, async (id) => {
   workflowStages.value = id
     ? await $fetch<Array<{ id: string; name: string; category: Task['status'] }>>(`/api/projects/${id}/workflow` as any)
     : []
-  if (stageId.value && !workflowStages.value.some((stage) => stage.id === stageId.value)) stageId.value = null
+  if (stageId.value && !workflowStages.value.some((item) => item.id === stageId.value)) stageId.value = null
 })
-
 watch(stageId, (id) => {
-  const selected = workflowStages.value.find((stage) => stage.id === id)
-  if (selected) status.value = selected.category
+  const stage = workflowStages.value.find((item) => item.id === id)
+  if (stage) status.value = stage.category
 })
 
-async function addSubtask() {
-  if (!props.task || !newSubtask.value.trim()) return
-  const item = await $fetch<(typeof subtasks.value)[number]>(`/api/tasks/${props.task.id}/subtasks`, {
-    method: 'POST',
-    body: { title: newSubtask.value }
-  })
-  subtasks.value.push(item)
-  newSubtask.value = ''
+async function submit() {
+  if (!title.value.trim() || submitting.value) return
+  submitting.value = true
+  try {
+    recentTags.value = [...new Set([...tags.value, ...recentTags.value])].slice(0, 30)
+    taskDefaults.value = {
+      projectId: projectId.value,
+      priority: priority.value,
+      recurrence: recurrence.value,
+      assigneeId: assigneeId.value
+    }
+    if (props.task) scheduleSave(payload())
+    else {
+      emit('save', payload())
+      draft.value = null
+    }
+  } finally {
+    submitting.value = false
+  }
 }
-
-async function toggleSubtask(item: (typeof subtasks.value)[number]) {
-  item.done = !item.done
-  await $fetch(`/api/subtasks/${item.id}`, { method: 'PATCH', body: { done: item.done } })
+function addTag(event: KeyboardEvent) {
+  const input = event.target as HTMLInputElement
+  const value = input.value.trim().replace(/^#/, '')
+  if (!value || tags.value.includes(value) || tags.value.length >= 10) return
+  addTagValue(value)
+  input.value = ''
 }
-
-async function addComment() {
-  if (!props.task || !newComment.value.trim()) return
-  await $fetch(`/api/tasks/${props.task.id}/comments`, { method: 'POST', body: { body: newComment.value } })
-  comments.value.push({
-    id: crypto.randomUUID(),
-    body: newComment.value,
-    authorName: t('common.you'),
-    createdAt: Date.now()
-  })
-  newComment.value = ''
+function addTagValue(value: string) {
+  const normalized = value.trim().replace(/^#/, '')
+  if (!normalized || tags.value.includes(normalized) || tags.value.length >= 10) return
+  tags.value = [...tags.value, normalized]
+  recentTags.value = [...new Set([normalized, ...recentTags.value])].slice(0, 30)
 }
+function close() {
+  if (saveState.value === 'saving' && props.task) scheduleSave(payload())
+  emit('close')
+}
+useTaskKeyboard({
+  enabled: computed(() => props.open),
+  onCreate: () => {},
+  onEdit: () => {},
+  onClose: close,
+  onSave: submit,
+  onSearch: () => {},
+  onMove: () => {},
+  onCommands: () => {}
+})
 </script>
 
 <template>
   <AppDrawer
-    class="task-editor"
+    class="task-editor task-workspace"
     :open="open"
     :title="task ? $t('task.details') : $t('shell.newTask')"
     :eyebrow="task ? $t('task.identifier', { id: task.id.slice(0, 8) }) : $t('task.create')"
     icon="i-lucide-square-check-big"
-    @close="emit('close')"
+    size="fullscreen"
+    @close="close"
   >
-    <div class="space-y-4">
-      <section class="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-bg-alt)]/45 p-3.5 sm:p-4">
-        <div class="mb-3 flex items-center gap-2">
+    <div class="task-workspace__content space-y-4">
+      <header class="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-4">
+        <div class="mb-2 flex items-center justify-between gap-3">
+          <span class="text-secondary text-xs">{{ task ? $t('task.editing') : $t('task.newDraft') }}</span>
           <span
-            class="grid size-7 place-items-center rounded-lg bg-[var(--color-panel-bg)] text-[var(--color-accent)] shadow-sm"
+            class="inline-flex items-center gap-1.5 text-xs"
+            :class="saveState === 'error' ? 'text-[var(--color-danger)]' : 'text-secondary'"
           >
             <UIcon
-              name="i-lucide-pencil-line"
-              class="size-3.5"
+              :name="
+                saveState === 'saving'
+                  ? 'i-lucide-loader-circle'
+                  : saveState === 'error'
+                    ? 'i-lucide-circle-alert'
+                    : 'i-lucide-cloud-check'
+              "
+              :class="{ 'animate-spin': saveState === 'saving' }"
             />
+            {{
+              saveState === 'saving'
+                ? $t('task.saving')
+                : saveState === 'error'
+                  ? $t('task.saveFailed')
+                  : task
+                    ? $t('task.saved')
+                    : $t('task.draftSaved')
+            }}
           </span>
-          <h3 class="text-sm font-semibold">{{ $t('task.basics') }}</h3>
         </div>
-        <FormField
-          :label="$t('task.name')"
-          icon="i-lucide-type"
-          ><FormInput
-            v-model="title"
-            class="text-base font-semibold"
-            :placeholder="$t('task.namePlaceholder')"
-            @keyup.enter="submit"
-        /></FormField>
-        <FormField
-          class="mt-3"
-          :label="$t('task.note')"
-          icon="i-lucide-align-left"
-          ><FormTextarea
-            v-model="note"
-            rows="3"
-            :placeholder="$t('task.notePlaceholder')"
-        /></FormField>
-      </section>
-      <section class="rounded-2xl border border-[var(--color-panel-border)] p-3.5 sm:p-4">
-        <div class="mb-3 flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-lg bg-[var(--color-bg-alt)] text-[var(--color-accent)]">
-            <UIcon
-              name="i-lucide-sliders-horizontal"
-              class="size-3.5"
-            />
-          </span>
-          <h3 class="text-sm font-semibold">{{ $t('task.planning') }}</h3>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <FormField
-            :label="$t('task.status')"
-            icon="i-lucide-circle-dashed"
-            ><FormSelect v-model="status"
-              ><option
-                v-for="s in TASK_STATUSES"
-                :key="s"
-                :value="s"
-              >
-                {{ $t(getStatusLabel(s)) }}
-              </option></FormSelect
-            ></FormField
-          >
-          <FormField
-            :label="$t('task.project')"
-            icon="i-lucide-folder-kanban"
-            ><FormSelect v-model="projectId"
-              ><option :value="null">{{ $t('task.noProject') }}</option>
-              <option
-                v-for="project in projects"
-                :key="project.id"
-                :value="project.id"
-              >
-                {{ project.name }}
-              </option></FormSelect
-            ></FormField
-          >
-          <FormField
-            :label="$t('task.assignee')"
-            icon="i-lucide-user-round"
-            ><FormSelect v-model="assigneeId"
-              ><option :value="null">{{ $t('task.unassigned') }}</option>
-              <option
-                v-for="person in assignees"
-                :key="person.id"
-                :value="person.id"
-              >
-                {{ person.name }}
-              </option></FormSelect
-            ></FormField
-          >
-          <FormField
-            v-if="workflowStages.length"
-            :label="$t('task.workflowStage')"
-            icon="i-lucide-git-branch"
-            ><FormSelect v-model="stageId"
-              ><option :value="null">{{ $t('task.standardStatus') }}</option>
-              <option
-                v-for="item in workflowStages"
-                :key="item.id"
-                :value="item.id"
-              >
-                {{ item.name }}
-              </option></FormSelect
-            ></FormField
-          >
-          <FormField
-            :label="$t('task.priority')"
-            icon="i-lucide-flag"
-            ><FormSelect v-model="priority"
-              ><option value="low">{{ $t('task.priorityValue.low') }}</option>
-              <option value="medium">{{ $t('task.priorityValue.medium') }}</option>
-              <option value="high">{{ $t('task.priorityValue.high') }}</option>
-              <option value="urgent">{{ $t('task.priorityValue.urgent') }}</option></FormSelect
-            ></FormField
-          >
-          <FormField
-            :label="$t('task.deadline')"
-            icon="i-lucide-calendar-days"
-            ><FormInput
-              v-model="dueDate"
-              type="date"
-          /></FormField>
-          <FormField
-            :label="$t('task.recurrence')"
-            icon="i-lucide-repeat-2"
-            ><FormSelect v-model="recurrence"
-              ><option :value="null">{{ $t('task.noRecurrence') }}</option>
-              <option value="daily">{{ $t('task.recurrenceValue.daily') }}</option>
-              <option value="weekly">{{ $t('task.recurrenceValue.weekly') }}</option>
-              <option value="monthly">{{ $t('task.recurrenceValue.monthly') }}</option></FormSelect
-            ></FormField
-          >
-          <FormField
-            class="sm:col-span-2"
-            :label="$t('task.tags')"
-            icon="i-lucide-tags"
-          >
-            <FormInput
-              v-model="tags"
-              :placeholder="$t('task.tagsPlaceholder')"
-            />
-            <div
-              v-if="selectedTags.length"
-              class="mt-2 flex flex-wrap gap-1.5"
-            >
+        <TaskTitleEditor
+          ref="titleEditor"
+          v-model="title"
+          :placeholder="$t('task.namePlaceholder')"
+        />
+        <p
+          v-if="saveError"
+          class="mt-2 text-xs text-[var(--color-danger)]"
+        >
+          {{ saveError }}
+        </p>
+      </header>
+
+      <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <div class="space-y-4">
+          <TaskDescription v-model="note" />
+          <section class="rounded-2xl border border-[var(--color-panel-border)] p-4">
+            <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <UIcon name="i-lucide-tags" />{{ $t('task.tags') }}
+            </h3>
+            <div class="flex flex-wrap gap-1.5">
               <button
-                v-for="tag in selectedTags"
+                v-for="tag in tags"
                 :key="tag"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-accent)_13%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-accent)]"
+                class="rounded-full bg-[var(--color-bg-alt)] px-2.5 py-1 text-xs"
                 :aria-label="$t('task.removeTag', { tag })"
-                @click="removeTag(tag)"
+                @click="tags = tags.filter((item) => item !== tag)"
               >
-                #{{ tag }}
-                <UIcon
-                  name="i-lucide-x"
-                  class="size-3"
-                />
+                #{{ tag }} <UIcon name="i-lucide-x" />
               </button>
             </div>
+            <FormInput
+              class="mt-2"
+              :placeholder="$t('task.tagsPlaceholder')"
+              @keyup.enter="addTag"
+            />
             <div
               v-if="availableTags.length"
               class="mt-2 flex flex-wrap gap-1.5"
-              :aria-label="$t('task.savedTags')"
             >
               <button
                 v-for="tag in availableTags"
                 :key="tag"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-full border border-dashed border-[var(--color-panel-border)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)]"
-                @click="reuseTag(tag)"
+                class="text-secondary rounded-full border border-dashed border-[var(--color-panel-border)] px-2.5 py-1 text-xs hover:text-[var(--color-accent)]"
+                @click="addTagValue(tag)"
               >
-                <UIcon
-                  name="i-lucide-plus"
-                  class="size-3"
-                />{{ tag }}
+                <UIcon name="i-lucide-plus" />{{ tag }}
               </button>
             </div>
-          </FormField>
+          </section>
         </div>
-      </section>
-      <div
-        v-if="task"
-        class="grid gap-3 sm:grid-cols-2"
-      >
-        <section class="rounded-2xl border border-[var(--color-panel-border)] p-3.5">
-          <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <UIcon
-              name="i-lucide-list-checks"
-              class="size-4 text-[var(--color-accent)]"
-            />{{ $t('task.subtasks') }}
-          </h3>
-          <div class="space-y-2">
-            <label
-              v-for="item in subtasks"
-              :key="item.id"
-              class="flex items-center gap-2 text-sm"
-              ><input
-                :checked="item.done"
-                type="checkbox"
-                class="ui-checkbox"
-                @change="toggleSubtask(item)"
-              /><span :class="item.done ? 'text-secondary line-through' : ''">{{ item.title }}</span></label
-            >
-          </div>
-          <div class="mt-2 flex gap-2">
-            <FormInput
-              v-model="newSubtask"
-              size="sm"
-              :placeholder="$t('task.newSubtask')"
-              @keyup.enter="addSubtask"
-            /><IconButton
-              icon="i-lucide-plus"
-              :label="$t('task.addSubtask')"
-              size="sm"
-              @click="addSubtask"
-            />
-          </div>
-        </section>
-        <section class="rounded-2xl border border-[var(--color-panel-border)] p-3.5">
-          <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <UIcon
-              name="i-lucide-messages-square"
-              class="size-4 text-[var(--color-accent)]"
-            />{{ $t('task.comments') }}
-          </h3>
-          <div class="max-h-32 space-y-2 overflow-y-auto">
-            <div
-              v-for="comment in comments"
-              :key="comment.id"
-              class="rounded-lg bg-black/[0.03] p-2 text-sm"
-            >
-              <p>{{ comment.body }}</p>
-              <span class="text-secondary text-xs">{{ comment.authorName }}</span>
-            </div>
-          </div>
-          <div class="mt-2 flex gap-2">
-            <FormInput
-              v-model="newComment"
-              size="sm"
-              :placeholder="$t('task.comment')"
-              @keyup.enter="addComment"
-            /><IconButton
-              icon="i-lucide-send"
-              :label="$t('common.send')"
-              size="sm"
-              @click="addComment"
-            />
-          </div>
-        </section>
+        <TaskProperties
+          v-model:status="status"
+          v-model:project-id="projectId"
+          v-model:assignee-id="assigneeId"
+          v-model:priority="priority"
+          v-model:due-date="dueDate"
+          v-model:stage-id="stageId"
+          v-model:recurrence="recurrence"
+          :projects="projects"
+          :assignees="assignees ?? []"
+          :stages="workflowStages"
+        />
       </div>
+
+      <template v-if="task">
+        <div
+          v-if="detailsLoading"
+          class="grid gap-3 sm:grid-cols-2"
+        >
+          <div
+            v-for="index in 2"
+            :key="index"
+            class="skeleton h-40 rounded-2xl"
+          />
+        </div>
+        <TaskSubtasks
+          v-else
+          v-model="subtasks"
+          :task="task"
+          :assignees="assignees ?? []"
+          @promoted="emit('promoted', $event)"
+        />
+        <div class="grid gap-4 lg:grid-cols-2">
+          <TaskComments
+            v-model="comments"
+            :task-id="task.id"
+          /><TaskActivity :items="activity" />
+        </div>
+      </template>
     </div>
-    <template #footer
-      ><AppButton
-        variant="ghost"
-        icon="i-lucide-x"
-        @click="emit('close')"
-        >{{ $t('common.cancel') }}</AppButton
-      ><AppButton
-        variant="primary"
-        icon="i-lucide-check"
-        @click="submit"
-        >{{ $t('common.save') }}</AppButton
-      ></template
-    >
+    <template #footer>
+      <div class="flex w-full items-center justify-between gap-3">
+        <span class="text-secondary hidden text-xs sm:block">{{ $t('task.saveShortcut') }}</span>
+        <div class="ml-auto flex gap-2">
+          <AppButton
+            variant="ghost"
+            icon="i-lucide-x"
+            @click="close"
+            >{{ $t('common.close') }}</AppButton
+          ><AppButton
+            v-if="!task"
+            variant="primary"
+            icon="i-lucide-check"
+            :disabled="submitting || !title.trim()"
+            @click="submit"
+            >{{ $t('common.create') }}</AppButton
+          >
+        </div>
+      </div>
+    </template>
   </AppDrawer>
 </template>

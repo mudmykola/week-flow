@@ -1,3 +1,4 @@
+import { count, eq } from 'drizzle-orm'
 import { useDb } from '../../../db'
 import { subtasks } from '../../../db/schema'
 import { createSubtaskSchema } from '../../../utils/validators'
@@ -8,8 +9,23 @@ export default defineEventHandler(async (event) => {
   const taskId = getRouterParam(event, 'id')!
   const { user, task } = await requireTaskAccess(event, taskId, { write: true })
   const body = await readValidatedBody(event, createSubtaskSchema.parse)
-  const subtask = { id: crypto.randomUUID(), taskId, title: body.title, done: false, sort: 0, createdAt: Date.now() }
-  await useDb(event).insert(subtasks).values(subtask)
+  const db = useDb(event)
+  const countRows = await db.select({ value: count() }).from(subtasks).where(eq(subtasks.taskId, taskId))
+  const currentCount = countRows[0]?.value ?? 0
+  const subtask = {
+    id: crypto.randomUUID(),
+    taskId,
+    title: body.title,
+    note: body.note ?? null,
+    done: body.status === 'done',
+    status: body.status,
+    priority: body.priority,
+    dueDate: body.dueDate ?? null,
+    assigneeId: body.assigneeId ?? null,
+    sort: body.sort ?? currentCount,
+    createdAt: Date.now()
+  }
+  await db.insert(subtasks).values(subtask)
   await logActivity(event, {
     ownerId: task.ownerId!,
     actorId: user.id,

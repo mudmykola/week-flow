@@ -10,7 +10,10 @@ export default defineEventHandler(async (event) => {
   if (!existing) throw createError({ statusCode: 404 })
   await requireTaskAccess(event, existing.taskId, { write: true })
   const body = await readValidatedBody(event, updateSubtaskSchema.parse)
-  await useDb(event).update(subtasks).set(body).where(eq(subtasks.id, id))
+  const patch = { ...body }
+  if (body.done !== undefined) patch.status = body.done ? 'done' : 'todo'
+  if (body.status !== undefined) patch.done = body.status === 'done'
+  await useDb(event).update(subtasks).set(patch).where(eq(subtasks.id, id))
   const [result] = await useDb(event).select().from(subtasks).where(eq(subtasks.id, id))
   if (!result) throw createError({ statusCode: 404 })
   return result

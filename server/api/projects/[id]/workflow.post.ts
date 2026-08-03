@@ -8,7 +8,8 @@ const schema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   category: z.enum(['todo', 'in_progress', 'done']),
   position: z.number().int().min(0),
-  wipLimit: z.number().int().positive().nullable().optional()
+  wipLimit: z.number().int().positive().nullable().optional(),
+  wipPolicy: z.enum(['warn', 'block']).optional().default('warn')
 })
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id')!

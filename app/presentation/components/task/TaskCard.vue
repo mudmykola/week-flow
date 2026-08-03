@@ -52,6 +52,10 @@ const priorityColor: Record<Task['priority'], string> = {
   high: '#f59e0b',
   urgent: '#ef4444'
 }
+const today = new Date().toISOString().slice(0, 10)
+const overdue = computed(() =>
+  Boolean(props.task.dueDate && props.task.dueDate < today && props.task.status !== 'done')
+)
 </script>
 
 <template>
@@ -124,6 +128,7 @@ const priorityColor: Record<Task['priority'], string> = {
           <span
             v-if="task.dueDate"
             class="inline-flex items-center gap-1"
+            :class="{ 'font-semibold text-[var(--color-danger)]': overdue }"
             ><UIcon name="i-lucide-calendar" />{{ task.dueDate }}</span
           ><span
             v-if="assigneeName"
@@ -136,6 +141,20 @@ const priorityColor: Record<Task['priority'], string> = {
             v-for="tag in compact ? [] : task.tags"
             :key="tag"
             >#{{ tag }}</span
+          ><span
+            v-if="task.subtaskCount"
+            class="inline-flex items-center gap-1"
+            :title="$t('task.subtasks')"
+            ><UIcon name="i-lucide-list-checks" />{{ task.completedSubtaskCount ?? 0 }}/{{ task.subtaskCount }}</span
+          ><span
+            v-if="task.commentCount"
+            class="inline-flex items-center gap-1"
+            :title="$t('task.comments')"
+            ><UIcon name="i-lucide-message-circle" />{{ task.commentCount }}</span
+          ><span
+            v-if="overdue"
+            class="inline-flex items-center gap-1 text-[var(--color-danger)]"
+            ><UIcon name="i-lucide-triangle-alert" />{{ $t('task.overdue') }}</span
           >
         </div>
       </div>

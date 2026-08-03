@@ -1,6 +1,19 @@
 <script setup lang="ts">
-defineProps<{ open: boolean; title: string; eyebrow?: string; icon?: string }>()
+defineOptions({ inheritAttrs: false })
+withDefaults(
+  defineProps<{
+    open: boolean
+    title: string
+    eyebrow?: string
+    icon?: string
+    size?: 'default' | 'wide' | 'fullscreen'
+  }>(),
+  {
+    size: 'default'
+  }
+)
 const emit = defineEmits<{ close: [] }>()
+const attrs = useAttrs()
 </script>
 
 <template>
@@ -8,9 +21,16 @@ const emit = defineEmits<{ close: [] }>()
     ><div
       v-if="open"
       class="app-drawer ui-overlay justify-end"
+      v-bind="attrs"
       @click.self="emit('close')"
     >
-      <aside class="app-drawer__panel ui-drawer">
+      <aside
+        class="app-drawer__panel ui-drawer"
+        :class="{
+          'ui-drawer--wide': size === 'wide',
+          'ui-drawer--fullscreen': size === 'fullscreen'
+        }"
+      >
         <header class="app-drawer__header ui-drawer__header">
           <div class="flex min-w-0 items-center gap-3">
             <span

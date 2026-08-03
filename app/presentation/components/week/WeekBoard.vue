@@ -9,6 +9,8 @@ const props = defineProps<{
   getProject: (id: string | null) => Project | null
   selectedIds?: string[]
   getAssigneeName?: (id: string | null) => string
+  projects: Project[]
+  assignees: import('~/domain/entities/task').AssignableUser[]
 }>()
 
 const emit = defineEmits<{
@@ -20,12 +22,23 @@ const emit = defineEmits<{
   select: [id: string, selected: boolean]
   duplicate: [id: string]
   inlineTitle: [id: string, title: string]
+  quickCreate: [
+    payload: {
+      title: string
+      status: Task['status']
+      projectId: string | null
+      assigneeId: string | null
+      dueDate: string | null
+      priority: Task['priority']
+    }
+  ]
 }>()
 const { t } = useI18n()
 
 const columns = computed(() => TASK_STATUSES.map((status) => ({ status, title: t(getStatusLabel(status)) })))
 const density = useLocalStorage<'comfortable' | 'compact'>('weekflow-board-density', 'comfortable')
 const collapsedDone = useLocalStorage('weekflow-board-done-collapsed', false)
+const quickStatus = ref<Task['status'] | null>(null)
 
 const localLists = reactive<Record<Task['status'], Task[]>>({
   todo: [...props.tasksByStatus.todo],
@@ -56,6 +69,9 @@ function forwardSelect(id: string, selected: boolean) {
 }
 function forwardInlineTitle(id: string, title: string) {
   emit('inlineTitle', id, title)
+}
+function openQuick(status: Task['status']) {
+  quickStatus.value = quickStatus.value === status ? null : status
 }
 </script>
 
@@ -112,7 +128,7 @@ function forwardInlineTitle(id: string, title: string) {
             class="text-secondary grid size-8 place-items-center rounded-lg hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]"
             :title="$t('board.addTask')"
             :aria-label="$t('board.addTaskTo', { column: column.title })"
-            @click="emit('addTask', column.status)"
+            @click="openQuick(column.status)"
           >
             <UIcon
               name="i-lucide-plus"
@@ -156,6 +172,16 @@ function forwardInlineTitle(id: string, title: string) {
             />
           </template>
         </draggable>
+        <TaskQuickCreate
+          v-if="quickStatus === column.status"
+          class="mt-2"
+          :status="column.status"
+          :projects="projects"
+          :assignees="assignees"
+          @create="emit('quickCreate', $event)"
+          @full="emit('addTask', $event)"
+          @close="quickStatus = null"
+        />
         <div
           v-if="localLists[column.status].length === 0"
           class="grid place-items-center px-3 py-3 text-center"
@@ -172,7 +198,7 @@ function forwardInlineTitle(id: string, title: string) {
         <button
           class="text-secondary mt-2 flex h-9 items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] text-xs font-semibold hover:border-[var(--color-accent)] hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]"
           :aria-label="$t('board.addTaskTo', { column: column.title })"
-          @click="emit('addTask', column.status)"
+          @click="openQuick(column.status)"
         >
           <UIcon
             name="i-lucide-plus"

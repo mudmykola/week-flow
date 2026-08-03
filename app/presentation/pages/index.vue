@@ -37,6 +37,8 @@ const selectedIds = ref<string[]>([])
 const assignees = ref<AssignableUser[]>([])
 const undoAction = ref<null | { label: string; run: () => Promise<void> }>(null)
 const workspaceReady = ref(false)
+const searchInput = ref<HTMLInputElement | null>(null)
+const commandOpen = ref(false)
 const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
 let undoTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -81,6 +83,18 @@ onMounted(async () => {
     })
   ])
   workspaceReady.value = true
+  if (typeof route.query.task === 'string') {
+    try {
+      const details = await $fetch<{ task: Task }>(`/api/tasks/${route.query.task}/details`)
+      if (details.task.week !== week.value) {
+        week.value = details.task.week
+        await loadWeek()
+      }
+      openEdit(tasksStore.tasks.find((item) => item.id === details.task.id) ?? details.task, false)
+    } catch {
+      await navigateTo({ query: { ...route.query, task: undefined } }, { replace: true })
+    }
+  }
 })
 
 watch(week, loadWeek)
@@ -92,14 +106,16 @@ function openCreate(status: Task['status']) {
   editorOpen.value = true
 }
 
-function openEdit(task: Task) {
+function openEdit(task: Task, syncQuery = true) {
   editingTask.value = task
   editorOpen.value = true
+  if (syncQuery) void navigateTo({ query: { ...route.query, task: task.id, new: undefined } }, { replace: true })
 }
 
 function closeEditor() {
   editorOpen.value = false
   editingTask.value = null
+  void navigateTo({ query: { ...route.query, task: undefined, new: undefined } }, { replace: true })
 }
 
 async function handleSave(payload: {
@@ -122,6 +138,58 @@ async function handleSave(payload: {
   }
   closeEditor()
 }
+
+async function handleQuickCreate(payload: {
+  title: string
+  status: Task['status']
+  projectId: string | null
+  assigneeId: string | null
+  dueDate: string | null
+  priority: TaskPriority
+}) {
+  await tasksStore.addTask({ ...payload, week: week.value, sort: tasksStore.tasksByStatus[payload.status].length })
+}
+
+function handleUpdated(task: Task) {
+  const index = tasksStore.tasks.findIndex((item) => item.id === task.id)
+  if (index !== -1) tasksStore.tasks[index] = task
+  editingTask.value = task
+}
+
+function handlePromoted(task: Task) {
+  if (task.week === week.value) tasksStore.tasks.push(task)
+}
+
+const navigableTasks = computed(() => Object.values(boardTasks.value).flat())
+function moveSelection(direction: -1 | 1) {
+  if (!navigableTasks.value.length) return
+  const current = selectedIds.value[0]
+  const index = Math.max(
+    0,
+    navigableTasks.value.findIndex((item) => item.id === current)
+  )
+  const nextTask =
+    navigableTasks.value[(index + direction + navigableTasks.value.length) % navigableTasks.value.length]!
+  selectedIds.value = [nextTask.id]
+}
+useTaskKeyboard({
+  enabled: computed(() => workspaceReady.value && !editorOpen.value),
+  onCreate: () => openCreate('todo'),
+  onEdit: () => {
+    const task = tasksStore.tasks.find((item) => item.id === selectedIds.value[0])
+    if (task) openEdit(task)
+  },
+  onClose: () => {
+    selectedIds.value = []
+    commandOpen.value = false
+  },
+  onSave: () => {},
+  onSearch: () => searchInput.value?.focus(),
+  onMove: moveSelection,
+  onCommands: () => {
+    commandOpen.value = true
+  }
+})
 
 async function handleCycleStatus(task: Task) {
   await tasksStore.cycleStatus(task)
@@ -179,6 +247,9 @@ async function bulkPatch(patch: UpdateTaskInput) {
       status: task.status,
       priority: task.priority,
       assigneeId: task.assigneeId,
+      projectId: task.projectId,
+      dueDate: task.dueDate,
+      week: task.week,
       archivedAt: task.archivedAt
     }))
   await tasksStore.bulkPatch(ids, patch)
@@ -267,6 +338,7 @@ async function saveView() {
           name="i-lucide-search"
           class="text-secondary size-4"
         /><input
+          ref="searchInput"
           v-model="search"
           class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none"
           :placeholder="$t('board.findTask')"
@@ -363,6 +435,8 @@ async function saveView() {
       :get-project="projectsStore.getProject"
       :selected-ids="selectedIds"
       :get-assignee-name="getAssigneeName"
+      :projects="projectsStore.projects"
+      :assignees="assignees"
       @edit="openEdit"
       @delete="handleDelete"
       @cycle-status="handleCycleStatus"
@@ -371,6 +445,7 @@ async function saveView() {
       @select="toggleSelected"
       @duplicate="duplicate"
       @inline-title="(id, title) => patchTask(id, { title })"
+      @quick-create="handleQuickCreate"
     />
     <TaskTable
       v-else
@@ -404,7 +479,31 @@ async function saveView() {
         >
           {{ person.name }}
         </option></select
-      ><button
+      ><select
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        :aria-label="$t('task.project')"
+        @change="bulkPatch({ projectId: ($event.target as HTMLSelectElement).value || null })"
+      >
+        <option value="">{{ $t('board.changeProject') }}</option>
+        <option
+          v-for="project in projectsStore.projects"
+          :key="project.id"
+          :value="project.id"
+        >
+          {{ project.name }}
+        </option></select
+      ><input
+        type="date"
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        :aria-label="$t('task.deadline')"
+        @change="bulkPatch({ dueDate: ($event.target as HTMLInputElement).value || null })"
+      /><input
+        :value="week"
+        type="week"
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        :aria-label="$t('board.moveWeek')"
+        @change="bulkPatch({ week: ($event.target as HTMLInputElement).value })"
+      /><button
         class="rounded-lg px-3 py-2 text-xs text-[var(--color-danger)] hover:bg-[var(--color-bg-alt)]"
         @click="bulkPatch({ archivedAt: Date.now() })"
       >
@@ -438,6 +537,8 @@ async function saveView() {
       :tag-options="reusableTags"
       @close="closeEditor"
       @save="handleSave"
+      @updated="handleUpdated"
+      @promoted="handlePromoted"
     />
 
     <ProjectEditor
@@ -446,6 +547,14 @@ async function saveView() {
       @close="projectEditorOpen = false"
       @save="handleSaveProject"
       @delete="handleDeleteProject"
+    />
+    <TaskCommandMenu
+      :open="commandOpen"
+      @close="commandOpen = false"
+      @create="openCreate('todo')"
+      @search="searchInput?.focus()"
+      @complete-selected="bulkPatch({ status: 'done' })"
+      @archive-selected="bulkPatch({ archivedAt: Date.now() })"
     />
   </div>
 </template>

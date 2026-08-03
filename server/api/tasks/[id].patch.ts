@@ -8,6 +8,7 @@ import { logActivity } from '../../utils/activity'
 import { requireTaskAccess } from '../../utils/taskAccess'
 import { runTaskAutomations } from '../../utils/automations'
 import { requireAssignableUser } from '../../utils/assigneeAccess'
+import { assertWorkflowWip } from '../../utils/workflowWip'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
@@ -35,6 +36,14 @@ export default defineEventHandler(async (event) => {
   }
 
   await requireAssignableUser(event, body.assigneeId)
+  await assertWorkflowWip(event, body.stageId, existing.stageId)
+
+  const changedMetadata = Object.fromEntries(
+    Object.entries(body).filter(
+      ([key, value]) => JSON.stringify(existing[key as keyof typeof existing]) !== JSON.stringify(value)
+    )
+  )
+  if (!Object.keys(changedMetadata).length) return existing
 
   const patch: Record<string, unknown> = { ...body }
   if (body.status === 'done') {
@@ -76,7 +85,8 @@ export default defineEventHandler(async (event) => {
     action: 'task.updated',
     entityType: 'task',
     entityId: task.id,
-    metadata: body
+    metadata: changedMetadata,
+    coalesceMs: 120_000
   })
   return body.status && body.status !== existing.status ? runTaskAutomations(event, task, 'status_changed') : task
 })

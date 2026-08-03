@@ -13,6 +13,7 @@ import {
 } from '~/domain/services/analytics'
 import { getCurrentWeek, getPrevWeek } from '~/domain/services/week'
 import { priorityColors, priorityLabels, statusLabels } from '~/domain/services/taskLabels'
+import { focusStats, type FocusSession } from '~/domain/services/focus'
 
 const { t } = useI18n()
 const tasks = ref<Task[]>([])
@@ -20,6 +21,7 @@ const projects = ref<Project[]>([])
 const assignees = ref<AssignableUser[]>([])
 const loading = ref(true)
 const error = ref('')
+const focusSessions = ref<FocusSession[]>([])
 const filters = reactive<{
   period: AnalyticsPeriod
   projectId: string | null
@@ -37,10 +39,11 @@ async function loadDashboard() {
   loading.value = true
   error.value = ''
   try {
-    ;[tasks.value, projects.value, assignees.value] = await Promise.all([
+    ;[tasks.value, projects.value, assignees.value, focusSessions.value] = await Promise.all([
       fetchAllTasks(),
       fetchProjects(),
-      $fetch<AssignableUser[]>('/api/users/assignable')
+      $fetch<AssignableUser[]>('/api/users/assignable'),
+      $fetch<{ sessions: FocusSession[] }>('/api/focus').then((response) => response.sessions)
     ])
   } catch {
     error.value = t('pages.analytics.error')
@@ -65,6 +68,7 @@ const overdue = computed(() =>
 const trendData = computed(() => buildAnalyticsTrend(filteredTasks.value, weeks.value, today))
 const statusCounts = computed(() => countByStatus(periodTasks.value))
 const velocity = computed(() => trendData.value.slice(-4).reduce((sum, point) => sum + point.done, 0))
+const focusSummary = computed(() => focusStats(focusSessions.value))
 
 const statusItems = computed(() =>
   (
@@ -236,7 +240,7 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
       </UButton>
     </EmptyState>
     <template v-else>
-      <section class="analytics-page__metrics grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section class="analytics-page__metrics grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           :label="$t('pages.analytics.weekTasks')"
           :value="currentTasks.length"
@@ -264,6 +268,12 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
           :tone="currentCompletion >= 70 ? 'success' : 'accent'"
           :trend="`${completionDelta > 0 ? '+' : completionDelta < 0 ? '−' : ''}${Math.abs(completionDelta)}%`"
           :hint="$t('pages.analytics.completionHint')"
+        />
+        <MetricCard
+          :label="$t('pages.analytics.focusMinutes')"
+          :value="focusSummary.minutesToday"
+          icon="i-lucide-timer"
+          :hint="$t('pages.analytics.focusMinutesHint', { count: focusSummary.completedToday })"
         />
       </section>
 

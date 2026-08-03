@@ -50,6 +50,27 @@
       "when": 1785623191481,
       "tag": "0006_clean_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785790427536,
+      "tag": "0007_curious_albert_cleary",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1785793100344,
+      "tag": "0008_curious_the_captain",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785793980547,
+      "tag": "0009_many_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

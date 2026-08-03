@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
     actorId: user.id,
     action: 'task.deleted',
     entityType: 'task',
-    entityId: id
+    entityId: id,
+    metadata: { title: task.title }
   })
   return { ok: true }
 })

@@ -269,6 +269,8 @@ onKeyStroke('k', (event) => {
       @save="saveTask"
     />
 
+    <FocusMiniPlayer />
+
     <div
       v-if="commandOpen"
       class="fixed inset-0 z-60 flex items-start justify-center bg-black/45 p-4 pt-[12vh]"

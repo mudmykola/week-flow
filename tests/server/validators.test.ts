@@ -3,20 +3,30 @@
 import { describe, expect, it } from 'vitest'
 import {
   bulkTaskSchema,
+  bulkSubtaskSchema,
   createCommentSchema,
   createInvitationSchema,
+  createFocusSessionSchema,
   createProjectSchema,
   createStickyNoteSchema,
   createSubtaskSchema,
   createTaskSchema,
   moveWeekSchema,
   updateSettingsSchema,
+  updateFocusSessionSchema,
   updateStickyNoteSchema,
   updateSubtaskSchema,
   updateTaskSchema
 } from '../../server/utils/validators'
 
 describe('server validators', () => {
+  it('validates bounded focus session payloads', () => {
+    expect(createFocusSessionSchema.parse({ kind: 'focus', plannedSeconds: 1500 })).toMatchObject({ kind: 'focus' })
+    expect(() => createFocusSessionSchema.parse({ kind: 'focus', plannedSeconds: 10 })).toThrow()
+    expect(updateFocusSessionSchema.parse({ status: 'completed', elapsedSeconds: 1499 })).toMatchObject({
+      status: 'completed'
+    })
+  })
   it('applies safe defaults to new tasks', () => {
     expect(createTaskSchema.parse({ title: 'Plan', week: '2026-W31' })).toMatchObject({
       status: 'todo',
@@ -41,7 +51,10 @@ describe('server validators', () => {
 
   it('validates safe bulk task operations', () => {
     const id = '00000000-0000-4000-8000-000000000001'
-    expect(bulkTaskSchema.safeParse({ ids: [id], patch: { status: 'done', assigneeId: null } }).success).toBe(true)
+    expect(
+      bulkTaskSchema.safeParse({ ids: [id], patch: { status: 'done', assigneeId: null, dueDate: '2026-08-07' } })
+        .success
+    ).toBe(true)
     expect(bulkTaskSchema.safeParse({ ids: [], patch: { status: 'done' } }).success).toBe(false)
     expect(bulkTaskSchema.safeParse({ ids: [id], patch: { title: 'not allowed' } }).success).toBe(false)
   })
@@ -52,7 +65,24 @@ describe('server validators', () => {
     expect(createInvitationSchema.parse({ email: 'user@example.com' }).role).toBe('viewer')
     expect(createInvitationSchema.safeParse({ email: 'bad' }).success).toBe(false)
     expect(createSubtaskSchema.safeParse({ title: ' Step ' }).success).toBe(true)
+    expect(
+      createSubtaskSchema.safeParse({
+        title: 'Detailed step',
+        note: 'Context',
+        status: 'in_progress',
+        priority: 'high',
+        dueDate: '2026-08-07',
+        assigneeId: '00000000-0000-4000-8000-000000000001'
+      }).success
+    ).toBe(true)
     expect(updateSubtaskSchema.safeParse({ done: true }).success).toBe(true)
+    expect(updateSubtaskSchema.safeParse({ status: 'blocked' }).success).toBe(false)
+    expect(
+      bulkSubtaskSchema.safeParse({
+        ids: ['00000000-0000-4000-8000-000000000001'],
+        patch: { done: true }
+      }).success
+    ).toBe(true)
     expect(createCommentSchema.safeParse({ body: '  ' }).success).toBe(false)
     expect(
       updateSettingsSchema.safeParse({ theme: 'dark', locale: 'uk', weekStartsOn: 1, notifications: true }).success

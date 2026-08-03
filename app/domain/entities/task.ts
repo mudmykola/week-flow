@@ -19,6 +19,9 @@ export interface Task {
   archivedAt: number | null
   assigneeId: string | null
   stageId: string | null
+  subtaskCount?: number
+  completedSubtaskCount?: number
+  commentCount?: number
 }
 
 export interface CreateTaskInput {
@@ -63,7 +66,12 @@ export interface Subtask {
   id: string
   taskId: string
   title: string
+  note: string | null
   done: boolean
+  status: TaskStatus
+  priority: TaskPriority
+  dueDate: string | null
+  assigneeId: string | null
   sort: number
   createdAt: number
 }

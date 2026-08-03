@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { calculateProgress } from '~/domain/services/progress'
 import { getNextStatus, getStatusLabel, TASK_STATUSES } from '~/domain/services/taskStatus'
 import { getCurrentWeek, getNextWeek, getPrevWeek, getWeekLabel } from '~/domain/services/week'
+import { groupTaskActivity } from '~/domain/services/taskActivity'
 
 describe('domain services', () => {
   it('calculates rounded progress and handles an empty total', () => {
@@ -29,5 +30,27 @@ describe('domain services', () => {
     vi.setSystemTime(new Date('2026-08-01T10:00:00Z'))
     expect(getCurrentWeek()).toBe('2026-W31')
     vi.useRealTimers()
+  })
+
+  it('groups autosave activity bursts and collects changed fields', () => {
+    const grouped = groupTaskActivity([
+      { id: '3', action: 'task.updated', actorName: 'Mykola', metadata: { title: 'C' }, createdAt: 170_000 },
+      { id: '2', action: 'task.updated', actorName: 'Mykola', metadata: { note: 'B' }, createdAt: 120_000 },
+      { id: '1', action: 'task.updated', actorName: 'Mykola', metadata: { title: 'A' }, createdAt: 100_000 }
+    ])
+
+    expect(grouped).toHaveLength(1)
+    expect(grouped[0]).toMatchObject({ count: 3, ids: ['3', '2', '1'] })
+    expect(grouped[0]?.changedFields).toEqual(['title', 'note'])
+  })
+
+  it('keeps unrelated or distant activity events separate', () => {
+    const grouped = groupTaskActivity([
+      { id: '3', action: 'task.updated', actorName: 'Mykola', metadata: {}, createdAt: 300_001 },
+      { id: '2', action: 'task.updated', actorName: 'Mykola', metadata: {}, createdAt: 100_000 },
+      { id: '1', action: 'task.created', actorName: 'Mykola', metadata: {}, createdAt: 99_999 }
+    ])
+
+    expect(grouped.map((item) => item.id)).toEqual(['3', '2', '1'])
   })
 })

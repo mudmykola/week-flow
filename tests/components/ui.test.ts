@@ -6,8 +6,10 @@ import TaskCard from '~/presentation/components/task/TaskCard.vue'
 import AppButton from '~/presentation/components/base/AppButton.vue'
 import IconButton from '~/presentation/components/base/IconButton.vue'
 import DropdownMenu from '~/presentation/components/overlay/DropdownMenu.vue'
+import AppDrawer from '~/presentation/components/overlay/AppDrawer.vue'
 import ProjectEditor from '~/presentation/components/project/ProjectEditor.vue'
 import TaskEditor from '~/presentation/components/task/TaskEditor.vue'
+import TaskQuickCreate from '~/presentation/components/task/TaskQuickCreate.vue'
 import Modal from '~/presentation/components/overlay/Modal.vue'
 import FormField from '~/presentation/components/form/FormField.vue'
 import FormInput from '~/presentation/components/form/FormInput.vue'
@@ -69,6 +71,35 @@ describe('shared UI components', () => {
     expect(wrapper.get('select').attributes('disabled')).toBeDefined()
     expect(wrapper.get('option').text()).toBe('Немає доступних варіантів')
     expect(wrapper.get('option').attributes('disabled')).toBeDefined()
+  })
+
+  it('supports a fullscreen workspace drawer', async () => {
+    const wrapper = await mountSuspended(AppDrawer, {
+      props: { open: true, title: 'Task workspace', size: 'fullscreen' },
+      slots: { default: '<main>Workspace content</main>' },
+      global: { stubs }
+    })
+
+    expect(wrapper.get('.ui-drawer').classes()).toContain('ui-drawer--fullscreen')
+    expect(wrapper.text()).toContain('Workspace content')
+  })
+
+  it('creates tasks inline with Enter and opens the full editor with Shift+Enter', async () => {
+    const wrapper = await mountSuspended(TaskQuickCreate, {
+      props: { status: 'in_progress', projects: [], assignees: [] },
+      global: { stubs, components: { FormInput, FormSelect, IconButton } }
+    })
+    const input = wrapper.get('input[type="text"]')
+    await input.setValue('Швидка задача')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.emitted('create')?.[0]?.[0]).toMatchObject({
+      title: 'Швидка задача',
+      status: 'in_progress',
+      priority: 'medium'
+    })
+    await input.setValue('Повна задача')
+    await input.trigger('keydown', { key: 'Enter', shiftKey: true })
+    expect(wrapper.emitted('full')?.[0]).toEqual(['in_progress'])
   })
 
   it('supports compact icon-only checkboxes without losing an accessible name', async () => {
@@ -138,7 +169,7 @@ describe('shared UI components', () => {
       .findAll('button')
       .find((button) => button.text().includes('клієнт'))!
       .trigger('click')
-    await wrapper.findAll('button').at(-1)!.trigger('click')
+    await wrapper.get('.ui-button--primary').trigger('click')
     expect(wrapper.emitted('save')?.[0]?.[0]).toMatchObject({ title: 'Підготувати звіт', tags: ['клієнт'] })
     expect(JSON.parse(localStorage.getItem('weekflow-reusable-tags') ?? '[]')).toContain('клієнт')
     expect(localStorage.getItem('weekflow-task-defaults')).toBeTruthy()

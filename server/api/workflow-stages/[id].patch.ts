@@ -12,7 +12,8 @@ const schema = z.object({
     .optional(),
   category: z.enum(['todo', 'in_progress', 'done']).optional(),
   position: z.number().int().min(0).optional(),
-  wipLimit: z.number().int().positive().nullable().optional()
+  wipLimit: z.number().int().positive().nullable().optional(),
+  wipPolicy: z.enum(['warn', 'block']).optional()
 })
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!

@@ -10,9 +10,11 @@ describe('workflow automation validators', () => {
         trigger: 'status_changed',
         triggerValue: 'in_progress',
         action: 'set_priority',
-        actionValue: 'urgent'
+        actionValue: 'urgent',
+        conditions: [{ field: 'priority', operator: 'not_equals', value: 'urgent' }],
+        actions: [{ type: 'add_comment', value: 'Escalated automatically' }]
       })
-    ).toMatchObject({ enabled: true, actionValue: 'urgent' })
+    ).toMatchObject({ enabled: true, actionValue: 'urgent', conditions: [{ field: 'priority' }] })
   })
 
   it('supports enabled-only patches and rejects empty patches', () => {
