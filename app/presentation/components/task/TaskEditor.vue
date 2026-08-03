@@ -28,7 +28,14 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 const taskRef = toRef(props, 'task')
-const { subtasks, comments, activity, loading: detailsLoading } = useTaskDetails(taskRef)
+const {
+  subtasks,
+  comments,
+  activity,
+  loading: detailsLoading,
+  error: detailsError,
+  load: loadDetails
+} = useTaskDetails(taskRef)
 const titleEditor = useTemplateRef<{ focus: () => void }>('titleEditor')
 
 const title = ref('')
@@ -70,6 +77,7 @@ const {
   state: saveState,
   error: saveError,
   schedule: scheduleSave,
+  flush: flushSave,
   cancel: cancelSave
 } = useTaskAutosave(async (patch) => {
   if (!props.task) return
@@ -93,9 +101,10 @@ function payload() {
 }
 
 watch(
-  () => [props.open, props.task] as const,
-  ([open, task]) => {
+  () => [props.open, props.task?.id] as const,
+  ([open]) => {
     if (!open) return
+    const task = props.task
     hydrated.value = false
     cancelSave()
     const savedDraft = !task ? readStoredDraft() : null
@@ -127,11 +136,21 @@ watch(
   { deep: true }
 )
 
+let stageRequest = 0
 watch(projectId, async (id) => {
-  workflowStages.value = id
-    ? await $fetch<Array<{ id: string; name: string; category: Task['status'] }>>(`/api/projects/${id}/workflow` as any)
-    : []
-  if (stageId.value && !workflowStages.value.some((item) => item.id === stageId.value)) stageId.value = null
+  const request = ++stageRequest
+  try {
+    const result = id
+      ? await $fetch<Array<{ id: string; name: string; category: Task['status'] }>>(
+          `/api/projects/${id}/workflow` as any
+        )
+      : []
+    if (request !== stageRequest) return
+    workflowStages.value = result
+    if (stageId.value && !result.some((item) => item.id === stageId.value)) stageId.value = null
+  } catch {
+    if (request === stageRequest) workflowStages.value = []
+  }
 })
 watch(stageId, (id) => {
   const stage = workflowStages.value.find((item) => item.id === id)
@@ -149,8 +168,10 @@ async function submit() {
       recurrence: recurrence.value,
       assigneeId: assigneeId.value
     }
-    if (props.task) scheduleSave(payload())
-    else {
+    if (props.task) {
+      scheduleSave(payload())
+      await flushSave()
+    } else {
       emit('save', payload())
       draft.value = null
     }
@@ -171,8 +192,24 @@ function addTagValue(value: string) {
   tags.value = [...tags.value, normalized]
   recentTags.value = [...new Set([normalized, ...recentTags.value])].slice(0, 30)
 }
-function close() {
-  if (saveState.value === 'saving' && props.task) scheduleSave(payload())
+function updateSubtasks(value: typeof subtasks.value) {
+  subtasks.value = value
+  if (!props.task) return
+  emit('updated', {
+    ...props.task,
+    subtaskCount: value.length,
+    completedSubtaskCount: value.filter((item) => item.done).length
+  })
+}
+function updateComments(value: typeof comments.value) {
+  comments.value = value
+  if (props.task) emit('updated', { ...props.task, commentCount: value.length })
+}
+async function close() {
+  if (props.task) {
+    scheduleSave(payload())
+    if (!(await flushSave())) return
+  }
   emit('close')
 }
 useTaskKeyboard({
@@ -304,17 +341,35 @@ useTaskKeyboard({
             class="skeleton h-40 rounded-2xl"
           />
         </div>
+        <div
+          v-else-if="detailsError"
+          class="flex items-center justify-between gap-3 rounded-2xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 p-4"
+          role="alert"
+        >
+          <span class="flex items-center gap-2 text-sm text-[var(--color-danger)]">
+            <UIcon name="i-lucide-circle-alert" />{{ $t('task.detailsLoadError') }}
+          </span>
+          <AppButton
+            size="sm"
+            variant="ghost"
+            icon="i-lucide-refresh-cw"
+            @click="loadDetails"
+            >{{ $t('common.tryAgain') }}</AppButton
+          >
+        </div>
         <TaskSubtasks
           v-else
-          v-model="subtasks"
+          :model-value="subtasks"
           :task="task"
           :assignees="assignees ?? []"
+          @update:model-value="updateSubtasks"
           @promoted="emit('promoted', $event)"
         />
         <div class="grid gap-4 lg:grid-cols-2">
           <TaskComments
-            v-model="comments"
+            :model-value="comments"
             :task-id="task.id"
+            @update:model-value="updateComments"
           /><TaskActivity :items="activity" />
         </div>
       </template>

@@ -6,10 +6,12 @@ const emit = defineEmits<{ 'update:modelValue': [value: TaskComment[]] }>()
 const { t } = useI18n()
 const value = ref('')
 const sending = ref(false)
+const error = ref(false)
 async function send() {
   const body = value.value.trim()
   if (!body || sending.value) return
   sending.value = true
+  error.value = false
   try {
     await $fetch(`/api/tasks/${props.taskId}/comments`, { method: 'POST', body: { body } })
     emit('update:modelValue', [
@@ -17,6 +19,8 @@ async function send() {
       { id: crypto.randomUUID(), body, authorName: t('common.you'), createdAt: Date.now() }
     ])
     value.value = ''
+  } catch {
+    error.value = true
   } finally {
     sending.value = false
   }
@@ -51,5 +55,12 @@ async function send() {
         @click="send"
       />
     </div>
+    <p
+      v-if="error"
+      class="mt-2 flex items-center gap-1.5 text-xs text-[var(--color-danger)]"
+      role="alert"
+    >
+      <UIcon name="i-lucide-circle-alert" />{{ $t('task.commentError') }}
+    </p>
   </section>
 </template>

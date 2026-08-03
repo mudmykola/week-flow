@@ -7,9 +7,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: Subtask[]]; promoted: [t
 const items = computed({ get: () => props.modelValue, set: (value) => emit('update:modelValue', value) })
 const input = ref('')
 const creating = ref(false)
+const error = ref('')
 const hideDone = ref(false)
 const visibleItems = computed(() => (hideDone.value ? items.value.filter((item) => !item.done) : items.value))
 const completed = computed(() => items.value.filter((item) => item.done).length)
+const patchQueues = new Map<string, Promise<void>>()
 
 async function createLines() {
   const lines = input.value
@@ -18,6 +20,7 @@ async function createLines() {
     .filter(Boolean)
   if (!lines.length || creating.value) return
   creating.value = true
+  error.value = ''
   try {
     const created = []
     for (const title of lines) {
@@ -25,6 +28,8 @@ async function createLines() {
     }
     items.value = [...items.value, ...created]
     input.value = ''
+  } catch {
+    error.value = 'create'
   } finally {
     creating.value = false
   }
@@ -42,33 +47,66 @@ async function patch(id: string, patchValue: Partial<Subtask>) {
     throw error
   }
 }
+async function safePatch(id: string, patchValue: Partial<Subtask>) {
+  error.value = ''
+  const queued = (patchQueues.get(id) ?? Promise.resolve())
+    .then(() => patch(id, patchValue))
+    .catch(() => {
+      error.value = 'save'
+    })
+    .finally(() => {
+      if (patchQueues.get(id) === queued) patchQueues.delete(id)
+    })
+  patchQueues.set(id, queued)
+  await queued
+}
 async function reorder() {
-  await Promise.all(items.value.map((item, sort) => (item.sort === sort ? null : patch(item.id, { sort }))))
+  error.value = ''
+  try {
+    await Promise.all(items.value.map((item, sort) => (item.sort === sort ? null : patch(item.id, { sort }))))
+  } catch {
+    error.value = 'save'
+  }
 }
 async function duplicate(id: string) {
-  const item = await $fetch<Subtask>(`/api/subtasks/${id}/duplicate`, { method: 'POST' })
-  items.value = [...items.value, item].sort((a, b) => a.sort - b.sort)
+  error.value = ''
+  try {
+    const item = await $fetch<Subtask>(`/api/subtasks/${id}/duplicate`, { method: 'POST' })
+    items.value = [...items.value, item].sort((a, b) => a.sort - b.sort)
+  } catch {
+    error.value = 'save'
+  }
 }
 async function remove(id: string) {
   const previous = items.value
   items.value = items.value.filter((item) => item.id !== id)
   try {
     await $fetch(`/api/subtasks/${id}` as any, { method: 'DELETE' })
-  } catch (error) {
+  } catch {
     items.value = previous
-    throw error
+    error.value = 'delete'
   }
 }
 async function promote(id: string) {
-  const task = await $fetch<Task>(`/api/subtasks/${id}/promote`, { method: 'POST' })
-  items.value = items.value.filter((item) => item.id !== id)
-  emit('promoted', task)
+  error.value = ''
+  try {
+    const task = await $fetch<Task>(`/api/subtasks/${id}/promote`, { method: 'POST' })
+    items.value = items.value.filter((item) => item.id !== id)
+    emit('promoted', task)
+  } catch {
+    error.value = 'promote'
+  }
 }
 async function completeAll() {
   const ids = items.value.filter((item) => !item.done).map((item) => item.id)
   if (!ids.length) return
-  await $fetch('/api/subtasks/bulk', { method: 'PATCH', body: { ids, patch: { done: true } } })
-  items.value = items.value.map((item) => (ids.includes(item.id) ? { ...item, done: true, status: 'done' } : item))
+  error.value = ''
+  try {
+    await $fetch('/api/subtasks/bulk', { method: 'PATCH', body: { ids, patch: { done: true } } })
+    items.value = items.value.map((item) => (ids.includes(item.id) ? { ...item, done: true, status: 'done' } : item))
+  } catch {
+    error.value = 'save'
+  }
 }
 </script>
 
@@ -117,7 +155,7 @@ async function completeAll() {
           v-if="!hideDone || !element.done"
           :item="element"
           :assignees="assignees"
-          @patch="patch"
+          @patch="safePatch"
           @duplicate="duplicate"
           @promote="promote"
           @delete="remove"
@@ -138,5 +176,12 @@ async function completeAll() {
       />
     </div>
     <p class="text-secondary mt-1 text-[11px]">{{ $t('task.multiSubtaskHint') }}</p>
+    <p
+      v-if="error"
+      class="mt-2 flex items-center gap-1.5 text-xs text-[var(--color-danger)]"
+      role="alert"
+    >
+      <UIcon name="i-lucide-circle-alert" />{{ $t(`task.subtaskError.${error}`) }}
+    </p>
   </section>
 </template>

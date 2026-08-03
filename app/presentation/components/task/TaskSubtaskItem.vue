@@ -11,13 +11,21 @@ const emit = defineEmits<{
 const expanded = ref(false)
 const menuOpen = ref(false)
 const title = ref(props.item.title)
+const note = ref(props.item.note ?? '')
 watch(
-  () => props.item.title,
-  (value) => (title.value = value)
+  () => [props.item.title, props.item.note] as const,
+  ([nextTitle, nextNote]) => {
+    title.value = nextTitle
+    note.value = nextNote ?? ''
+  }
 )
 function saveTitle() {
   const value = title.value.trim()
   if (value && value !== props.item.title) emit('patch', props.item.id, { title: value })
+}
+function saveNote() {
+  const value = note.value.trim() || null
+  if (value !== props.item.note) emit('patch', props.item.id, { note: value })
 }
 function duplicateAndClose() {
   emit('duplicate', props.item.id)
@@ -105,10 +113,10 @@ function deleteAndClose() {
       class="mt-3 grid gap-2 border-t border-[var(--color-panel-border)] pt-3 sm:grid-cols-2"
     >
       <FormTextarea
-        :model-value="item.note ?? ''"
+        v-model="note"
         rows="2"
         :placeholder="$t('task.note')"
-        @update:model-value="emit('patch', item.id, { note: $event || null })"
+        @blur="saveNote"
       />
       <div class="grid grid-cols-2 gap-2">
         <FormSelect
