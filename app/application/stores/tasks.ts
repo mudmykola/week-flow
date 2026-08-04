@@ -3,11 +3,13 @@ import {
   createTask,
   deleteTask,
   duplicateTask,
+  fetchInboxTasks,
   fetchTasks,
   moveWeekTasks,
   updateTask
 } from '~/data/repositories/tasksRepository'
 import type { CreateTaskInput, Task, UpdateTaskInput } from '~/domain/entities/task'
+import { isInboxTask } from '~/domain/services/inbox'
 import { getNextStatus } from '~/domain/services/taskStatus'
 import { getNextWeek } from '~/domain/services/week'
 
@@ -15,6 +17,8 @@ export const useTasksStore = defineStore('tasks', () => {
   const tasks = ref<Task[]>([])
   const loading = ref(false)
   const filterProjectId = ref<string | null>(null)
+  const inboxTasks = ref<Task[]>([])
+  const inboxLoading = ref(false)
 
   const filteredTasks = computed(() =>
     filterProjectId.value ? tasks.value.filter((t) => t.projectId === filterProjectId.value) : tasks.value
@@ -103,6 +107,86 @@ export const useTasksStore = defineStore('tasks', () => {
     return task
   }
 
+  async function loadInboxTasks() {
+    inboxLoading.value = true
+    try {
+      inboxTasks.value = await fetchInboxTasks()
+    } finally {
+      inboxLoading.value = false
+    }
+  }
+
+  async function addInboxTask(input: CreateTaskInput) {
+    const task = await createTask(input)
+    inboxTasks.value.unshift(task)
+    return task
+  }
+
+  async function patchInboxTask(id: string, patch: UpdateTaskInput) {
+    const index = inboxTasks.value.findIndex((t) => t.id === id)
+    const previous = index === -1 ? null : { ...inboxTasks.value[index]! }
+    if (index !== -1) inboxTasks.value[index] = { ...inboxTasks.value[index]!, ...patch }
+    try {
+      const task = await updateTask(id, patch)
+      const currentIndex = inboxTasks.value.findIndex((t) => t.id === id)
+      if (currentIndex !== -1) {
+        if (isInboxTask(task)) inboxTasks.value[currentIndex] = task
+        else inboxTasks.value.splice(currentIndex, 1)
+      }
+      return task
+    } catch (error) {
+      const currentIndex = inboxTasks.value.findIndex((t) => t.id === id)
+      if (previous && currentIndex !== -1) inboxTasks.value[currentIndex] = previous
+      throw error
+    }
+  }
+
+  async function removeInboxTask(id: string) {
+    const previous = inboxTasks.value
+    inboxTasks.value = inboxTasks.value.filter((t) => t.id !== id)
+    try {
+      await deleteTask(id)
+    } catch (error) {
+      inboxTasks.value = previous
+      throw error
+    }
+  }
+
+  function syncInboxTaskFromEditor(task: Task) {
+    const index = inboxTasks.value.findIndex((t) => t.id === task.id)
+    if (isInboxTask(task)) {
+      if (index !== -1) inboxTasks.value[index] = task
+      else inboxTasks.value.unshift(task)
+    } else if (index !== -1) {
+      inboxTasks.value.splice(index, 1)
+    }
+  }
+
+  async function restoreCompletedInboxTask(task: Task) {
+    const restored = await updateTask(task.id, { status: task.status })
+    inboxTasks.value.unshift(restored)
+    return restored
+  }
+
+  async function recreateInboxTask(task: Task) {
+    const recreated = await createTask({
+      title: task.title,
+      note: task.note,
+      status: task.status,
+      projectId: task.projectId,
+      week: task.week,
+      sort: task.sort,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      tags: task.tags,
+      recurrence: task.recurrence,
+      assigneeId: task.assigneeId,
+      stageId: task.stageId
+    })
+    inboxTasks.value.unshift(recreated)
+    return recreated
+  }
+
   return {
     tasks,
     loading,
@@ -117,6 +201,15 @@ export const useTasksStore = defineStore('tasks', () => {
     moveIncompleteToNextWeek,
     reorderColumn,
     bulkPatch,
-    duplicate
+    duplicate,
+    inboxTasks,
+    inboxLoading,
+    loadInboxTasks,
+    addInboxTask,
+    patchInboxTask,
+    removeInboxTask,
+    syncInboxTaskFromEditor,
+    restoreCompletedInboxTask,
+    recreateInboxTask
   }
 })

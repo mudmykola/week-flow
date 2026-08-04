@@ -5,6 +5,7 @@ import { makeProject, makeTask } from '../fixtures'
 const projectApi = vi.hoisted(() => ({ fetchProjects: vi.fn(), createProject: vi.fn(), deleteProject: vi.fn() }))
 const taskApi = vi.hoisted(() => ({
   fetchTasks: vi.fn(),
+  fetchInboxTasks: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -137,5 +138,75 @@ describe('Pinia stores', () => {
     await store.reorderColumn('todo', [unchanged, changed])
     expect(taskApi.updateTask).toHaveBeenCalledTimes(1)
     expect(taskApi.updateTask).toHaveBeenCalledWith('b', { status: 'todo', sort: 1 })
+  })
+
+  it('loads inbox tasks and drops one once it no longer qualifies', async () => {
+    const task = makeTask()
+    taskApi.fetchInboxTasks.mockResolvedValue([task])
+    const store = useTasksStore()
+    await store.loadInboxTasks()
+    expect(store.inboxLoading).toBe(false)
+    expect(store.inboxTasks).toEqual([task])
+
+    taskApi.updateTask.mockResolvedValue({ ...task, projectId: 'project-1' })
+    await store.patchInboxTask(task.id, { projectId: 'project-1' })
+    expect(store.inboxTasks).toEqual([])
+  })
+
+  it('keeps a still-qualifying inbox task updated in place', async () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.inboxTasks = [task]
+    taskApi.updateTask.mockResolvedValue({ ...task, priority: 'urgent' })
+    await store.patchInboxTask(task.id, { priority: 'urgent' })
+    expect(store.inboxTasks[0]?.priority).toBe('urgent')
+  })
+
+  it('restores optimistic inbox edits and deletion after API failure', async () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.inboxTasks = [task]
+    taskApi.updateTask.mockRejectedValue(new Error('network'))
+    const patch = store.patchInboxTask(task.id, { priority: 'urgent' })
+    expect(store.inboxTasks[0]?.priority).toBe('urgent')
+    await expect(patch).rejects.toThrow('network')
+    expect(store.inboxTasks[0]).toEqual(task)
+
+    taskApi.deleteTask.mockRejectedValue(new Error('network'))
+    const deletion = store.removeInboxTask(task.id)
+    expect(store.inboxTasks).toEqual([])
+    await expect(deletion).rejects.toThrow('network')
+    expect(store.inboxTasks).toEqual([task])
+  })
+
+  it('syncs an editor update by upserting or removing an inbox task', () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.inboxTasks = [task]
+
+    store.syncInboxTaskFromEditor({ ...task, priority: 'high' })
+    expect(store.inboxTasks[0]?.priority).toBe('high')
+
+    store.syncInboxTaskFromEditor({ ...task, projectId: 'project-1' })
+    expect(store.inboxTasks).toEqual([])
+
+    const newTask = makeTask({ id: 'promoted' })
+    store.syncInboxTaskFromEditor(newTask)
+    expect(store.inboxTasks).toEqual([newTask])
+  })
+
+  it('restores a completed inbox task and recreates a deleted one', async () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    taskApi.updateTask.mockResolvedValue(task)
+    await store.restoreCompletedInboxTask(task)
+    expect(store.inboxTasks).toEqual([task])
+
+    store.inboxTasks = []
+    const recreated = makeTask({ id: 'task-2' })
+    taskApi.createTask.mockResolvedValue(recreated)
+    await store.recreateInboxTask(task)
+    expect(taskApi.createTask).toHaveBeenCalledWith(expect.objectContaining({ title: task.title, week: task.week }))
+    expect(store.inboxTasks).toEqual([recreated])
   })
 })

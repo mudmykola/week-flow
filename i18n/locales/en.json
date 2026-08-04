@@ -90,7 +90,8 @@
     "changeTheme": "Change theme",
     "newTask": "New task",
     "findTask": "Find a task…",
-    "nothingFound": "Nothing found"
+    "nothingFound": "Nothing found",
+    "addToInbox": "Add “{query}” to Inbox"
   },
   "task": {
     "title": "Task",
@@ -192,6 +193,7 @@
     "duplicate": "Duplicate",
     "restore": "Restore",
     "complete": "Complete",
+    "delete": "Delete",
     "return": "Reopen",
     "archive": "Archive",
     "empty": "Nothing here yet",
@@ -430,7 +432,10 @@
       "description": "Capture a thought now and process it later.",
       "placeholder": "What should you remember?",
       "empty": "Inbox cleared",
-      "emptyHint": "Every thought is now a plan — great work."
+      "emptyHint": "Every thought is now a plan — great work.",
+      "staleDays": "{days}d unprocessed",
+      "completedUndo": "Task completed",
+      "deletedUndo": "Task deleted"
     },
     "login": {
       "description": "Sign in to manage your projects and tasks.",

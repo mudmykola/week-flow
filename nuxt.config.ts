@@ -69,7 +69,12 @@ export default defineNuxtConfig({
       background_color: '#f7f7f7',
       display: 'standalone',
       start_url: '/',
-      icons: [{ src: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }]
+      icons: [{ src: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }],
+      share_target: {
+        action: '/inbox',
+        method: 'GET',
+        params: { title: 'title', text: 'text', url: 'url' }
+      }
     },
     workbox: { navigateFallback: '/login' }
   },

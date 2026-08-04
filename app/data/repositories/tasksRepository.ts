@@ -11,6 +11,10 @@ export function fetchAllTasks() {
   return apiRequest<Task[]>('/api/tasks')
 }
 
+export function fetchInboxTasks() {
+  return apiRequest<Task[]>('/api/tasks', { query: { scope: 'inbox' } })
+}
+
 export function createTask(input: CreateTaskInput) {
   return apiRequest<Task>('/api/tasks', { method: 'POST', body: input })
 }

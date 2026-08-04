@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
 import { createTask, fetchAllTasks } from '~/data/repositories/tasksRepository'
+import { isInboxTask } from '~/domain/services/inbox'
 import { navigationForRole } from '~/domain/services/navigation'
 import { getCurrentWeek } from '~/domain/services/week'
 
@@ -19,6 +20,11 @@ const taskEditorLoading = ref(false)
 const projectsStore = useProjectsStore()
 const assignees = ref<AssignableUser[]>([])
 const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
+const tasksStore = useTasksStore()
+
+onMounted(() => {
+  tasksStore.loadInboxTasks().catch(() => {})
+})
 
 const reusableTags = computed(() =>
   [...new Set(allTasks.value.flatMap((task) => task.tags ?? []))].sort((a, b) => a.localeCompare(b, 'uk'))
@@ -75,8 +81,17 @@ async function saveTask(payload: {
 }) {
   const task = await createTask({ ...payload, week: getCurrentWeek(), sort: 0 })
   allTasks.value.push(task)
+  if (isInboxTask(task)) tasksStore.inboxTasks.unshift(task)
   taskCreatedBus.emit(task)
   taskEditorOpen.value = false
+}
+
+async function addQueryToInbox() {
+  const title = query.value.trim()
+  if (!title) return
+  await tasksStore.addInboxTask({ title, week: getCurrentWeek(), priority: 'medium' })
+  query.value = ''
+  commandOpen.value = false
 }
 
 function toggleTheme() {
@@ -162,7 +177,16 @@ onKeyStroke('k', (event) => {
           <UIcon
             :name="item.icon"
             class="size-4.5 shrink-0"
-          /><span :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
+          /><span
+            class="flex-1"
+            :class="sidebarCollapsed ? 'lg:hidden' : ''"
+            >{{ item.label }}</span
+          ><span
+            v-if="item.to === '/inbox' && tasksStore.inboxTasks.length"
+            class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
+            :class="sidebarCollapsed ? 'lg:hidden' : ''"
+            >{{ tasksStore.inboxTasks.length }}</span
+          >
         </NuxtLink>
       </nav>
 
@@ -287,6 +311,7 @@ onKeyStroke('k', (event) => {
             class="h-14 flex-1 bg-transparent outline-none"
             :placeholder="$t('shell.findTask')"
             @keyup.esc="commandOpen = false"
+            @keyup.enter="!results.length && addQueryToInbox()"
           />
         </div>
         <div class="max-h-96 overflow-y-auto p-2">
@@ -303,8 +328,20 @@ onKeyStroke('k', (event) => {
             /><span class="flex-1 truncate">{{ task.title }}</span
             ><span class="text-secondary text-xs">{{ task.week }}</span>
           </NuxtLink>
+          <button
+            v-if="!results.length && query.trim()"
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+            @click="addQueryToInbox"
+          >
+            <UIcon
+              name="i-lucide-inbox"
+              class="size-4 text-[var(--color-accent)]"
+            /><span class="flex-1 truncate">{{ $t('shell.addToInbox', { query }) }}</span
+            ><kbd class="text-xs">↵</kbd>
+          </button>
           <p
-            v-if="!results.length"
+            v-else-if="!results.length"
             class="text-secondary p-6 text-center text-sm"
           >
             {{ $t('shell.nothingFound') }}

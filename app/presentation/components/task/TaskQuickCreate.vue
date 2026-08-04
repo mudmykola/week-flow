@@ -2,7 +2,12 @@
 import type { Project } from '~/domain/entities/project'
 import type { AssignableUser, TaskPriority, TaskStatus } from '~/domain/entities/task'
 
-const props = defineProps<{ status: TaskStatus; projects: Project[]; assignees: AssignableUser[] }>()
+const props = defineProps<{
+  status: TaskStatus
+  projects: Project[]
+  assignees: AssignableUser[]
+  initialTitle?: string
+}>()
 const emit = defineEmits<{
   create: [
     payload: {
@@ -25,7 +30,11 @@ const priority = ref<TaskPriority>('medium')
 const expanded = ref(false)
 const input = useTemplateRef<HTMLInputElement>('quickInput')
 const fullDraft = useLocalStorage<Record<string, unknown> | null>('weekflow-task-draft-v2', null)
-onMounted(() => input.value?.focus())
+onMounted(() => {
+  if (props.initialTitle) title.value = props.initialTitle
+  input.value?.focus()
+})
+defineExpose({ focus: () => input.value?.focus() })
 function submit() {
   if (!title.value.trim()) return
   emit('create', {
