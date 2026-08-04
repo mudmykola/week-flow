@@ -101,7 +101,7 @@ function payload() {
 }
 
 watch(
-  () => [props.open, props.task?.id] as const,
+  [() => props.open, () => props.task?.id],
   ([open]) => {
     if (!open) return
     const task = props.task
