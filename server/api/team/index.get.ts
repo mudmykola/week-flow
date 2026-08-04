@@ -1,7 +1,8 @@
-import { eq, inArray } from 'drizzle-orm'
+import { eq, getTableColumns, inArray } from 'drizzle-orm'
 import { useDb } from '../../db'
-import { goals, tasks, teamMembers, teams, users } from '../../db/schema'
+import { goals, projects, tasks, teamMembers, teams, users } from '../../db/schema'
 import { isAdmin, requireManager } from '../../utils/auth'
+import { withComputedProgress } from '../../utils/goals'
 
 export default defineEventHandler(async (event) => {
   const manager = await requireManager(event)
@@ -52,7 +53,13 @@ export default defineEventHandler(async (event) => {
         .from(tasks)
         .where(inArray(tasks.assigneeId, ids))
     : []
-  const teamGoals = await db.select().from(goals).where(eq(goals.teamId, team.id)).orderBy(goals.createdAt)
+  const rawGoals = await db
+    .select({ ...getTableColumns(goals), projectName: projects.name, projectColor: projects.color })
+    .from(goals)
+    .leftJoin(projects, eq(projects.id, goals.projectId))
+    .where(eq(goals.teamId, team.id))
+    .orderBy(goals.createdAt)
+  const teamGoals = await withComputedProgress(db, rawGoals)
 
   const enriched = members.map((member) => {
     const ownTasks = memberTasks.filter((task) => task.assigneeId === member.id && !task.archivedAt)

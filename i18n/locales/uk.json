@@ -19,7 +19,13 @@
   "activityActions": {
     "task": { "created": "створив задачу", "updated": "оновив задачу", "deleted": "видалив задачу" },
     "subtask": { "created": "додав підзадачу" },
-    "comment": { "created": "додав коментар" }
+    "comment": { "created": "додав коментар" },
+    "goal": {
+      "created": "створив ціль",
+      "progress_updated": "оновив прогрес цілі",
+      "project_linked": "прив'язав ціль до проєкту",
+      "project_unlinked": "відв'язав ціль від проєкту"
+    }
   },
   "activityFields": {
     "title": "Назва",
@@ -196,8 +202,20 @@
     "delete": "Видалити",
     "return": "Повернути",
     "archive": "Архівувати",
-    "empty": "Тут поки порожньо",
-    "emptyHint": "Задачі з’являться автоматично."
+    "snooze": "Перенести на завтра",
+    "progress": "{done}/{total} виконано сьогодні",
+    "overdueSection": "Прострочено",
+    "todaySection": "Сьогодні",
+    "completedUndo": "Задачу виконано",
+    "deletedUndo": "Задачу видалено",
+    "emptyToday": "На сьогодні немає задач",
+    "emptyTodayHint": "Чудова робота — усе під контролем.",
+    "emptyUpcoming": "Немає майбутніх задач",
+    "emptyUpcomingHint": "Задачі з дедлайном з’являться тут.",
+    "emptyOverdue": "Прострочених задач немає",
+    "emptyOverdueHint": "Усе виконано вчасно.",
+    "emptyArchive": "Архів порожній",
+    "emptyArchiveHint": "Архівовані задачі з’являться тут."
   },
   "board": {
     "title": "Дошка тижня",
@@ -267,6 +285,7 @@
       "allProjects": "Усі проєкти",
       "tasks": "Задачі",
       "projects": "Проєкти",
+      "goals": "Цілі",
       "last7Days": "Останні 7 днів",
       "last30Days": "Останні 30 днів",
       "last90Days": "Останні 90 днів",
@@ -426,7 +445,12 @@
       "description": "Очікувані результати та особистий прогрес.",
       "empty": "Цілей ще немає",
       "emptyHint": "Ваш PM додасть сюди командні або персональні цілі.",
-      "until": "До {date}"
+      "until": "До {date}",
+      "activeSection": "Активні",
+      "completedSection": "Завершені",
+      "linkedTo": "Прив'язано до проєкту «{project}»",
+      "overdueBadge": "прострочено",
+      "dueSoonBadge": "скоро дедлайн"
     },
     "inbox": {
       "description": "Швидко зафіксуйте думку, розберете її пізніше.",
@@ -487,6 +511,11 @@
       "activeProjects": "Активні проєкти",
       "activeProjectsHint": "Невиконані задачі за проєктами",
       "noProjects": "Немає активних проєктів.",
+      "goalsBreakdown": "Цілі",
+      "goalsBreakdownHint": "Активні vs завершені цілі",
+      "goalsActive": "Активні цілі",
+      "goalsDone": "Завершені",
+      "goalsAvgProgress": "Середній прогрес",
       "attention": "Потребує уваги",
       "attentionHint": "Прострочені та термінові задачі",
       "viewAll": "Переглянути всі",
@@ -561,7 +590,9 @@
       "newGoal": "Нова ціль",
       "goalName": "Назва цілі",
       "expected": "Очікуваний результат",
-      "createGoal": "Створити ціль"
+      "createGoal": "Створити ціль",
+      "noLinkedProject": "Без прив'язки до проєкту",
+      "linkProject": "Прив'язати: {project}"
     },
     "workflows": {
       "stageAdded": "Статус додано",

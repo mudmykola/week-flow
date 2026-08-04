@@ -338,6 +338,7 @@ export const goals = sqliteTable(
       .notNull()
       .default('active'),
     dueDate: text('due_date'),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
     createdBy: text('created_by')
       .notNull()
       .references(() => users.id),

@@ -15,6 +15,14 @@ export function fetchInboxTasks() {
   return apiRequest<Task[]>('/api/tasks', { query: { scope: 'inbox' } })
 }
 
+export function fetchDueTasks() {
+  return apiRequest<Task[]>('/api/tasks', { query: { scope: 'due' } })
+}
+
+export function fetchArchivedTasks() {
+  return apiRequest<Task[]>('/api/tasks', { query: { scope: 'archived' } })
+}
+
 export function createTask(input: CreateTaskInput) {
   return apiRequest<Task>('/api/tasks', { method: 'POST', body: input })
 }

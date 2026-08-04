@@ -9,7 +9,7 @@ export async function requireTaskAccess(event: H3Event, taskId: string, options:
   const db = useDb(event)
   const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId))
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
-  if (!isAdmin(user) && task.ownerId !== user.id) {
+  if (!isAdmin(user) && task.ownerId !== user.id && task.assigneeId !== user.id) {
     if (!task.projectId) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
     const [member] = await db
       .select()

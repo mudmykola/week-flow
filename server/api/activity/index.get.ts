@@ -1,10 +1,20 @@
-import { and, desc, eq, gte, like, lt, or } from 'drizzle-orm'
+import { and, desc, eq, gte, like, lt, or, sql } from 'drizzle-orm'
 import { useDb } from '../../db'
-import { activityLogs, projects, tasks, users } from '../../db/schema'
+import { activityLogs, goals, projects, tasks, users } from '../../db/schema'
 import { requireAppUser } from '../../utils/auth'
 
-const allowedActions = new Set(['task.created', 'task.updated', 'task.deleted', 'subtask.created', 'comment.created'])
-const allowedEntities = new Set(['task', 'project'])
+const allowedActions = new Set([
+  'task.created',
+  'task.updated',
+  'task.deleted',
+  'subtask.created',
+  'comment.created',
+  'goal.created',
+  'goal.progress_updated',
+  'goal.project_linked',
+  'goal.project_unlinked'
+])
+const allowedEntities = new Set(['task', 'project', 'goal'])
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
@@ -32,13 +42,14 @@ export default defineEventHandler(async (event) => {
       createdAt: activityLogs.createdAt,
       actorName: users.name,
       actorAvatar: users.avatarUrl,
-      entityTitle: tasks.title,
+      entityTitle: sql<string | null>`coalesce(${tasks.title}, ${goals.title})`,
       projectName: projects.name,
       projectColor: projects.color
     })
     .from(activityLogs)
     .innerJoin(users, eq(users.id, activityLogs.actorId))
     .leftJoin(tasks, eq(tasks.id, activityLogs.entityId))
+    .leftJoin(goals, eq(goals.id, activityLogs.entityId))
     .leftJoin(projects, eq(projects.id, tasks.projectId))
     .where(
       and(
@@ -59,6 +70,7 @@ export default defineEventHandler(async (event) => {
               like(users.name, pattern),
               like(activityLogs.action, pattern),
               like(tasks.title, pattern),
+              like(goals.title, pattern),
               like(projects.name, pattern)
             )
           : undefined

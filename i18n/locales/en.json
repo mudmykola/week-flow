@@ -19,7 +19,13 @@
   "activityActions": {
     "task": { "created": "created the task", "updated": "updated the task", "deleted": "deleted the task" },
     "subtask": { "created": "added a subtask" },
-    "comment": { "created": "added a comment" }
+    "comment": { "created": "added a comment" },
+    "goal": {
+      "created": "created a goal",
+      "progress_updated": "updated goal progress",
+      "project_linked": "linked the goal to a project",
+      "project_unlinked": "unlinked the goal from its project"
+    }
   },
   "activityFields": {
     "title": "Title",
@@ -196,8 +202,20 @@
     "delete": "Delete",
     "return": "Reopen",
     "archive": "Archive",
-    "empty": "Nothing here yet",
-    "emptyHint": "Tasks will appear automatically."
+    "snooze": "Move to tomorrow",
+    "progress": "{done}/{total} completed today",
+    "overdueSection": "Overdue",
+    "todaySection": "Today",
+    "completedUndo": "Task completed",
+    "deletedUndo": "Task deleted",
+    "emptyToday": "Nothing due today",
+    "emptyTodayHint": "Great work — you're all caught up.",
+    "emptyUpcoming": "No upcoming tasks",
+    "emptyUpcomingHint": "Tasks with a due date will show up here.",
+    "emptyOverdue": "No overdue tasks",
+    "emptyOverdueHint": "Everything is on time.",
+    "emptyArchive": "Archive is empty",
+    "emptyArchiveHint": "Archived tasks will show up here."
   },
   "board": {
     "title": "Weekly board",
@@ -267,6 +285,7 @@
       "allProjects": "All projects",
       "tasks": "Tasks",
       "projects": "Projects",
+      "goals": "Goals",
       "last7Days": "Last 7 days",
       "last30Days": "Last 30 days",
       "last90Days": "Last 90 days",
@@ -426,7 +445,12 @@
       "description": "Expected outcomes and personal progress.",
       "empty": "No goals yet",
       "emptyHint": "Your PM will add team or personal goals here.",
-      "until": "Due {date}"
+      "until": "Due {date}",
+      "activeSection": "Active",
+      "completedSection": "Completed",
+      "linkedTo": "Linked to project \"{project}\"",
+      "overdueBadge": "overdue",
+      "dueSoonBadge": "due soon"
     },
     "inbox": {
       "description": "Capture a thought now and process it later.",
@@ -487,6 +511,11 @@
       "activeProjects": "Active projects",
       "activeProjectsHint": "Incomplete tasks by project",
       "noProjects": "No active projects.",
+      "goalsBreakdown": "Goals",
+      "goalsBreakdownHint": "Active vs completed goals",
+      "goalsActive": "Active goals",
+      "goalsDone": "Completed",
+      "goalsAvgProgress": "Average progress",
       "attention": "Needs attention",
       "attentionHint": "Overdue and urgent tasks",
       "viewAll": "View all",
@@ -561,7 +590,9 @@
       "newGoal": "New goal",
       "goalName": "Goal name",
       "expected": "Expected outcome",
-      "createGoal": "Create goal"
+      "createGoal": "Create goal",
+      "noLinkedProject": "No linked project",
+      "linkProject": "Link: {project}"
     },
     "workflows": {
       "stageAdded": "Stage added",

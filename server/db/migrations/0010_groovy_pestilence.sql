@@ -1,0 +1,1 @@
+ALTER TABLE `goals` ADD `project_id` text REFERENCES projects(id);

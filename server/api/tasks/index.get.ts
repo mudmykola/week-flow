@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
 import { useDb } from '../../db'
 import { comments, projectMembers, subtasks, tasks } from '../../db/schema'
 import { weekSchema } from '../../utils/validators'
@@ -15,19 +15,23 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const week = query.week ? weekSchema.parse(query.week) : undefined
   const projectId = typeof query.project === 'string' ? query.project : undefined
-  const inboxOnly = query.scope === 'inbox'
+  const scope = query.scope
 
   const conditions = [
     isAdmin(user)
       ? undefined
       : sharedProjectIds.length
-        ? or(eq(tasks.ownerId, user.id), inArray(tasks.projectId, sharedProjectIds))
-        : eq(tasks.ownerId, user.id),
+        ? or(eq(tasks.ownerId, user.id), eq(tasks.assigneeId, user.id), inArray(tasks.projectId, sharedProjectIds))
+        : or(eq(tasks.ownerId, user.id), eq(tasks.assigneeId, user.id)),
     week ? eq(tasks.week, week) : undefined,
     projectId ? eq(tasks.projectId, projectId) : undefined,
-    inboxOnly
+    scope === 'inbox'
       ? and(isNull(tasks.projectId), isNull(tasks.dueDate), ne(tasks.status, 'done'), isNull(tasks.archivedAt))
-      : undefined
+      : scope === 'due'
+        ? and(isNotNull(tasks.dueDate), isNull(tasks.archivedAt))
+        : scope === 'archived'
+          ? isNotNull(tasks.archivedAt)
+          : undefined
   ].filter((c) => c !== undefined)
 
   const result = await db

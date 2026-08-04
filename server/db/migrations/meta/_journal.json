@@ -71,6 +71,13 @@
       "when": 1785793980547,
       "tag": "0009_many_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785877268836,
+      "tag": "0010_groovy_pestilence",
+      "breakpoints": true
     }
   ]
 }

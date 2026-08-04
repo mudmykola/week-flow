@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
   await db.insert(tasks).values(task)
   await logActivity(event, {
-    ownerId: user.id,
+    ownerId: task.assigneeId,
     actorId: user.id,
     action: 'task.created',
     entityType: 'task',

@@ -30,6 +30,8 @@ function clearFilters() {
 function openEntity(item: ActivityFeedItem) {
   if (item.entityType === 'task' && item.action !== 'task.deleted') {
     void navigateTo({ path: '/', query: { task: item.entityId } })
+  } else if (item.entityType === 'goal') {
+    void navigateTo('/goals')
   }
 }
 function exportCsv() {

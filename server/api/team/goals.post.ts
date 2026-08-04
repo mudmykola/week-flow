@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { useDb } from '../../db'
 import { goals, teamMembers } from '../../db/schema'
 import { requireManagedTeam } from '../../utils/teamAccess'
+import { logActivity } from '../../utils/activity'
 
 const schema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -37,10 +38,19 @@ export default defineEventHandler(async (event) => {
     progress: 0,
     status: 'active' as const,
     dueDate: body.dueDate ?? null,
+    projectId: null,
     createdBy: manager.id,
     createdAt: now,
     updatedAt: now
   }
   await db.insert(goals).values(goal)
+  await logActivity(event, {
+    ownerId: body.assigneeId ?? manager.id,
+    actorId: manager.id,
+    action: 'goal.created',
+    entityType: 'goal',
+    entityId: goal.id,
+    metadata: { title: goal.title }
+  })
   return goal
 })

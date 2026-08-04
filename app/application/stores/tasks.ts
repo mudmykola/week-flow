@@ -19,6 +19,8 @@ export const useTasksStore = defineStore('tasks', () => {
   const filterProjectId = ref<string | null>(null)
   const inboxTasks = ref<Task[]>([])
   const inboxLoading = ref(false)
+  const listTasks = ref<Task[]>([])
+  const listLoading = ref(false)
 
   const filteredTasks = computed(() =>
     filterProjectId.value ? tasks.value.filter((t) => t.projectId === filterProjectId.value) : tasks.value
@@ -187,6 +189,73 @@ export const useTasksStore = defineStore('tasks', () => {
     return recreated
   }
 
+  async function loadListTasks(fetcher: () => Promise<Task[]>) {
+    listLoading.value = true
+    try {
+      listTasks.value = await fetcher()
+    } finally {
+      listLoading.value = false
+    }
+  }
+
+  async function addListTask(input: CreateTaskInput) {
+    const task = await createTask(input)
+    listTasks.value.unshift(task)
+    return task
+  }
+
+  async function patchListTask(id: string, patch: UpdateTaskInput) {
+    const index = listTasks.value.findIndex((t) => t.id === id)
+    const previous = index === -1 ? null : { ...listTasks.value[index]! }
+    if (index !== -1) listTasks.value[index] = { ...listTasks.value[index]!, ...patch }
+    try {
+      const task = await updateTask(id, patch)
+      const currentIndex = listTasks.value.findIndex((t) => t.id === id)
+      if (currentIndex !== -1) listTasks.value[currentIndex] = task
+      return task
+    } catch (error) {
+      const currentIndex = listTasks.value.findIndex((t) => t.id === id)
+      if (previous && currentIndex !== -1) listTasks.value[currentIndex] = previous
+      throw error
+    }
+  }
+
+  async function removeListTask(id: string) {
+    const previous = listTasks.value
+    listTasks.value = listTasks.value.filter((t) => t.id !== id)
+    try {
+      await deleteTask(id)
+    } catch (error) {
+      listTasks.value = previous
+      throw error
+    }
+  }
+
+  async function recreateListTask(task: Task) {
+    const recreated = await createTask({
+      title: task.title,
+      note: task.note,
+      status: task.status,
+      projectId: task.projectId,
+      week: task.week,
+      sort: task.sort,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      tags: task.tags,
+      recurrence: task.recurrence,
+      assigneeId: task.assigneeId,
+      stageId: task.stageId
+    })
+    listTasks.value.unshift(recreated)
+    return recreated
+  }
+
+  function syncListTask(task: Task) {
+    const index = listTasks.value.findIndex((t) => t.id === task.id)
+    if (index !== -1) listTasks.value[index] = task
+    else listTasks.value.unshift(task)
+  }
+
   return {
     tasks,
     loading,
@@ -210,6 +279,14 @@ export const useTasksStore = defineStore('tasks', () => {
     removeInboxTask,
     syncInboxTaskFromEditor,
     restoreCompletedInboxTask,
-    recreateInboxTask
+    recreateInboxTask,
+    listTasks,
+    listLoading,
+    loadListTasks,
+    addListTask,
+    patchListTask,
+    removeListTask,
+    recreateListTask,
+    syncListTask
   }
 })

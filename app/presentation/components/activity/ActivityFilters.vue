@@ -39,6 +39,10 @@ function update(key: keyof ActivityFiltersState, value: string) {
       <option value="task.deleted">{{ $t('activityActions.task.deleted') }}</option>
       <option value="subtask.created">{{ $t('activityActions.subtask.created') }}</option>
       <option value="comment.created">{{ $t('activityActions.comment.created') }}</option>
+      <option value="goal.created">{{ $t('activityActions.goal.created') }}</option>
+      <option value="goal.progress_updated">{{ $t('activityActions.goal.progress_updated') }}</option>
+      <option value="goal.project_linked">{{ $t('activityActions.goal.project_linked') }}</option>
+      <option value="goal.project_unlinked">{{ $t('activityActions.goal.project_unlinked') }}</option>
     </FormSelect>
     <FormSelect
       :model-value="modelValue.actor"
@@ -73,6 +77,7 @@ function update(key: keyof ActivityFiltersState, value: string) {
       <option value="">{{ $t('pages.activity.allEntities') }}</option>
       <option value="task">{{ $t('pages.activity.tasks') }}</option>
       <option value="project">{{ $t('pages.activity.projects') }}</option>
+      <option value="goal">{{ $t('pages.activity.goals') }}</option>
     </FormSelect>
     <FormSelect
       :model-value="modelValue.period"

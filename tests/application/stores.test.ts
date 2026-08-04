@@ -6,6 +6,8 @@ const projectApi = vi.hoisted(() => ({ fetchProjects: vi.fn(), createProject: vi
 const taskApi = vi.hoisted(() => ({
   fetchTasks: vi.fn(),
   fetchInboxTasks: vi.fn(),
+  fetchDueTasks: vi.fn(),
+  fetchArchivedTasks: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -208,5 +210,49 @@ describe('Pinia stores', () => {
     await store.recreateInboxTask(task)
     expect(taskApi.createTask).toHaveBeenCalledWith(expect.objectContaining({ title: task.title, week: task.week }))
     expect(store.inboxTasks).toEqual([recreated])
+  })
+
+  it('loads, adds and optimistically patches list tasks with rollback on failure', async () => {
+    const task = makeTask({ dueDate: '2026-08-05' })
+    taskApi.fetchDueTasks.mockResolvedValue([task])
+    const store = useTasksStore()
+    await store.loadListTasks(taskApi.fetchDueTasks)
+    expect(store.listLoading).toBe(false)
+    expect(store.listTasks).toEqual([task])
+
+    const created = makeTask({ id: 'task-2' })
+    taskApi.createTask.mockResolvedValue(created)
+    await store.addListTask({ title: created.title, week: created.week })
+    expect(store.listTasks[0]).toEqual(created)
+
+    taskApi.updateTask.mockRejectedValue(new Error('network'))
+    const patch = store.patchListTask(task.id, { status: 'done' })
+    expect(store.listTasks.find((item) => item.id === task.id)?.status).toBe('done')
+    await expect(patch).rejects.toThrow('network')
+    expect(store.listTasks.find((item) => item.id === task.id)).toEqual(task)
+  })
+
+  it('removes a list task and restores it via recreateListTask on undo', async () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.listTasks = [task]
+    taskApi.deleteTask.mockResolvedValue({ ok: true })
+    await store.removeListTask(task.id)
+    expect(store.listTasks).toEqual([])
+
+    const recreated = makeTask({ id: 'task-2' })
+    taskApi.createTask.mockResolvedValue(recreated)
+    await store.recreateListTask(task)
+    expect(store.listTasks).toEqual([recreated])
+  })
+
+  it('upserts a task into the list via syncListTask', () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.syncListTask(task)
+    expect(store.listTasks).toEqual([task])
+    const updated = { ...task, title: 'Updated' }
+    store.syncListTask(updated)
+    expect(store.listTasks).toEqual([updated])
   })
 })

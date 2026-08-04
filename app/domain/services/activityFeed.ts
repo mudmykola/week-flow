@@ -40,11 +40,15 @@ export function activityIcon(action: string) {
   if (action === 'task.created') return 'i-lucide-circle-plus'
   if (action === 'task.deleted') return 'i-lucide-trash-2'
   if (action === 'subtask.created') return 'i-lucide-list-plus'
+  if (action === 'goal.created') return 'i-lucide-target'
+  if (action === 'goal.progress_updated') return 'i-lucide-trending-up'
+  if (action === 'goal.project_linked') return 'i-lucide-link'
+  if (action === 'goal.project_unlinked') return 'i-lucide-link-2-off'
   return 'i-lucide-pencil-line'
 }
 
 export function activityTone(action: string) {
-  if (action === 'task.created' || action === 'subtask.created') return 'success'
+  if (action === 'task.created' || action === 'subtask.created' || action === 'goal.created') return 'success'
   if (action === 'task.deleted') return 'danger'
   return 'accent'
 }

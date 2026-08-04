@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { createTeamGoal, updateGoal } from '~/data/repositories/goalsRepository'
+
 const { user } = useUserSession()
 const { t } = useI18n()
 if (user.value?.role !== 'pm' && user.value?.role !== 'admin')
@@ -6,6 +8,7 @@ if (user.value?.role !== 'pm' && user.value?.role !== 'admin')
 
 const toast = useToast()
 const { report } = useApiFeedback()
+const projectsStore = useProjectsStore()
 const selectedTeamId = ref<string | null>(null)
 const { data, status, refresh } = await useFetch('/api/team', {
   query: computed(() => ({ team: selectedTeamId.value || undefined }))
@@ -14,6 +17,10 @@ const teamName = ref(t('pages.team.defaultName'))
 const memberEmail = ref('')
 const goal = reactive({ title: '', description: '', assigneeId: null as string | null, dueDate: '' })
 const saving = ref(false)
+
+onMounted(() => {
+  if (!projectsStore.projects.length) void projectsStore.loadProjects()
+})
 
 async function createTeam() {
   saving.value = true
@@ -49,10 +56,7 @@ async function createGoal() {
   if (!goal.title.trim()) return
   saving.value = true
   try {
-    await $fetch('/api/team/goals', {
-      method: 'POST',
-      body: { ...goal, dueDate: goal.dueDate || null, teamId: data.value?.team?.id }
-    })
+    await createTeamGoal({ ...goal, dueDate: goal.dueDate || null, teamId: data.value?.team?.id })
     Object.assign(goal, { title: '', description: '', assigneeId: null, dueDate: '' })
     await refresh()
     toast.add({ title: t('pages.team.goalCreated'), color: 'success' })
@@ -62,7 +66,12 @@ async function createGoal() {
 }
 
 async function setProgress(id: string, progress: number) {
-  await $fetch(`/api/goals/${id}`, { method: 'PATCH', body: { progress } })
+  await updateGoal(id, { progress })
+  await refresh()
+}
+
+async function linkProject(id: string, projectId: string | null) {
+  await updateGoal(id, { projectId })
   await refresh()
 }
 </script>
@@ -230,7 +239,18 @@ async function setProgress(id: string, progress: number) {
                   </div>
                   <strong class="text-sm text-[var(--color-accent)]">{{ item.progress }}%</strong>
                 </div>
+                <div
+                  v-if="item.projectId"
+                  class="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-alt)]"
+                >
+                  <div
+                    class="h-full rounded-full"
+                    style="background-color: var(--color-accent)"
+                    :style="{ width: `${item.progress}%` }"
+                  />
+                </div>
                 <input
+                  v-else
                   :value="item.progress"
                   type="range"
                   min="0"
@@ -239,6 +259,20 @@ async function setProgress(id: string, progress: number) {
                   class="mt-3 w-full accent-[var(--color-accent)]"
                   @change="setProgress(item.id, Number(($event.target as HTMLInputElement).value))"
                 />
+                <select
+                  :value="item.projectId"
+                  class="mt-2 h-8 w-full rounded-lg border border-[var(--color-panel-border)] bg-transparent px-2 text-xs"
+                  @change="linkProject(item.id, ($event.target as HTMLSelectElement).value || null)"
+                >
+                  <option value="">{{ $t('pages.team.noLinkedProject') }}</option>
+                  <option
+                    v-for="project in projectsStore.projects"
+                    :key="project.id"
+                    :value="project.id"
+                  >
+                    {{ $t('pages.team.linkProject', { project: project.name }) }}
+                  </option>
+                </select>
               </div>
             </div>
           </article>

@@ -6,7 +6,9 @@ import { activityIcon, activityTone } from '~/domain/services/activityFeed'
 const props = defineProps<{ item: ActivityGroup<ActivityFeedItem> }>()
 const emit = defineEmits<{ open: [item: ActivityFeedItem] }>()
 const { t, te, locale } = useI18n()
-const actionable = computed(() => props.item.entityType === 'task' && props.item.action !== 'task.deleted')
+const actionable = computed(
+  () => (props.item.entityType === 'task' && props.item.action !== 'task.deleted') || props.item.entityType === 'goal'
+)
 const actionLabel = computed(() => {
   const key = `activityActions.${props.item.action}`
   return te(key) ? t(key) : t('pages.activity.changedItem')

@@ -5,9 +5,11 @@ import type { Project } from '~/domain/entities/project'
 import type { AssignableUser, Task, TaskPriority, TaskStatus } from '~/domain/entities/task'
 import {
   analyticsWeeks,
+  averageGoalProgress,
   buildAnalyticsTrend,
   completionRate,
   countByStatus,
+  countGoalsByStatus,
   filterAnalyticsTasks,
   type AnalyticsPeriod
 } from '~/domain/services/analytics'
@@ -16,6 +18,7 @@ import { priorityColors, priorityLabels, statusLabels } from '~/domain/services/
 import { focusStats, type FocusSession } from '~/domain/services/focus'
 
 const { t } = useI18n()
+const goalsStore = useGoalsStore()
 const tasks = ref<Task[]>([])
 const projects = ref<Project[]>([])
 const assignees = ref<AssignableUser[]>([])
@@ -43,7 +46,8 @@ async function loadDashboard() {
       fetchAllTasks(),
       fetchProjects(),
       $fetch<AssignableUser[]>('/api/users/assignable'),
-      $fetch<{ sessions: FocusSession[] }>('/api/focus').then((response) => response.sessions)
+      $fetch<{ sessions: FocusSession[] }>('/api/focus').then((response) => response.sessions),
+      goalsStore.loadGoals()
     ])
   } catch {
     error.value = t('pages.analytics.error')
@@ -113,6 +117,12 @@ const attention = computed(() =>
   ].slice(0, 6)
 )
 const hasFilters = computed(() => Boolean(filters.projectId || filters.assigneeId || filters.priority))
+const goalStatusCounts = computed(() => countGoalsByStatus(goalsStore.goals))
+const avgGoalProgress = computed(() => averageGoalProgress(goalsStore.goals))
+const goalBreakdownItems = computed(() => [
+  { key: 'active', label: t('pages.analytics.goalsActive'), value: goalStatusCounts.value.active, color: '#3b82f6' },
+  { key: 'done', label: t('pages.analytics.goalsDone'), value: goalStatusCounts.value.done, color: '#16a34a' }
+])
 
 function resetFilters() {
   filters.projectId = null
@@ -385,6 +395,36 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
             {{ $t('pages.analytics.noProjects') }}
           </p>
         </article>
+      </section>
+
+      <section class="analytics-page__goals mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <article class="section-card min-w-0">
+          <h2 class="font-display text-lg">{{ $t('pages.analytics.goalsBreakdown') }}</h2>
+          <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.goalsBreakdownHint') }}</p>
+          <ClientOnly>
+            <LazyBarBreakdown
+              class="mt-3"
+              :items="goalBreakdownItems"
+              @select="navigateTo('/goals')"
+            />
+            <template #fallback>
+              <USkeleton class="mt-3 h-[280px] rounded-xl" />
+            </template>
+          </ClientOnly>
+        </article>
+        <div class="grid gap-4">
+          <MetricCard
+            :label="$t('pages.analytics.goalsActive')"
+            :value="goalStatusCounts.active"
+            icon="i-lucide-target"
+          />
+          <MetricCard
+            :label="$t('pages.analytics.goalsAvgProgress')"
+            :value="`${avgGoalProgress}%`"
+            icon="i-lucide-trending-up"
+            tone="accent"
+          />
+        </div>
       </section>
 
       <section class="analytics-page__attention section-card mt-4">

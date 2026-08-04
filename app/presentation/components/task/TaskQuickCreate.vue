@@ -7,6 +7,7 @@ const props = defineProps<{
   projects: Project[]
   assignees: AssignableUser[]
   initialTitle?: string
+  initialDueDate?: string
 }>()
 const emit = defineEmits<{
   create: [
@@ -32,6 +33,7 @@ const input = useTemplateRef<HTMLInputElement>('quickInput')
 const fullDraft = useLocalStorage<Record<string, unknown> | null>('weekflow-task-draft-v2', null)
 onMounted(() => {
   if (props.initialTitle) title.value = props.initialTitle
+  if (props.initialDueDate) dueDate.value = props.initialDueDate
   input.value?.focus()
 })
 defineExpose({ focus: () => input.value?.focus() })

@@ -1,3 +1,4 @@
+import type { Goal } from '~/domain/entities/goal'
 import type { Task, TaskPriority, TaskStatus } from '~/domain/entities/task'
 import { getPrevWeek } from '~/domain/services/week'
 
@@ -68,4 +69,16 @@ export function countByStatus(tasks: Task[]): Record<TaskStatus, number> {
 export function completionRate(tasks: Task[]) {
   if (!tasks.length) return 0
   return Math.round((tasks.filter((task) => task.status === 'done').length / tasks.length) * 100)
+}
+
+export function countGoalsByStatus(goals: Goal[]): Record<'active' | 'done', number> {
+  return {
+    active: goals.filter((goal) => goal.status !== 'done').length,
+    done: goals.filter((goal) => goal.status === 'done').length
+  }
+}
+
+export function averageGoalProgress(goals: Goal[]) {
+  if (!goals.length) return 0
+  return Math.round(goals.reduce((sum, goal) => sum + goal.progress, 0) / goals.length)
 }

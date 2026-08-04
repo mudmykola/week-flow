@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
     })
   }
   await logActivity(event, {
-    ownerId: task.ownerId!,
+    ownerId: task.assigneeId ?? task.ownerId!,
     actorId: user.id,
     action: 'task.updated',
     entityType: 'task',
