@@ -2,10 +2,11 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import TaskListView from '~/presentation/components/task/TaskListView.vue'
+import { localDateKey } from '~/domain/services/today'
 import { makeTask } from '../fixtures'
 
-const today = new Date().toISOString().slice(0, 10)
-const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+const today = localDateKey()
+const yesterday = localDateKey(new Date(Date.now() - 86_400_000))
 
 const taskApi = vi.hoisted(() => ({
   fetchDueTasks: vi.fn(),
@@ -79,7 +80,10 @@ describe('TaskListView (today)', () => {
   it('deletes a task and recreates it on undo', async () => {
     const task = makeTask({ id: 'task-1', title: 'Buy milk', dueDate: today })
     taskApi.fetchDueTasks.mockResolvedValue([task])
-    taskApi.deleteTask.mockResolvedValue({ ok: true })
+    taskApi.deleteTask.mockImplementation(async () => {
+      taskApi.fetchDueTasks.mockResolvedValue([])
+      return { ok: true }
+    })
     const wrapper = await mountSuspended(TaskListView, {
       props: { mode: 'today', title: 'Today', icon: 'i-lucide-sun' },
       global: { stubs: stubs() }
@@ -91,7 +95,11 @@ describe('TaskListView (today)', () => {
     await flushPromises()
     expect(wrapper.text()).not.toContain('Buy milk')
 
-    taskApi.createTask.mockResolvedValue(makeTask({ id: 'task-2', title: 'Buy milk', dueDate: today }))
+    const recreated = makeTask({ id: 'task-2', title: 'Buy milk', dueDate: today })
+    taskApi.createTask.mockImplementation(async () => {
+      taskApi.fetchDueTasks.mockResolvedValue([recreated])
+      return recreated
+    })
     await wrapper.get('button.font-semibold').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('Buy milk')

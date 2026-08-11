@@ -10,13 +10,15 @@ const { t, tm, rt } = useI18n()
 const prompts = computed(() =>
   (tm('pages.review.prompts') as Array<Parameters<typeof rt>[0]>).map((prompt) => rt(prompt))
 )
-onMounted(async () => {
+async function loadReview() {
   try {
     tasks.value = (await fetchAllTasks()).filter((task) => task.week === getCurrentWeek() && !task.archivedAt)
   } finally {
     loading.value = false
   }
-})
+}
+onMounted(loadReview)
+useLiveRefresh('tasks', loadReview)
 const done = computed(() => tasks.value.filter((task) => task.status === 'done'))
 const remaining = computed(() => tasks.value.filter((task) => task.status !== 'done'))
 const score = computed(() => (tasks.value.length ? Math.round((done.value.length / tasks.value.length) * 100) : 0))

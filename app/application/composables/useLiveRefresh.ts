@@ -1,6 +1,7 @@
 export type SyncKind = 'tasks' | 'goals' | 'projects'
 
 let channel: BroadcastChannel | null = null
+const localEvent = 'weekflow:sync'
 
 function getChannel() {
   if (!import.meta.client) return null
@@ -9,6 +10,7 @@ function getChannel() {
 }
 
 export function broadcastSync(kind: SyncKind) {
+  if (import.meta.client) window.dispatchEvent(new CustomEvent<SyncKind>(localEvent, { detail: kind }))
   getChannel()?.postMessage(kind)
 }
 
@@ -19,11 +21,18 @@ export function useLiveRefresh(kind: SyncKind, refetch: () => void | Promise<voi
   })
 
   const own = getChannel()
+  const onLocal = (event: Event) => {
+    if ((event as CustomEvent<SyncKind>).detail === kind) void refetch()
+  }
+  if (import.meta.client) window.addEventListener(localEvent, onLocal)
   if (own) {
     const listener = (event: MessageEvent<SyncKind>) => {
       if (event.data === kind) void refetch()
     }
     own.addEventListener('message', listener)
-    onUnmounted(() => own.removeEventListener('message', listener))
+    onUnmounted(() => {
+      own.removeEventListener('message', listener)
+      window.removeEventListener(localEvent, onLocal)
+    })
   }
 }

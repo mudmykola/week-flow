@@ -4,6 +4,7 @@ import { fetchArchivedTasks, fetchDueTasks } from '~/data/repositories/tasksRepo
 import type { AssignableUser, Task } from '~/domain/entities/task'
 import { priorityColors } from '~/domain/services/taskLabels'
 import { getCurrentWeek } from '~/domain/services/week'
+import { localDateKey } from '~/domain/services/today'
 
 const props = defineProps<{ mode: 'today' | 'upcoming' | 'overdue' | 'archive'; title: string; icon: string }>()
 
@@ -12,7 +13,7 @@ const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
 const assignees = ref<AssignableUser[]>([])
 const loading = ref(true)
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateKey()
 const tomorrow = addDays(new Date(), 1).toISOString().slice(0, 10)
 
 const editorOpen = ref(false)

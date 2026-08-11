@@ -55,6 +55,8 @@ if (user.value?.role !== 'admin') throw createError({ statusCode: 403, statusMes
 
 const { data, status, error, refresh } = await useFetch<AdminData>('/api/admin/users')
 const { data: audit, refresh: refreshAudit } = await useFetch<AuditEntry[]>('/api/admin/audit')
+useLiveRefresh('tasks', refresh)
+useLiveRefresh('projects', refresh)
 const activeTab = ref<'users' | 'teams' | 'audit'>('users')
 const search = ref('')
 const roleFilter = ref<Role | null>(null)

@@ -38,4 +38,20 @@ describe('useLiveRefresh / broadcastSync', () => {
 
     expect(received).toHaveBeenCalledWith('projects')
   })
+
+  it('refreshes consumers in the same tab immediately', async () => {
+    const refetch = vi.fn()
+    const Consumer = defineComponent({
+      setup() {
+        useLiveRefresh('tasks', refetch)
+        return () => h('div')
+      }
+    })
+    await mountSuspended(Consumer)
+
+    broadcastSync('tasks')
+    await flushPromises()
+
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
 })

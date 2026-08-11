@@ -16,6 +16,7 @@ import {
 import { getCurrentWeek, getPrevWeek } from '~/domain/services/week'
 import { priorityColors, priorityLabels, statusLabels } from '~/domain/services/taskLabels'
 import { focusStats, type FocusSession } from '~/domain/services/focus'
+import { localDateKey } from '~/domain/services/today'
 
 const { t } = useI18n()
 const goalsStore = useGoalsStore()
@@ -32,11 +33,14 @@ const filters = reactive<{
   priority: TaskPriority | null
 }>({ period: '8w', projectId: null, assigneeId: null, priority: null })
 
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateKey()
 const currentWeek = getCurrentWeek()
 const previousWeek = getPrevWeek(currentWeek)
 
 onMounted(loadDashboard)
+useLiveRefresh('tasks', loadDashboard)
+useLiveRefresh('goals', loadDashboard)
+useLiveRefresh('projects', loadDashboard)
 
 async function loadDashboard() {
   loading.value = true

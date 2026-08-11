@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { fetchAllTasks, updateTask } from '~/data/repositories/tasksRepository'
+import type { GlobalCreateAction } from '~/domain/entities/globalCreate'
 import type { Subtask, Task } from '~/domain/entities/task'
 import { focusStats, type FocusKind, type FocusSession } from '~/domain/services/focus'
 
@@ -18,6 +19,7 @@ const result = ref('')
 const immersive = ref(false)
 const subtasks = ref<Subtask[]>([])
 const timer = useFocusTimer()
+const globalCreateBus = useEventBus<GlobalCreateAction>('weekflow:open-create')
 
 const available = computed(() => tasks.value.filter((task) => !task.archivedAt && task.status !== 'done'))
 const queue = computed(
@@ -29,6 +31,7 @@ const selected = computed(
 const stats = computed(() => focusStats(sessions.value))
 
 await load()
+useLiveRefresh('tasks', load)
 useIntervalFn(() => void loadSessions(), 30_000, { immediate: false })
 watch(() => selected.value?.id, loadDetails, { immediate: true })
 
@@ -162,7 +165,7 @@ onKeyStroke('Escape', () => (immersive.value = false))
       icon="i-lucide-party-popper"
       ><AppButton
         icon="i-lucide-plus"
-        @click="navigateTo('/?new=1')"
+        @click="globalCreateBus.emit('task')"
         >{{ $t('pages.focus.createTask') }}</AppButton
       ></EmptyState
     >

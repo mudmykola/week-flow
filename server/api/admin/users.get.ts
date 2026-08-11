@@ -2,6 +2,7 @@ import { asc, desc, eq } from 'drizzle-orm'
 import { useDb } from '../../db'
 import { activityLogs, projectMembers, projects, tasks, teamMembers, teams, users } from '../../db/schema'
 import { isAdmin, requireAppUser } from '../../utils/auth'
+import { calendarDateKey } from '#shared/utils/date'
 
 export default defineEventHandler(async (event) => {
   const actor = await requireAppUser(event)
@@ -45,7 +46,7 @@ export default defineEventHandler(async (event) => {
       .orderBy(desc(activityLogs.createdAt))
       .limit(500)
   ])
-  const today = new Date().toISOString().slice(0, 10)
+  const today = calendarDateKey()
   const enriched = accounts.map((account) => {
     const assigned = taskRows.filter((task) => task.assigneeId === account.id && !task.archivedAt)
     const ownedProjects = projectRows.filter((project) => project.ownerId === account.id).map((project) => project.id)

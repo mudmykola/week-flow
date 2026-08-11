@@ -56,12 +56,10 @@ onBeforeUnmount(clearTimers)
           aria-busy="true"
         >
           <div class="app-preloader__surface">
-            <span class="app-preloader__mark">
-              <UIcon
-                name="i-lucide-check-check"
-                class="size-5"
-              />
-            </span>
+            <BrandLogo
+              compact
+              size="sm"
+            />
             <div class="app-preloader__content">
               <strong>WeekFlow</strong>
               <span>{{ $t('common.loading') }}</span>
@@ -123,7 +121,10 @@ onBeforeUnmount(clearTimers)
   display: grid;
   gap: 0.1rem;
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: #666;
+}
+:global(.dark) .app-preloader__content {
+  color: #b3b3b3;
 }
 
 .app-preloader__content strong {

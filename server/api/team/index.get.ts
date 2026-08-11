@@ -3,6 +3,7 @@ import { useDb } from '../../db'
 import { goals, projects, tasks, teamMembers, teams, users } from '../../db/schema'
 import { isAdmin, requireManager } from '../../utils/auth'
 import { withComputedProgress } from '../../utils/goals'
+import { calendarDateKey } from '#shared/utils/date'
 
 export default defineEventHandler(async (event) => {
   const manager = await requireManager(event)
@@ -60,6 +61,7 @@ export default defineEventHandler(async (event) => {
     .where(eq(goals.teamId, team.id))
     .orderBy(goals.createdAt)
   const teamGoals = await withComputedProgress(db, rawGoals)
+  const today = calendarDateKey()
 
   const enriched = members.map((member) => {
     const ownTasks = memberTasks.filter((task) => task.assigneeId === member.id && !task.archivedAt)
@@ -69,9 +71,7 @@ export default defineEventHandler(async (event) => {
       taskTotal: ownTasks.length,
       taskDone: ownTasks.filter((task) => task.status === 'done').length,
       taskActive: ownTasks.filter((task) => task.status === 'in_progress').length,
-      taskOverdue: ownTasks.filter(
-        (task) => task.status !== 'done' && task.dueDate && task.dueDate < new Date().toISOString().slice(0, 10)
-      ).length,
+      taskOverdue: ownTasks.filter((task) => task.status !== 'done' && task.dueDate && task.dueDate < today).length,
       goalCount: ownGoals.length,
       goalProgress: ownGoals.length
         ? Math.round(ownGoals.reduce((sum, goal) => sum + goal.progress, 0) / ownGoals.length)

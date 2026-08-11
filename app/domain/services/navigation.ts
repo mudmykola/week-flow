@@ -30,3 +30,15 @@ export const navigationSections: NavigationSection[] = ['daily', 'insights', 'te
 export function navigationForRole(role?: NavigationRole) {
   return appNavigation.filter((item) => !item.roles || (role ? item.roles.includes(role) : false))
 }
+
+export function taskBoardLink(task: { id: string; week: string; projectId?: string | null; priority?: string }) {
+  return {
+    path: '/',
+    query: {
+      week: task.week,
+      task: task.id,
+      project: task.projectId ?? undefined,
+      priority: task.priority
+    }
+  }
+}

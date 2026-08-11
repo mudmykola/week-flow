@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { appNavigation, navigationForRole } from '../../app/domain/services/navigation'
+import { appNavigation, navigationForRole, taskBoardLink } from '../../app/domain/services/navigation'
 
 describe('application navigation', () => {
   it('maps every shell destination to an existing Nuxt page', () => {
@@ -18,5 +18,12 @@ describe('application navigation', () => {
     expect(navigationForRole('user').some((item) => item.to === '/admin')).toBe(false)
     expect(navigationForRole('pm').some((item) => item.to === '/team')).toBe(true)
     expect(navigationForRole('admin').some((item) => item.to === '/admin')).toBe(true)
+  })
+
+  it('preserves the selected task when navigating back to the board', () => {
+    expect(taskBoardLink({ id: 'task-1', week: '2026-W33', projectId: 'project-1', priority: 'high' })).toEqual({
+      path: '/',
+      query: { week: '2026-W33', task: 'task-1', project: 'project-1', priority: 'high' }
+    })
   })
 })

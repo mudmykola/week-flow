@@ -17,7 +17,7 @@ export function weekToDate(week: string): Date {
   return startOfISOWeek(date)
 }
 
-function dateToWeek(date: Date): string {
+export function dateToWeek(date: Date): string {
   const year = getISOWeekYear(date)
   const week = getISOWeek(date)
   return `${year}-W${String(week).padStart(2, '0')}`

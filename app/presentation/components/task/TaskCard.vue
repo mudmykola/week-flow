@@ -2,6 +2,7 @@
 import type { Project } from '~/domain/entities/project'
 import type { Task } from '~/domain/entities/task'
 import { getStatusLabel } from '~/domain/services/taskStatus'
+import { localDateKey } from '~/domain/services/today'
 
 const props = defineProps<{
   task: Task
@@ -52,7 +53,7 @@ const priorityColor: Record<Task['priority'], string> = {
   high: '#f59e0b',
   urgent: '#ef4444'
 }
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateKey()
 const overdue = computed(() =>
   Boolean(props.task.dueDate && props.task.dueDate < today && props.task.status !== 'done')
 )

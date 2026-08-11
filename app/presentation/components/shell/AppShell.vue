@@ -2,14 +2,24 @@
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
 import { createTask, fetchAllTasks, fetchDueTasks } from '~/data/repositories/tasksRepository'
 import { captureInboxItems, fetchInboxItems } from '~/data/repositories/inboxRepository'
+import { createStickyNote } from '~/data/repositories/stickyNotesRepository'
 import type { InboxItem } from '~/domain/entities/inbox'
+import type { StickyNote } from '~/domain/entities/stickyNote'
+import type { GlobalCreateAction } from '~/domain/entities/globalCreate'
 import { isInboxTask } from '~/domain/services/inbox'
-import { navigationForRole, navigationSections, type NavigationSection } from '~/domain/services/navigation'
+import {
+  navigationForRole,
+  navigationSections,
+  taskBoardLink,
+  type NavigationSection
+} from '~/domain/services/navigation'
+import { localDateKey } from '~/domain/services/today'
 import { getCurrentWeek } from '~/domain/services/week'
 
 const route = useRoute()
 const { user, clear } = useUserSession()
 const { t } = useI18n()
+const { report } = useApiFeedback()
 const colorMode = useColorMode()
 const mobileOpen = ref(false)
 const commandOpen = ref(false)
@@ -19,14 +29,24 @@ const query = ref('')
 const allTasks = ref<Task[]>([])
 const taskEditorOpen = ref(false)
 const taskEditorLoading = ref(false)
+const taskPlannedDate = ref<string | null>(null)
+const quickCreateKind = ref<Exclude<GlobalCreateAction, 'task' | 'today'> | null>(null)
+const quickCreateValue = ref('')
+const quickCreateColor = ref('#fe5011')
+const quickCreateSaving = ref(false)
+const createFeedback = ref('')
 const projectsStore = useProjectsStore()
 const assignees = ref<AssignableUser[]>([])
 const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
+const stickyCreatedBus = useEventBus<StickyNote>('weekflow:sticky-created')
+const globalCreateBus = useEventBus<GlobalCreateAction>('weekflow:open-create')
 const tasksStore = useTasksStore()
 const inboxItems = useState<InboxItem[]>('inbox-items', () => [])
 
 const shortcutsOpen = ref(false)
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateKey()
+
+globalCreateBus.on(handleCreateAction)
 
 onMounted(() => {
   fetchInboxItems()
@@ -82,7 +102,8 @@ async function openCommand() {
   document.querySelector<HTMLInputElement>('[data-command-input]')?.focus()
 }
 
-async function openTaskEditor() {
+async function openTaskEditor(plannedDate: string | null = null) {
+  taskPlannedDate.value = plannedDate
   taskEditorOpen.value = true
   if (projectsStore.projects.length && assignees.value.length && allTasks.value.length) return
 
@@ -107,6 +128,10 @@ async function saveTask(payload: {
   projectId: string | null
   priority: TaskPriority
   dueDate: string | null
+  plannedDate: string | null
+  plannedTime: string | null
+  estimateMinutes: number | null
+  dayRank: number | null
   tags: string[]
   recurrence: TaskRecurrence | null
   assigneeId: string | null
@@ -116,7 +141,47 @@ async function saveTask(payload: {
   allTasks.value.push(task)
   if (isInboxTask(task)) tasksStore.inboxTasks.unshift(task)
   taskCreatedBus.emit(task)
+  broadcastSync('tasks')
   taskEditorOpen.value = false
+  showCreateFeedback(t('shell.created.task'))
+}
+
+function showCreateFeedback(message: string) {
+  createFeedback.value = message
+  window.setTimeout(() => {
+    if (createFeedback.value === message) createFeedback.value = ''
+  }, 2600)
+}
+
+function handleCreateAction(action: GlobalCreateAction) {
+  if (action === 'task' || action === 'today') {
+    void openTaskEditor(action === 'today' ? today : null)
+    return
+  }
+  quickCreateKind.value = action
+  quickCreateValue.value = ''
+  quickCreateColor.value = '#fe5011'
+}
+
+async function submitQuickCreate() {
+  const value = quickCreateValue.value.trim()
+  if (!value || !quickCreateKind.value || quickCreateSaving.value) return
+  quickCreateSaving.value = true
+  try {
+    if (quickCreateKind.value === 'inbox') {
+      inboxItems.value.unshift(...(await captureInboxItems(value)))
+    } else if (quickCreateKind.value === 'note') {
+      stickyCreatedBus.emit(await createStickyNote({ content: value, color: 'yellow' }))
+    } else {
+      await projectsStore.addProject({ name: value, color: quickCreateColor.value })
+    }
+    showCreateFeedback(t(`shell.created.${quickCreateKind.value}`))
+    quickCreateKind.value = null
+  } catch (error) {
+    report(error)
+  } finally {
+    quickCreateSaving.value = false
+  }
 }
 
 async function addQueryToInbox() {
@@ -142,6 +207,19 @@ onKeyStroke('k', (event) => {
   openCommand()
 })
 
+onKeyStroke('n', (event) => {
+  const target = event.target as HTMLElement | null
+  if (
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey ||
+    target?.matches('input, textarea, select, [contenteditable="true"]')
+  )
+    return
+  event.preventDefault()
+  void openTaskEditor()
+})
+
 useEventListener('keydown', (event) => {
   if (event.key !== '?') return
   const target = event.target as HTMLElement | null
@@ -163,16 +241,10 @@ useEventListener('keydown', (event) => {
           class="flex items-center gap-3"
           @click="mobileOpen = false"
         >
-          <span class="grid size-9 place-items-center rounded-xl bg-[var(--color-accent)] text-white"
-            ><UIcon
-              name="i-lucide-check-check"
-              class="size-5"
-          /></span>
-          <span
-            class="font-display text-xl"
-            :class="sidebarCollapsed ? 'lg:hidden' : ''"
-            >WeekFlow</span
-          >
+          <BrandLogo
+            class="app-shell__brand"
+            :class="{ 'app-shell__brand--collapsed': sidebarCollapsed }"
+          />
         </NuxtLink>
         <button
           class="lg:hidden"
@@ -322,18 +394,18 @@ useEventListener('keydown', (event) => {
             class="size-5"
           />
         </button>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-3.5 py-2 text-sm font-semibold text-white"
-          :disabled="taskEditorLoading"
-          @click="openTaskEditor"
-        >
-          <UIcon
-            :name="taskEditorLoading ? 'i-lucide-loader-circle' : 'i-lucide-plus'"
-            class="size-4"
-            :class="taskEditorLoading ? 'animate-spin' : ''"
-          /><span class="hidden sm:inline">{{ $t('shell.newTask') }}</span>
-        </button>
+        <Transition name="fade">
+          <span
+            v-if="createFeedback"
+            class="app-shell__create-feedback"
+          >
+            <UIcon name="i-lucide-circle-check" />{{ createFeedback }}
+          </span>
+        </Transition>
+        <GlobalCreateMenu
+          :loading="taskEditorLoading"
+          @select="handleCreateAction"
+        />
       </header>
       <main><slot /></main>
     </div>
@@ -347,12 +419,62 @@ useEventListener('keydown', (event) => {
     <TaskEditor
       :open="taskEditorOpen"
       :task="null"
+      :default-planned-date="taskPlannedDate"
       :projects="projectsStore.projects"
       :assignees="assignees"
       :tag-options="reusableTags"
       @close="taskEditorOpen = false"
       @save="saveTask"
     />
+
+    <Modal
+      :open="Boolean(quickCreateKind)"
+      :title="quickCreateKind ? $t(`shell.createActions.${quickCreateKind}.title`) : ''"
+      size="sm"
+      @close="quickCreateKind = null"
+    >
+      <form
+        class="space-y-3"
+        @submit.prevent="submitQuickCreate"
+      >
+        <FormField :label="$t('shell.quickCreateLabel')">
+          <FormTextarea
+            v-if="quickCreateKind === 'note'"
+            v-model="quickCreateValue"
+            autofocus
+            :placeholder="$t(`shell.createActions.${quickCreateKind}.placeholder`)"
+          />
+          <FormInput
+            v-else
+            v-model="quickCreateValue"
+            autofocus
+            :placeholder="quickCreateKind ? $t(`shell.createActions.${quickCreateKind}.placeholder`) : ''"
+          />
+        </FormField>
+        <FormField
+          v-if="quickCreateKind === 'project'"
+          :label="$t('projectEditor.color')"
+        >
+          <FormInput
+            v-model="quickCreateColor"
+            type="color"
+          />
+        </FormField>
+      </form>
+      <template #footer>
+        <AppButton
+          variant="ghost"
+          @click="quickCreateKind = null"
+          >{{ $t('common.cancel') }}</AppButton
+        >
+        <AppButton
+          :loading="quickCreateSaving"
+          variant="primary"
+          @click="submitQuickCreate"
+          >{{ $t('common.add') }}</AppButton
+        >
+      </template>
+    </Modal>
 
     <FocusMiniPlayer />
 
@@ -392,7 +514,7 @@ useEventListener('keydown', (event) => {
           <NuxtLink
             v-for="task in results"
             :key="task.id"
-            :to="`/?week=${task.week}`"
+            :to="taskBoardLink(task)"
             class="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
             @click="commandOpen = false"
           >
@@ -463,3 +585,47 @@ useEventListener('keydown', (event) => {
     </Modal>
   </div>
 </template>
+
+<style scoped>
+.app-shell__create-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 13rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgb(16 185 129 / 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(16 185 129 / 0.1);
+  color: rgb(5 150 105);
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (min-width: 1024px) {
+  .app-shell__brand--collapsed :deep(.brand-logo__wordmark) {
+    display: none;
+  }
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-0.2rem);
+}
+@media (max-width: 639px) {
+  .app-shell__create-feedback {
+    position: fixed;
+    top: 4rem;
+    right: 0.75rem;
+    z-index: 55;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.16);
+  }
+}
+</style>

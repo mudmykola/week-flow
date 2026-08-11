@@ -1,5 +1,6 @@
-import { addDays, format } from 'date-fns'
+import { addDays } from 'date-fns'
 import type { Task, TaskPriority, TaskStatus } from '~/domain/entities/task'
+import { calendarDateKey } from '#shared/utils/date'
 
 export type TodayFilters = {
   search: string
@@ -11,7 +12,7 @@ export type TodayFilters = {
 }
 
 export function localDateKey(date = new Date()) {
-  return format(date, 'yyyy-MM-dd')
+  return calendarDateKey(date)
 }
 
 export function localDayRange(date = new Date()) {

@@ -109,6 +109,7 @@ onMounted(async () => {
     null
 })
 watch(projectId, load, { immediate: true })
+useLiveRefresh('tasks', load)
 watch(
   () => ruleForm.trigger,
   (trigger) => {

@@ -6,6 +6,7 @@ const props = defineProps<{
   open: boolean
   task: Task | null
   defaultStatus?: Task['status']
+  defaultPlannedDate?: string | null
   projects: Project[]
   assignees?: AssignableUser[]
   tagOptions?: string[]
@@ -163,7 +164,7 @@ watch(
     projectId.value = task?.projectId ?? (savedDraft?.projectId as string | null) ?? taskDefaults.value.projectId
     priority.value = task?.priority ?? (savedDraft?.priority as TaskPriority) ?? taskDefaults.value.priority
     dueDate.value = task?.dueDate ?? String(savedDraft?.dueDate ?? '')
-    plannedDate.value = task?.plannedDate ?? String(savedDraft?.plannedDate ?? '')
+    plannedDate.value = task?.plannedDate ?? props.defaultPlannedDate ?? String(savedDraft?.plannedDate ?? '')
     plannedTime.value = task?.plannedTime ?? String(savedDraft?.plannedTime ?? '')
     estimateMinutes.value = task?.estimateMinutes ?? (savedDraft?.estimateMinutes as number | null) ?? null
     dayRank.value = task?.dayRank ?? (savedDraft?.dayRank as number | null) ?? null

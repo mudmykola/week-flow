@@ -5,6 +5,7 @@ import { makeTask } from '../fixtures'
 describe('today planning', () => {
   it('uses the local calendar date instead of UTC', () => {
     expect(localDateKey(new Date(2026, 7, 11, 0, 10))).toBe('2026-08-11')
+    expect(localDateKey(new Date('2026-08-10T22:30:00.000Z'))).toBe('2026-08-11')
   })
 
   it('groups overdue, top, active, planned and done tasks without duplicates', () => {

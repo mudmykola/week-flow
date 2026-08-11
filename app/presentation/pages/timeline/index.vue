@@ -1,5 +1,5 @@
 <script setup lang="ts">
-await navigateTo({ path: '/calendar', query: { view: 'timeline' } }, { redirectCode: 301 })
+await navigateTo({ path: '/calendar', query: { view: 'week' } }, { redirectCode: 301 })
 </script>
 
 <template>

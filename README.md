@@ -79,7 +79,7 @@ NUXT_OAUTH_GOOGLE_CLIENT_SECRET=your-google-client-secret
 NUXT_SESSION_PASSWORD=unique-random-value-with-at-least-32-characters
 ```
 
-У Google Cloud Console додайте точний callback відповідно до локального порту:
+У Google Cloud Console додайте точний локальний callback:
 
 ```text
 http://localhost:3000/auth/google
@@ -91,7 +91,7 @@ Production callback:
 https://weekflow.pp.ua/auth/google
 ```
 
-Якщо Nuxt стартував на іншому порту, наприклад `3210`, додайте також `http://localhost:3210/auth/google`. Після зміни `.env` повністю перезапустіть dev-сервер.
+Команда `pnpm dev` використовує тільки порт `3000`. Якщо він зайнятий, перевірка зупинить запуск із чітким повідомленням замість тихого переходу на порт, якого немає у Google OAuth credentials. Звільніть порт `3000` і запустіть сервер повторно.
 
 > `.env`, локальна D1 і файли credentials ігноруються Git. У репозиторій можна додавати лише `.env.example` без реальних значень.
 

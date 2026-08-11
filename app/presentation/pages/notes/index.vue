@@ -16,6 +16,11 @@ const draggingId = ref<string | null>(null)
 const editingId = ref<string | null>(null)
 const board = useTemplateRef<HTMLElement>('board')
 const colors: StickyNoteColor[] = ['yellow', 'pink', 'blue', 'green']
+const stickyCreatedBus = useEventBus<StickyNote>('weekflow:sticky-created')
+
+stickyCreatedBus.on((note) => {
+  if (!notes.value.some((item) => item.id === note.id)) notes.value.push(note)
+})
 
 const colorClasses: Record<StickyNoteColor, string> = {
   yellow: 'bg-amber-200 text-amber-950 shadow-amber-950/10',

@@ -8,7 +8,12 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'uk' },
-      title: 'WeekFlow'
+      title: 'WeekFlow',
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/weekflow-mark.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }
+      ]
     }
   },
   modules: [
@@ -69,7 +74,11 @@ export default defineNuxtConfig({
       background_color: '#f7f7f7',
       display: 'standalone',
       start_url: '/',
-      icons: [{ src: '/favicon.ico', sizes: 'any', type: 'image/x-icon' }],
+      icons: [
+        { src: '/weekflow-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+      ],
       share_target: {
         action: '/inbox',
         method: 'GET',

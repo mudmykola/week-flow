@@ -20,6 +20,9 @@ await Promise.all([
     .catch(() => undefined)
 ])
 useIntervalFn(() => void load(), 60_000, { immediate: false })
+useLiveRefresh('tasks', load)
+useLiveRefresh('goals', load)
+useLiveRefresh('projects', load)
 
 function updateFilters(value: typeof filters) {
   Object.assign(filters, value)
