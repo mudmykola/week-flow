@@ -46,6 +46,12 @@ export default defineEventHandler(async (event) => {
     stageId: body.stageId ?? null,
     priority: body.priority,
     dueDate: body.dueDate ?? null,
+    plannedDate: body.plannedDate ?? null,
+    plannedTime: body.plannedTime ?? null,
+    estimateMinutes: body.estimateMinutes ?? null,
+    dayRank: body.dayRank ?? null,
+    weekRank: body.weekRank ?? null,
+    blockedByTaskId: body.blockedByTaskId ?? null,
     tags: body.tags,
     recurrence: body.recurrence ?? null,
     archivedAt: null

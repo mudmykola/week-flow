@@ -4,6 +4,7 @@ export const taskStatusSchema = z.enum(['todo', 'in_progress', 'done'])
 export const taskPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent'])
 export const taskRecurrenceSchema = z.enum(['daily', 'weekly', 'monthly'])
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+export const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 
 export const weekSchema = z.string().regex(/^\d{4}-W\d{2}$/, 'Expected format YYYY-Www')
 
@@ -16,6 +17,12 @@ export const createTaskSchema = z.object({
   sort: z.number().int().optional().default(0),
   priority: taskPrioritySchema.optional().default('medium'),
   dueDate: dateSchema.nullable().optional(),
+  plannedDate: dateSchema.nullable().optional(),
+  plannedTime: timeSchema.nullable().optional(),
+  estimateMinutes: z.number().int().min(5).max(1440).nullable().optional(),
+  dayRank: z.number().int().min(1).max(3).nullable().optional(),
+  weekRank: z.number().int().min(1).max(3).nullable().optional(),
+  blockedByTaskId: z.string().uuid().nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
   recurrence: taskRecurrenceSchema.nullable().optional(),
   assigneeId: z.string().uuid().nullable().optional(),
@@ -31,6 +38,12 @@ export const updateTaskSchema = z.object({
   sort: z.number().int().optional(),
   priority: taskPrioritySchema.optional(),
   dueDate: dateSchema.nullable().optional(),
+  plannedDate: dateSchema.nullable().optional(),
+  plannedTime: timeSchema.nullable().optional(),
+  estimateMinutes: z.number().int().min(5).max(1440).nullable().optional(),
+  dayRank: z.number().int().min(1).max(3).nullable().optional(),
+  weekRank: z.number().int().min(1).max(3).nullable().optional(),
+  blockedByTaskId: z.string().uuid().nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional(),
   recurrence: taskRecurrenceSchema.nullable().optional(),
   archivedAt: z.number().int().nullable().optional(),
@@ -47,6 +60,12 @@ export const bulkTaskSchema = z.object({
       week: true,
       priority: true,
       dueDate: true,
+      plannedDate: true,
+      plannedTime: true,
+      estimateMinutes: true,
+      dayRank: true,
+      weekRank: true,
+      blockedByTaskId: true,
       assigneeId: true,
       archivedAt: true
     })

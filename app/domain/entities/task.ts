@@ -14,6 +14,12 @@ export interface Task {
   doneAt: number | null
   priority: TaskPriority
   dueDate: string | null
+  plannedDate: string | null
+  plannedTime: string | null
+  estimateMinutes: number | null
+  dayRank: number | null
+  weekRank: number | null
+  blockedByTaskId: string | null
   tags: string[]
   recurrence: TaskRecurrence | null
   archivedAt: number | null
@@ -33,6 +39,12 @@ export interface CreateTaskInput {
   sort?: number
   priority?: TaskPriority
   dueDate?: string | null
+  plannedDate?: string | null
+  plannedTime?: string | null
+  estimateMinutes?: number | null
+  dayRank?: number | null
+  weekRank?: number | null
+  blockedByTaskId?: string | null
   tags?: string[]
   recurrence?: TaskRecurrence | null
   assigneeId?: string | null
@@ -48,6 +60,12 @@ export interface UpdateTaskInput {
   sort?: number
   priority?: TaskPriority
   dueDate?: string | null
+  plannedDate?: string | null
+  plannedTime?: string | null
+  estimateMinutes?: number | null
+  dayRank?: number | null
+  weekRank?: number | null
+  blockedByTaskId?: string | null
   tags?: string[]
   recurrence?: TaskRecurrence | null
   archivedAt?: number | null

@@ -13,6 +13,10 @@ const projectId = defineModel<string | null>('projectId', { required: true })
 const assigneeId = defineModel<string | null>('assigneeId', { required: true })
 const priority = defineModel<TaskPriority>('priority', { required: true })
 const dueDate = defineModel<string>('dueDate', { required: true })
+const plannedDate = defineModel<string>('plannedDate', { required: true })
+const plannedTime = defineModel<string>('plannedTime', { required: true })
+const estimateMinutes = defineModel<number | null>('estimateMinutes', { required: true })
+const dayRank = defineModel<number | null>('dayRank', { required: true })
 const stageId = defineModel<string | null>('stageId', { required: true })
 const recurrence = defineModel<TaskRecurrence | null>('recurrence', { required: true })
 </script>
@@ -88,6 +92,58 @@ const recurrence = defineModel<TaskRecurrence | null>('recurrence', { required: 
           v-model="dueDate"
           type="date"
         />
+      </FormField>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <FormField
+        :label="$t('task.plannedDate')"
+        icon="i-lucide-calendar-check-2"
+      >
+        <FormInput
+          v-model="plannedDate"
+          type="date"
+        />
+      </FormField>
+      <FormField
+        :label="$t('task.plannedTime')"
+        icon="i-lucide-clock-3"
+      >
+        <FormInput
+          v-model="plannedTime"
+          type="time"
+        />
+      </FormField>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <FormField
+        :label="$t('task.estimate')"
+        icon="i-lucide-hourglass"
+      >
+        <FormSelect v-model="estimateMinutes">
+          <option :value="null">{{ $t('task.noEstimate') }}</option>
+          <option
+            v-for="minutes in [15, 25, 30, 45, 60, 90, 120]"
+            :key="minutes"
+            :value="minutes"
+          >
+            {{ $t('task.minutes', { count: minutes }) }}
+          </option>
+        </FormSelect>
+      </FormField>
+      <FormField
+        :label="$t('task.dayPriority')"
+        icon="i-lucide-trophy"
+      >
+        <FormSelect v-model="dayRank">
+          <option :value="null">{{ $t('task.notTopThree') }}</option>
+          <option
+            v-for="rank in [1, 2, 3]"
+            :key="rank"
+            :value="rank"
+          >
+            #{{ rank }}
+          </option>
+        </FormSelect>
       </FormField>
     </div>
     <details class="task-properties__advanced rounded-xl border border-[var(--color-panel-border)] p-3">

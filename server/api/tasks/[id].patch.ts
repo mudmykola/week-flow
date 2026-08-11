@@ -20,6 +20,11 @@ export default defineEventHandler(async (event) => {
 
   const [existing] = await db.select().from(tasks).where(taskAccess)
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Task not found' })
+  if (body.blockedByTaskId) {
+    if (body.blockedByTaskId === id) throw createError({ statusCode: 400, statusMessage: 'Task cannot block itself' })
+    const { task: blocker } = await requireTaskAccess(event, body.blockedByTaskId)
+    if (blocker.blockedByTaskId === id) throw createError({ statusCode: 400, statusMessage: 'Circular dependency' })
+  }
 
   if (body.projectId) {
     const [project] = await db
@@ -74,6 +79,11 @@ export default defineEventHandler(async (event) => {
       status: 'todo',
       week,
       dueDate: format(nextDate, 'yyyy-MM-dd'),
+      plannedDate: null,
+      plannedTime: null,
+      dayRank: null,
+      weekRank: null,
+      blockedByTaskId: null,
       doneAt: null,
       archivedAt: null,
       createdAt: Date.now()

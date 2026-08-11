@@ -1,7 +1,8 @@
 import { and, eq } from 'drizzle-orm'
 import { useDb } from '../../db'
-import { focusSessions, tasks } from '../../db/schema'
+import { focusSessions } from '../../db/schema'
 import { requireAppUser } from '../../utils/auth'
+import { requireTaskAccess } from '../../utils/taskAccess'
 import { createFocusSessionSchema } from '../../utils/validators'
 
 export default defineEventHandler(async (event) => {
@@ -9,11 +10,7 @@ export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, createFocusSessionSchema.parse)
   const db = useDb(event)
   if (body.taskId) {
-    const [task] = await db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(and(eq(tasks.id, body.taskId), eq(tasks.ownerId, user.id)))
-    if (!task) throw createError({ statusCode: 400, statusMessage: 'Invalid task' })
+    await requireTaskAccess(event, body.taskId)
   }
   await db
     .update(focusSessions)

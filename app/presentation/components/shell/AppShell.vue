@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
 import { createTask, fetchAllTasks, fetchDueTasks } from '~/data/repositories/tasksRepository'
+import { captureInboxItems, fetchInboxItems } from '~/data/repositories/inboxRepository'
+import type { InboxItem } from '~/domain/entities/inbox'
 import { isInboxTask } from '~/domain/services/inbox'
 import { navigationForRole, navigationSections, type NavigationSection } from '~/domain/services/navigation'
 import { getCurrentWeek } from '~/domain/services/week'
@@ -21,12 +23,15 @@ const projectsStore = useProjectsStore()
 const assignees = ref<AssignableUser[]>([])
 const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
 const tasksStore = useTasksStore()
+const inboxItems = useState<InboxItem[]>('inbox-items', () => [])
 
 const shortcutsOpen = ref(false)
 const today = new Date().toISOString().slice(0, 10)
 
 onMounted(() => {
-  tasksStore.loadInboxTasks().catch(() => {})
+  fetchInboxItems()
+    .then((items) => (inboxItems.value = items))
+    .catch(() => {})
   tasksStore.loadListTasks(fetchDueTasks).catch(() => {})
 })
 
@@ -117,7 +122,7 @@ async function saveTask(payload: {
 async function addQueryToInbox() {
   const title = query.value.trim()
   if (!title) return
-  await tasksStore.addInboxTask({ title, week: getCurrentWeek(), priority: 'medium' })
+  inboxItems.value.unshift(...(await captureInboxItems(title)))
   query.value = ''
   commandOpen.value = false
 }
@@ -231,10 +236,10 @@ useEventListener('keydown', (event) => {
                 :class="sidebarCollapsed ? 'lg:hidden' : ''"
                 >{{ item.label }}</span
               ><span
-                v-if="item.to === '/inbox' && tasksStore.inboxTasks.length"
+                v-if="item.to === '/inbox' && inboxItems.length"
                 class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
                 :class="sidebarCollapsed ? 'lg:hidden' : ''"
-                >{{ tasksStore.inboxTasks.length }}</span
+                >{{ inboxItems.length }}</span
               ><span
                 v-else-if="item.to === '/today' && overdueCount"
                 class="rounded-full bg-[var(--color-danger)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-danger)]"

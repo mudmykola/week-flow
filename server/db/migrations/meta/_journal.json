@@ -78,6 +78,27 @@
       "when": 1785877268836,
       "tag": "0010_groovy_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786474342478,
+      "tag": "0011_futuristic_secret_warriors",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1786475609520,
+      "tag": "0012_thin_albert_cleary",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1786476539558,
+      "tag": "0013_secret_puff_adder",
+      "breakpoints": true
     }
   ]
 }

@@ -44,7 +44,9 @@ function selectMode(mode: Mode) {
         <UIcon :name="ICONS[mode]" />{{ $t(LABEL_KEYS[mode]) }}
       </button>
     </div>
+    <TodayWorkspace v-if="activeMode === 'today'" />
     <TaskListView
+      v-else
       :key="activeMode"
       :mode="activeMode"
       :title="$t(LABEL_KEYS[activeMode])"

@@ -5,6 +5,7 @@ import TodayPage from '~/presentation/pages/today/index.vue'
 
 const taskApi = vi.hoisted(() => ({
   fetchDueTasks: vi.fn().mockResolvedValue([]),
+  fetchTodayPlan: vi.fn().mockResolvedValue({ date: '2026-08-11', tasks: [], focusMinutes: 0 }),
   fetchArchivedTasks: vi.fn().mockResolvedValue([]),
   createTask: vi.fn(),
   updateTask: vi.fn(),
@@ -25,6 +26,7 @@ function stubs() {
     IconButton: { template: '<button type="button" />' },
     ProjectBadge: { template: '<span />' },
     TaskQuickCreate: { template: '<div />' },
+    AppButton: { template: '<button type="button"><slot /></button>' },
     TaskEditor: { props: ['open', 'task'], template: '<div />' }
   }
 }
@@ -40,7 +42,7 @@ describe('today page tabs', () => {
     const wrapper = await mountSuspended(TodayPage, { global: { stubs: stubs() } })
     await flushPromises()
     expect(wrapper.get('.today-page__view-button--active').text()).toContain('Today')
-    expect(taskApi.fetchDueTasks).toHaveBeenCalled()
+    expect(taskApi.fetchTodayPlan).toHaveBeenCalled()
   })
 
   it('activates the requested tab from the mode query', async () => {

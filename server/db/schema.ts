@@ -47,6 +47,12 @@ export const tasks = sqliteTable(
       .notNull()
       .default('medium'),
     dueDate: text('due_date'),
+    plannedDate: text('planned_date'),
+    plannedTime: text('planned_time'),
+    estimateMinutes: integer('estimate_minutes'),
+    dayRank: integer('day_rank'),
+    weekRank: integer('week_rank'),
+    blockedByTaskId: text('blocked_by_task_id'),
     tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
     recurrence: text('recurrence', { enum: ['daily', 'weekly', 'monthly'] }),
     archivedAt: integer('archived_at')
@@ -56,7 +62,8 @@ export const tasks = sqliteTable(
     index('tasks_week_status_idx').on(table.week, table.status),
     index('tasks_project_id_idx').on(table.projectId),
     index('tasks_owner_id_idx').on(table.ownerId),
-    index('tasks_assignee_id_idx').on(table.assigneeId)
+    index('tasks_assignee_id_idx').on(table.assigneeId),
+    index('tasks_planned_date_idx').on(table.plannedDate, table.dayRank)
   ]
 )
 
@@ -262,6 +269,20 @@ export const savedViews = sqliteTable(
   (table) => [index('saved_views_owner_idx').on(table.ownerId)]
 )
 
+export const inboxItems = sqliteTable(
+  'inbox_items',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull()
+  },
+  (table) => [index('inbox_items_owner_created_idx').on(table.ownerId, table.createdAt)]
+)
+
 export const stickyNotes = sqliteTable(
   'sticky_notes',
   {
@@ -357,3 +378,4 @@ export type NewUser = typeof users.$inferInsert
 export type Team = typeof teams.$inferSelect
 export type Goal = typeof goals.$inferSelect
 export type StickyNote = typeof stickyNotes.$inferSelect
+export type InboxItem = typeof inboxItems.$inferSelect

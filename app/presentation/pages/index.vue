@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence, UpdateTaskInput } from '~/domain/entities/task'
+import { parseQuickTask } from '~/domain/services/quickTaskParser'
 
 const { week, label, isCurrentWeek, next, prev, goToCurrent } = useWeek()
 const tasksStore = useTasksStore()
@@ -33,6 +34,9 @@ const statusFilter = ref<Task['status'] | null>(
     : null
 )
 const viewMode = useLocalStorage<'board' | 'table'>('weekflow-task-view', 'board')
+type BoardMode = 'status' | 'day' | 'assignee' | 'project' | 'priority'
+const boardMode = useLocalStorage<BoardMode>('weekflow-board-mode-v3', 'status')
+const boardDensity = useLocalStorage<'comfortable' | 'compact' | 'titles'>('weekflow-board-density-v3', 'comfortable')
 const selectedIds = ref<string[]>([])
 const assignees = ref<AssignableUser[]>([])
 const undoAction = ref<null | { label: string; run: () => Promise<void> }>(null)
@@ -69,6 +73,24 @@ const boardTasks = computed(() => {
     ])
   ) as Record<Task['status'], Task[]>
 })
+const boardTaskList = computed(() => Object.values(boardTasks.value).flat())
+const todayKey = computed(() => {
+  const date = new Date()
+  const offset = date.getTimezoneOffset()
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10)
+})
+const boardInsights = computed(() => ({
+  estimate: boardTaskList.value
+    .filter((task) => task.status !== 'done')
+    .reduce((sum, task) => sum + (task.estimateMinutes || 0), 0),
+  overdue: boardTaskList.value.filter((task) => task.status !== 'done' && task.dueDate && task.dueDate < todayKey.value)
+    .length,
+  unassigned: boardTaskList.value.filter((task) => task.status !== 'done' && !task.assigneeId).length,
+  unplanned: boardTaskList.value.filter((task) => task.status !== 'done' && !task.plannedDate).length
+}))
+const weekTop = computed(() =>
+  boardTaskList.value.filter((task) => task.weekRank).sort((a, b) => (a.weekRank || 4) - (b.weekRank || 4))
+)
 
 async function loadWeek() {
   await tasksStore.loadTasks(week.value)
@@ -149,6 +171,34 @@ async function handleQuickCreate(payload: {
   priority: TaskPriority
 }) {
   await tasksStore.addTask({ ...payload, week: week.value, sort: tasksStore.tasksByStatus[payload.status].length })
+}
+
+async function handleSmartQuick(input: string, lanePatch: UpdateTaskInput) {
+  const parsed = parseQuickTask(input, projectsStore.projects, assignees.value)
+  if (!parsed.title) return
+  await tasksStore.addTask({
+    title: parsed.title,
+    week: week.value,
+    status: lanePatch.status || 'todo',
+    priority: lanePatch.priority || parsed.priority,
+    projectId: lanePatch.projectId !== undefined ? lanePatch.projectId : parsed.projectId,
+    assigneeId: lanePatch.assigneeId !== undefined ? lanePatch.assigneeId : parsed.assigneeId,
+    plannedDate: lanePatch.plannedDate !== undefined ? lanePatch.plannedDate : parsed.plannedDate,
+    plannedTime: parsed.plannedTime,
+    estimateMinutes: parsed.estimateMinutes,
+    sort: tasksStore.tasks.length
+  })
+}
+
+async function toggleWeekTop(task: Task) {
+  if (task.weekRank) return patchTask(task.id, { weekRank: null })
+  const used = new Set(weekTop.value.map((item) => item.weekRank))
+  const rank = [1, 2, 3].find((value) => !used.has(value))
+  if (rank) await patchTask(task.id, { weekRank: rank })
+}
+function addSelectedToTop() {
+  const task = tasksStore.tasks.find((item) => item.id === selectedIds.value[0])
+  if (task) void toggleWeekTop(task)
 }
 
 function handleUpdated(task: Task) {
@@ -412,6 +462,106 @@ async function saveView() {
       </div>
     </div>
 
+    <div class="week-board-page__modebar">
+      <div
+        class="week-board-page__modes"
+        role="tablist"
+        :aria-label="$t('board.groupBy')"
+      >
+        <button
+          v-for="mode in ['status', 'day', 'assignee', 'project', 'priority'] as BoardMode[]"
+          :key="mode"
+          :class="{ 'week-board-page__mode--active': boardMode === mode }"
+          @click="boardMode = mode"
+        >
+          <UIcon
+            :name="
+              (
+                {
+                  status: 'i-lucide-columns-3',
+                  day: 'i-lucide-calendar-days',
+                  assignee: 'i-lucide-users',
+                  project: 'i-lucide-folder-kanban',
+                  priority: 'i-lucide-flag'
+                } as Record<BoardMode, string>
+              )[mode]
+            "
+          /><span>{{ $t(`board.mode.${mode}`) }}</span>
+        </button>
+      </div>
+      <div class="week-board-page__density">
+        <button
+          v-for="density in ['comfortable', 'compact', 'titles'] as const"
+          :key="density"
+          :class="{ 'week-board-page__density-button--active': boardDensity === density }"
+          :title="$t(`board.density.${density}`)"
+          @click="boardDensity = density"
+        >
+          <UIcon
+            :name="
+              density === 'comfortable'
+                ? 'i-lucide-rows-3'
+                : density === 'compact'
+                  ? 'i-lucide-rows-4'
+                  : 'i-lucide-list'
+            "
+          />
+        </button>
+      </div>
+    </div>
+
+    <section
+      class="week-board-page__insights"
+      :aria-label="$t('board.insights')"
+    >
+      <div>
+        <UIcon name="i-lucide-hourglass" /><strong>{{ boardInsights.estimate }}</strong
+        ><span>{{ $t('board.minutesPlanned') }}</span>
+      </div>
+      <div :class="{ 'week-board-page__insight--warning': boardInsights.overdue }">
+        <UIcon name="i-lucide-triangle-alert" /><strong>{{ boardInsights.overdue }}</strong
+        ><span>{{ $t('nav.overdue') }}</span>
+      </div>
+      <div>
+        <UIcon name="i-lucide-user-x" /><strong>{{ boardInsights.unassigned }}</strong
+        ><span>{{ $t('board.unassignedTasks') }}</span>
+      </div>
+      <div>
+        <UIcon name="i-lucide-calendar-x" /><strong>{{ boardInsights.unplanned }}</strong
+        ><span>{{ $t('board.unplannedTasks') }}</span>
+      </div>
+    </section>
+
+    <section class="week-board-page__top">
+      <header>
+        <div>
+          <UIcon name="i-lucide-trophy" />
+          <h2>{{ $t('board.weekTop') }}</h2>
+          <span>{{ weekTop.length }}/3</span>
+        </div>
+        <p>{{ $t('board.weekTopHint') }}</p>
+      </header>
+      <div class="week-board-page__top-list">
+        <button
+          v-for="task in weekTop"
+          :key="task.id"
+          @click="openEdit(task)"
+        >
+          <b>{{ task.weekRank }}</b
+          ><span>{{ task.title }}</span
+          ><UIcon name="i-lucide-arrow-up-right" /></button
+        ><button
+          v-if="weekTop.length < 3"
+          class="week-board-page__top-add"
+          @click="addSelectedToTop"
+        >
+          <UIcon name="i-lucide-plus" />{{
+            selectedIds.length ? $t('board.addSelectedTop') : $t('board.selectTopHint')
+          }}
+        </button>
+      </div>
+    </section>
+
     <div class="mb-4 grid gap-3 lg:grid-cols-[minmax(24rem,.9fr)_minmax(28rem,1.1fr)]">
       <WeekSwitcher
         class="flex-1"
@@ -430,23 +580,21 @@ async function saveView() {
       />
     </div>
 
-    <WeekBoard
+    <WeekBoardV3
       v-if="viewMode === 'board'"
-      :tasks-by-status="boardTasks"
-      :get-project="projectsStore.getProject"
+      :tasks="boardTaskList"
+      :week="week"
+      :mode="boardMode"
       :selected-ids="selectedIds"
-      :get-assignee-name="getAssigneeName"
       :projects="projectsStore.projects"
       :assignees="assignees"
+      :density="boardDensity"
       @edit="openEdit"
-      @delete="handleDelete"
-      @cycle-status="handleCycleStatus"
-      @add-task="openCreate"
-      @reorder="handleReorder"
       @select="toggleSelected"
+      @patch="patchTask"
+      @quick="handleSmartQuick"
+      @delete="handleDelete"
       @duplicate="duplicate"
-      @inline-title="(id, title) => patchTask(id, { title })"
-      @quick-create="handleQuickCreate"
     />
     <TaskTable
       v-else
@@ -468,6 +616,19 @@ async function saveView() {
         @click="bulkPatch({ status: 'done' })"
       >
         {{ $t('board.complete') }}</button
+      ><select
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        :aria-label="$t('task.priority')"
+        @change="bulkPatch({ priority: ($event.target as HTMLSelectElement).value as TaskPriority })"
+      >
+        <option value="">{{ $t('task.priority') }}</option>
+        <option
+          v-for="priority in ['urgent', 'high', 'medium', 'low'] as const"
+          :key="priority"
+          :value="priority"
+        >
+          {{ $t(`task.priorityValue.${priority}`) }}
+        </option></select
       ><select
         class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
         @change="bulkPatch({ assigneeId: ($event.target as HTMLSelectElement).value || null })"
@@ -492,6 +653,24 @@ async function saveView() {
           :value="project.id"
         >
           {{ project.name }}
+        </option></select
+      ><input
+        type="date"
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        :aria-label="$t('task.plannedDate')"
+        @change="bulkPatch({ plannedDate: ($event.target as HTMLInputElement).value || null })"
+      /><select
+        class="rounded-lg bg-[var(--color-bg-alt)] px-2 py-2 text-xs"
+        :aria-label="$t('board.blockedBy')"
+        @change="bulkPatch({ blockedByTaskId: ($event.target as HTMLSelectElement).value || null })"
+      >
+        <option value="">{{ $t('board.blockedBy') }}</option>
+        <option
+          v-for="task in boardTaskList.filter((item) => !selectedIds.includes(item.id))"
+          :key="task.id"
+          :value="task.id"
+        >
+          {{ task.title }}
         </option></select
       ><input
         type="date"
@@ -559,3 +738,172 @@ async function saveView() {
     />
   </div>
 </template>
+
+<style scoped>
+.week-board-page__modebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+.week-board-page__modes,
+.week-board-page__density {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.75rem;
+  background: var(--color-panel-bg);
+}
+.week-board-page__modes button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.55rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.week-board-page__mode--active,
+.week-board-page__density-button--active {
+  background: var(--color-bg-alt);
+  color: var(--color-accent) !important;
+}
+.week-board-page__density button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: var(--color-text-secondary);
+}
+.week-board-page__insights {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.week-board-page__insights > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.05rem 0.45rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.75rem;
+  background: var(--color-panel-bg);
+}
+.week-board-page__insights svg {
+  grid-row: 1/3;
+  color: var(--color-accent);
+}
+.week-board-page__insights strong {
+  font-size: 0.9rem;
+}
+.week-board-page__insights span {
+  color: var(--color-text-secondary);
+  font-size: 0.63rem;
+}
+.week-board-page__insight--warning {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-panel-border)) !important;
+}
+.week-board-page__insight--warning svg,
+.week-board-page__insight--warning strong {
+  color: var(--color-danger);
+}
+.week-board-page__top {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-panel-border));
+  border-radius: 0.85rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 7%, var(--color-panel-bg)),
+    var(--color-panel-bg)
+  );
+}
+.week-board-page__top header > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.week-board-page__top header svg {
+  color: var(--color-accent);
+}
+.week-board-page__top h2 {
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.week-board-page__top header span {
+  color: var(--color-text-secondary);
+  font-size: 0.65rem;
+}
+.week-board-page__top header p {
+  color: var(--color-text-secondary);
+  font-size: 0.62rem;
+}
+.week-board-page__top-list {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+.week-board-page__top-list button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 16rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.6rem;
+  background: var(--color-panel-bg);
+  font-size: 0.7rem;
+}
+.week-board-page__top-list b {
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 0.35rem;
+  background: var(--color-accent);
+  color: white;
+}
+.week-board-page__top-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.week-board-page__top-add {
+  border-style: dashed !important;
+  color: var(--color-text-secondary);
+}
+@media (max-width: 760px) {
+  .week-board-page__modebar {
+    align-items: flex-start;
+  }
+  .week-board-page__modes {
+    max-width: calc(100vw - 5.5rem);
+    overflow-x: auto;
+  }
+  .week-board-page__modes button span {
+    display: none;
+  }
+  .week-board-page__insights {
+    grid-template-columns: 1fr 1fr;
+  }
+  .week-board-page__top {
+    grid-template-columns: 1fr;
+  }
+  .week-board-page__top-list {
+    justify-content: flex-start;
+  }
+  .week-board-page__top header p {
+    display: none;
+  }
+}
+</style>

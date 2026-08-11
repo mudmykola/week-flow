@@ -8,6 +8,12 @@ import { requireAssignableUser } from '../../utils/assigneeAccess'
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
   const body = await readValidatedBody(event, bulkTaskSchema.parse)
+  if (body.patch.blockedByTaskId) {
+    if (body.ids.includes(body.patch.blockedByTaskId)) {
+      throw createError({ statusCode: 400, statusMessage: 'Task cannot block itself' })
+    }
+    await requireTaskAccess(event, body.patch.blockedByTaskId)
+  }
   await requireAssignableUser(event, body.patch.assigneeId)
   const updated = []
   for (const id of body.ids) {

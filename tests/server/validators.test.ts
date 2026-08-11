@@ -45,15 +45,32 @@ describe('server validators', () => {
   ])('rejects invalid task input: %s (%s)', (input) => expect(createTaskSchema.safeParse(input).success).toBe(false))
 
   it('validates task patches and archive timestamps', () => {
-    expect(updateTaskSchema.safeParse({ status: 'done', archivedAt: Date.now() }).success).toBe(true)
+    expect(
+      updateTaskSchema.safeParse({
+        status: 'done',
+        archivedAt: Date.now(),
+        plannedDate: '2026-08-11',
+        plannedTime: '09:30',
+        estimateMinutes: 45,
+        dayRank: 2,
+        weekRank: 1,
+        blockedByTaskId: '00000000-0000-4000-8000-000000000001'
+      }).success
+    ).toBe(true)
     expect(updateTaskSchema.safeParse({ priority: 'critical' }).success).toBe(false)
+    expect(updateTaskSchema.safeParse({ plannedTime: '25:00' }).success).toBe(false)
+    expect(updateTaskSchema.safeParse({ estimateMinutes: 2 }).success).toBe(false)
+    expect(updateTaskSchema.safeParse({ dayRank: 4 }).success).toBe(false)
+    expect(updateTaskSchema.safeParse({ weekRank: 4 }).success).toBe(false)
   })
 
   it('validates safe bulk task operations', () => {
     const id = '00000000-0000-4000-8000-000000000001'
     expect(
-      bulkTaskSchema.safeParse({ ids: [id], patch: { status: 'done', assigneeId: null, dueDate: '2026-08-07' } })
-        .success
+      bulkTaskSchema.safeParse({
+        ids: [id],
+        patch: { status: 'done', assigneeId: null, dueDate: '2026-08-07', plannedDate: '2026-08-08' }
+      }).success
     ).toBe(true)
     expect(bulkTaskSchema.safeParse({ ids: [], patch: { status: 'done' } }).success).toBe(false)
     expect(bulkTaskSchema.safeParse({ ids: [id], patch: { title: 'not allowed' } }).success).toBe(false)

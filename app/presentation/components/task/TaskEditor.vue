@@ -19,6 +19,10 @@ const emit = defineEmits<{
       note: string | null
       projectId: string | null
       dueDate: string | null
+      plannedDate: string | null
+      plannedTime: string | null
+      estimateMinutes: number | null
+      dayRank: number | null
       tags: string[]
       recurrence: TaskRecurrence | null
       assigneeId: string | null
@@ -44,6 +48,10 @@ const status = ref<Task['status']>('todo')
 const projectId = ref<string | null>(null)
 const priority = ref<TaskPriority>('medium')
 const dueDate = ref('')
+const plannedDate = ref('')
+const plannedTime = ref('')
+const estimateMinutes = ref<number | null>(null)
+const dayRank = ref<number | null>(null)
 const recurrence = ref<TaskRecurrence | null>(null)
 const assigneeId = ref<string | null>(null)
 const stageId = ref<string | null>(null)
@@ -130,6 +138,10 @@ function payload() {
     projectId: projectId.value,
     priority: priority.value,
     dueDate: dueDate.value || null,
+    plannedDate: plannedDate.value || null,
+    plannedTime: plannedTime.value || null,
+    estimateMinutes: estimateMinutes.value,
+    dayRank: dayRank.value,
     tags: tags.value,
     recurrence: recurrence.value,
     assigneeId: assigneeId.value,
@@ -151,6 +163,10 @@ watch(
     projectId.value = task?.projectId ?? (savedDraft?.projectId as string | null) ?? taskDefaults.value.projectId
     priority.value = task?.priority ?? (savedDraft?.priority as TaskPriority) ?? taskDefaults.value.priority
     dueDate.value = task?.dueDate ?? String(savedDraft?.dueDate ?? '')
+    plannedDate.value = task?.plannedDate ?? String(savedDraft?.plannedDate ?? '')
+    plannedTime.value = task?.plannedTime ?? String(savedDraft?.plannedTime ?? '')
+    estimateMinutes.value = task?.estimateMinutes ?? (savedDraft?.estimateMinutes as number | null) ?? null
+    dayRank.value = task?.dayRank ?? (savedDraft?.dayRank as number | null) ?? null
     recurrence.value =
       task?.recurrence ?? (savedDraft?.recurrence as TaskRecurrence | null) ?? taskDefaults.value.recurrence
     assigneeId.value = task?.assigneeId ?? (savedDraft?.assigneeId as string | null) ?? taskDefaults.value.assigneeId
@@ -163,7 +179,22 @@ watch(
 )
 
 watch(
-  [title, note, status, projectId, priority, dueDate, recurrence, assigneeId, stageId, tags],
+  [
+    title,
+    note,
+    status,
+    projectId,
+    priority,
+    dueDate,
+    plannedDate,
+    plannedTime,
+    estimateMinutes,
+    dayRank,
+    recurrence,
+    assigneeId,
+    stageId,
+    tags
+  ],
   () => {
     if (!hydrated.value || !props.open) return
     const value = payload()
@@ -359,6 +390,10 @@ useTaskKeyboard({
           v-model:assignee-id="assigneeId"
           v-model:priority="priority"
           v-model:due-date="dueDate"
+          v-model:planned-date="plannedDate"
+          v-model:planned-time="plannedTime"
+          v-model:estimate-minutes="estimateMinutes"
+          v-model:day-rank="dayRank"
           v-model:stage-id="stageId"
           v-model:recurrence="recurrence"
           :projects="projects"

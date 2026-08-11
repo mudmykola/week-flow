@@ -122,7 +122,13 @@ const overdue = computed(() =>
           class="mt-2.5"
         />
         <div
-          v-if="task.dueDate || assigneeName || (!compact && (task.recurrence || task.tags?.length))"
+          v-if="
+            task.dueDate ||
+            assigneeName ||
+            task.weekRank ||
+            task.blockedByTaskId ||
+            (!compact && (task.recurrence || task.tags?.length))
+          "
           class="text-secondary mt-2.5 flex flex-wrap items-center gap-2 text-xs"
         >
           <span
@@ -130,6 +136,14 @@ const overdue = computed(() =>
             class="inline-flex items-center gap-1"
             :class="{ 'font-semibold text-[var(--color-danger)]': overdue }"
             ><UIcon name="i-lucide-calendar" />{{ task.dueDate }}</span
+          ><span
+            v-if="task.weekRank"
+            class="inline-flex items-center gap-1 font-semibold text-[var(--color-accent)]"
+            ><UIcon name="i-lucide-trophy" />Top {{ task.weekRank }}</span
+          ><span
+            v-if="task.blockedByTaskId"
+            class="inline-flex items-center gap-1 text-[var(--color-danger)]"
+            ><UIcon name="i-lucide-lock-keyhole" />{{ $t('board.blocked') }}</span
           ><span
             v-if="assigneeName"
             class="inline-flex items-center gap-1"

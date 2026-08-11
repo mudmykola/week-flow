@@ -10,7 +10,7 @@ import {
 } from 'date-fns'
 import { uk } from 'date-fns/locale'
 
-function weekToDate(week: string): Date {
+export function weekToDate(week: string): Date {
   const [yearStr, weekStr] = week.split('-W')
   let date = setISOWeekYear(new Date(), Number(yearStr))
   date = setISOWeek(date, Number(weekStr))
