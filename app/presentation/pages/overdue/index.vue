@@ -1,8 +1,7 @@
+<script setup lang="ts">
+await navigateTo({ path: '/today', query: { mode: 'overdue' } }, { redirectCode: 301 })
+</script>
+
 <template>
-  <TaskListView
-    class="overdue-page"
-    mode="overdue"
-    :title="$t('nav.overdue')"
-    icon="i-lucide-triangle-alert"
-  />
+  <div class="overdue-page" />
 </template>

@@ -26,6 +26,7 @@ export const useGoalsStore = defineStore('goals', () => {
       const goal = await updateGoal(id, patch)
       const currentIndex = goals.value.findIndex((item) => item.id === id)
       if (currentIndex !== -1) goals.value[currentIndex] = goal
+      broadcastSync('goals')
       return goal
     } catch (error) {
       const currentIndex = goals.value.findIndex((item) => item.id === id)

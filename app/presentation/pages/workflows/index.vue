@@ -100,7 +100,13 @@ const workflowMetrics = computed(() => {
 
 onMounted(async () => {
   await projectsStore.loadProjects()
-  projectId.value = projectsStore.projects[0]?.id ?? null
+  const requested = useRoute().query.projectId
+  projectId.value =
+    (typeof requested === 'string' && projectsStore.projects.some((project) => project.id === requested)
+      ? requested
+      : null) ??
+    projectsStore.projects[0]?.id ??
+    null
 })
 watch(projectId, load, { immediate: true })
 watch(

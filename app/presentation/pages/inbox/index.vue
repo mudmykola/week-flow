@@ -42,6 +42,8 @@ onMounted(async () => {
   }
 })
 
+useLiveRefresh('tasks', () => tasksStore.loadInboxTasks())
+
 function isStale(task: Task) {
   return Date.now() - task.createdAt > 3 * 86_400_000
 }

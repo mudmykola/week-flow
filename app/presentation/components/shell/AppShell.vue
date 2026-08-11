@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
-import { createTask, fetchAllTasks } from '~/data/repositories/tasksRepository'
+import { createTask, fetchAllTasks, fetchDueTasks } from '~/data/repositories/tasksRepository'
 import { isInboxTask } from '~/domain/services/inbox'
-import { navigationForRole } from '~/domain/services/navigation'
+import { navigationForRole, navigationSections, type NavigationSection } from '~/domain/services/navigation'
 import { getCurrentWeek } from '~/domain/services/week'
 
 const route = useRoute()
@@ -22,9 +22,15 @@ const assignees = ref<AssignableUser[]>([])
 const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
 const tasksStore = useTasksStore()
 
+const shortcutsOpen = ref(false)
+const today = new Date().toISOString().slice(0, 10)
+
 onMounted(() => {
   tasksStore.loadInboxTasks().catch(() => {})
+  tasksStore.loadListTasks(fetchDueTasks).catch(() => {})
 })
+
+useLiveRefresh('tasks', () => tasksStore.loadListTasks(fetchDueTasks).catch(() => {}))
 
 const reusableTags = computed(() =>
   [...new Set(allTasks.value.flatMap((task) => task.tags ?? []))].sort((a, b) => a.localeCompare(b, 'uk'))
@@ -34,12 +40,34 @@ const navigation = computed(() =>
   navigationForRole(user.value?.role).map((item) => ({ ...item, label: t(item.label) }))
 )
 
+const groupedNavigation = computed(() =>
+  navigationSections
+    .map((section: NavigationSection) => ({
+      section,
+      items: navigation.value.filter((item) => item.section === section)
+    }))
+    .filter((group) => group.items.length)
+)
+
+const overdueCount = computed(
+  () =>
+    tasksStore.listTasks.filter(
+      (task) => !task.archivedAt && task.dueDate && task.dueDate < today && task.status !== 'done'
+    ).length
+)
+
 const results = computed(() => {
   const term = query.value.trim().toLowerCase()
   if (!term) return allTasks.value.slice(0, 8)
   return allTasks.value
     .filter((task) => `${task.title} ${task.note ?? ''} ${(task.tags ?? []).join(' ')}`.toLowerCase().includes(term))
     .slice(0, 12)
+})
+
+const navMatches = computed(() => {
+  const term = query.value.trim().toLowerCase()
+  if (!term) return []
+  return navigation.value.filter((item) => item.label.toLowerCase().includes(term)).slice(0, 5)
 })
 
 async function openCommand() {
@@ -108,6 +136,14 @@ onKeyStroke('k', (event) => {
   event.preventDefault()
   openCommand()
 })
+
+useEventListener('keydown', (event) => {
+  if (event.key !== '?') return
+  const target = event.target as HTMLElement | null
+  if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
+  event.preventDefault()
+  shortcutsOpen.value = true
+})
 </script>
 
 <template>
@@ -164,30 +200,50 @@ onKeyStroke('k', (event) => {
         >
       </button>
 
-      <nav class="app-scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-        <NuxtLink
-          v-for="item in navigation"
-          :key="item.to"
-          :to="item.to"
-          class="text-secondary flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-black/[0.04] hover:text-[var(--color-text-primary)] dark:hover:bg-white/[0.05]"
-          :class="route.path === item.to ? 'bg-black/[0.06] text-[var(--color-text-primary)] dark:bg-white/[0.08]' : ''"
-          :title="sidebarCollapsed ? item.label : undefined"
-          @click="mobileOpen = false"
+      <nav class="app-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+        <div
+          v-for="group in groupedNavigation"
+          :key="group.section"
         >
-          <UIcon
-            :name="item.icon"
-            class="size-4.5 shrink-0"
-          /><span
-            class="flex-1"
+          <p
+            class="text-secondary mb-1 px-3 text-[10px] font-semibold tracking-wide uppercase"
             :class="sidebarCollapsed ? 'lg:hidden' : ''"
-            >{{ item.label }}</span
-          ><span
-            v-if="item.to === '/inbox' && tasksStore.inboxTasks.length"
-            class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
-            :class="sidebarCollapsed ? 'lg:hidden' : ''"
-            >{{ tasksStore.inboxTasks.length }}</span
           >
-        </NuxtLink>
+            {{ $t(`shell.section.${group.section}`) }}
+          </p>
+          <div class="space-y-1">
+            <NuxtLink
+              v-for="item in group.items"
+              :key="item.to"
+              :to="item.to"
+              class="text-secondary flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-black/[0.04] hover:text-[var(--color-text-primary)] dark:hover:bg-white/[0.05]"
+              :class="
+                route.path === item.to ? 'bg-black/[0.06] text-[var(--color-text-primary)] dark:bg-white/[0.08]' : ''
+              "
+              :title="sidebarCollapsed ? item.label : undefined"
+              @click="mobileOpen = false"
+            >
+              <UIcon
+                :name="item.icon"
+                class="size-4.5 shrink-0"
+              /><span
+                class="flex-1"
+                :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                >{{ item.label }}</span
+              ><span
+                v-if="item.to === '/inbox' && tasksStore.inboxTasks.length"
+                class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
+                :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                >{{ tasksStore.inboxTasks.length }}</span
+              ><span
+                v-else-if="item.to === '/today' && overdueCount"
+                class="rounded-full bg-[var(--color-danger)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-danger)]"
+                :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                >{{ overdueCount }}</span
+              >
+            </NuxtLink>
+          </div>
+        </div>
       </nav>
 
       <button
@@ -316,6 +372,19 @@ onKeyStroke('k', (event) => {
         </div>
         <div class="max-h-96 overflow-y-auto p-2">
           <NuxtLink
+            v-for="item in navMatches"
+            :key="item.to"
+            :to="item.to"
+            class="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+            @click="commandOpen = false"
+          >
+            <UIcon
+              :name="item.icon"
+              class="text-secondary size-4"
+            /><span class="flex-1 truncate">{{ item.label }}</span
+            ><span class="text-secondary text-xs">{{ $t('shell.goTo') }}</span>
+          </NuxtLink>
+          <NuxtLink
             v-for="task in results"
             :key="task.id"
             :to="`/?week=${task.week}`"
@@ -341,7 +410,7 @@ onKeyStroke('k', (event) => {
             ><kbd class="text-xs">↵</kbd>
           </button>
           <p
-            v-else-if="!results.length"
+            v-else-if="!results.length && !navMatches.length"
             class="text-secondary p-6 text-center text-sm"
           >
             {{ $t('shell.nothingFound') }}
@@ -349,5 +418,43 @@ onKeyStroke('k', (event) => {
         </div>
       </div>
     </div>
+
+    <Modal
+      :open="shortcutsOpen"
+      :title="$t('shell.shortcuts')"
+      @close="shortcutsOpen = false"
+    >
+      <p class="text-secondary mb-3 text-sm">{{ $t('shell.shortcutsHint') }}</p>
+      <div class="space-y-1.5 text-sm">
+        <div class="flex items-center justify-between">
+          <span>{{ $t('task.commandCreate') }}</span
+          ><kbd class="text-xs">n</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>{{ $t('taskActions.complete') }} / {{ $t('common.edit') }}</span
+          ><kbd class="text-xs">e</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>{{ $t('task.commandSearch') }}</span
+          ><kbd class="text-xs">/</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>{{ $t('shell.findTask') }}</span
+          ><kbd class="text-xs">↑ ↓ ← →</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>{{ $t('common.save') }}</span
+          ><kbd class="text-xs">⌘/Ctrl + Enter</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>{{ $t('common.close') }}</span
+          ><kbd class="text-xs">Esc</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>{{ $t('common.search') }}</span
+          ><kbd class="text-xs">⌘/Ctrl + K</kbd>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>

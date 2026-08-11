@@ -97,7 +97,11 @@
     "newTask": "Нова задача",
     "findTask": "Знайти задачу…",
     "nothingFound": "Нічого не знайдено",
-    "addToInbox": "Додати «{query}» в Inbox"
+    "addToInbox": "Додати «{query}» в Inbox",
+    "goTo": "Перейти",
+    "shortcuts": "Клавіатурні скорочення",
+    "shortcutsHint": "Натисніть «?» будь-де, щоб відкрити цей список",
+    "section": { "daily": "Щодня", "insights": "Огляд", "team": "Команда" }
   },
   "task": {
     "title": "Задача",
@@ -162,6 +166,7 @@
     "quickCreatePlaceholder": "Що потрібно зробити?",
     "quickOptions": "Швидкі параметри",
     "quickCreateHint": "Enter — створити · Shift + Enter — повний редактор",
+    "loadTemplate": "Шаблон…",
     "overdue": "Прострочено",
     "commandPalette": "Швидкі дії",
     "commandCreate": "Створити задачу",
@@ -274,6 +279,9 @@
     "saveChanges": "Зберегти зміни"
   },
   "pages": {
+    "today": {
+      "viewSwitch": "Перемикач вигляду"
+    },
     "activity": {
       "title": "Активність",
       "description": "Зрозуміла хронологія роботи із задачами та проєктами.",
@@ -387,6 +395,7 @@
       "previous": "Попередній місяць",
       "next": "Наступний місяць",
       "today": "Сьогодні",
+      "mode": "Режим",
       "view": "Вигляд календаря",
       "month": "Місяць",
       "agenda": "Порядок денний",

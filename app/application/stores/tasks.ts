@@ -44,6 +44,7 @@ export const useTasksStore = defineStore('tasks', () => {
   async function addTask(input: CreateTaskInput) {
     const task = await createTask(input)
     tasks.value.push(task)
+    broadcastSync('tasks')
     return task
   }
 
@@ -55,6 +56,7 @@ export const useTasksStore = defineStore('tasks', () => {
       const task = await updateTask(id, patch)
       const currentIndex = tasks.value.findIndex((t) => t.id === id)
       if (currentIndex !== -1) tasks.value[currentIndex] = task
+      broadcastSync('tasks')
       return task
     } catch (error) {
       const currentIndex = tasks.value.findIndex((t) => t.id === id)
@@ -72,6 +74,7 @@ export const useTasksStore = defineStore('tasks', () => {
     tasks.value = tasks.value.filter((t) => t.id !== id)
     try {
       await deleteTask(id)
+      broadcastSync('tasks')
     } catch (error) {
       tasks.value = previous
       throw error
@@ -82,6 +85,7 @@ export const useTasksStore = defineStore('tasks', () => {
     const toWeek = getNextWeek(fromWeek)
     const result = await moveWeekTasks(fromWeek, toWeek)
     tasks.value = tasks.value.filter((t) => t.status === 'done')
+    broadcastSync('tasks')
     return result
   }
 
@@ -100,12 +104,14 @@ export const useTasksStore = defineStore('tasks', () => {
       const index = tasks.value.findIndex((item) => item.id === task.id)
       if (index !== -1) tasks.value[index] = task
     }
+    broadcastSync('tasks')
     return updated
   }
 
   async function duplicate(id: string) {
     const task = await duplicateTask(id)
     tasks.value.push(task)
+    broadcastSync('tasks')
     return task
   }
 
@@ -121,6 +127,7 @@ export const useTasksStore = defineStore('tasks', () => {
   async function addInboxTask(input: CreateTaskInput) {
     const task = await createTask(input)
     inboxTasks.value.unshift(task)
+    broadcastSync('tasks')
     return task
   }
 
@@ -135,6 +142,7 @@ export const useTasksStore = defineStore('tasks', () => {
         if (isInboxTask(task)) inboxTasks.value[currentIndex] = task
         else inboxTasks.value.splice(currentIndex, 1)
       }
+      broadcastSync('tasks')
       return task
     } catch (error) {
       const currentIndex = inboxTasks.value.findIndex((t) => t.id === id)
@@ -148,6 +156,7 @@ export const useTasksStore = defineStore('tasks', () => {
     inboxTasks.value = inboxTasks.value.filter((t) => t.id !== id)
     try {
       await deleteTask(id)
+      broadcastSync('tasks')
     } catch (error) {
       inboxTasks.value = previous
       throw error
@@ -167,6 +176,7 @@ export const useTasksStore = defineStore('tasks', () => {
   async function restoreCompletedInboxTask(task: Task) {
     const restored = await updateTask(task.id, { status: task.status })
     inboxTasks.value.unshift(restored)
+    broadcastSync('tasks')
     return restored
   }
 
@@ -186,6 +196,7 @@ export const useTasksStore = defineStore('tasks', () => {
       stageId: task.stageId
     })
     inboxTasks.value.unshift(recreated)
+    broadcastSync('tasks')
     return recreated
   }
 
@@ -201,6 +212,7 @@ export const useTasksStore = defineStore('tasks', () => {
   async function addListTask(input: CreateTaskInput) {
     const task = await createTask(input)
     listTasks.value.unshift(task)
+    broadcastSync('tasks')
     return task
   }
 
@@ -212,6 +224,7 @@ export const useTasksStore = defineStore('tasks', () => {
       const task = await updateTask(id, patch)
       const currentIndex = listTasks.value.findIndex((t) => t.id === id)
       if (currentIndex !== -1) listTasks.value[currentIndex] = task
+      broadcastSync('tasks')
       return task
     } catch (error) {
       const currentIndex = listTasks.value.findIndex((t) => t.id === id)
@@ -225,6 +238,7 @@ export const useTasksStore = defineStore('tasks', () => {
     listTasks.value = listTasks.value.filter((t) => t.id !== id)
     try {
       await deleteTask(id)
+      broadcastSync('tasks')
     } catch (error) {
       listTasks.value = previous
       throw error
@@ -247,6 +261,7 @@ export const useTasksStore = defineStore('tasks', () => {
       stageId: task.stageId
     })
     listTasks.value.unshift(recreated)
+    broadcastSync('tasks')
     return recreated
   }
 

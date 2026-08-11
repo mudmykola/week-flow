@@ -99,6 +99,7 @@ onMounted(async () => {
 
 watch(week, loadWeek)
 useQueryTrigger('new', '1', workspaceReady, () => openCreate('todo'))
+useLiveRefresh('tasks', loadWeek)
 
 function openCreate(status: Task['status']) {
   editingTask.value = null

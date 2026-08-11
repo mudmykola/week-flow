@@ -1,8 +1,7 @@
+<script setup lang="ts">
+await navigateTo({ path: '/today', query: { mode: 'archive' } }, { redirectCode: 301 })
+</script>
+
 <template>
-  <TaskListView
-    class="archive-page"
-    mode="archive"
-    :title="$t('nav.archive')"
-    icon="i-lucide-archive"
-  />
+  <div class="archive-page" />
 </template>

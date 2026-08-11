@@ -13,6 +13,8 @@ onMounted(async () => {
   }
 })
 
+useLiveRefresh('goals', () => goalsStore.loadGoals())
+
 function updateProgress(goal: Goal, progress: number) {
   void goalsStore.patchGoal(goal.id, { progress })
 }

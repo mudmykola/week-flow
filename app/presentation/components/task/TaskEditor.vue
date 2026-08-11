@@ -59,6 +59,43 @@ const taskDefaults = useLocalStorage<{
   recurrence: TaskRecurrence | null
   assigneeId: string | null
 }>('weekflow-task-defaults', { projectId: null, priority: 'medium', recurrence: null, assigneeId: null })
+type Template = {
+  id: string
+  title: string
+  note: string
+  priority: TaskPriority
+  recurrence: TaskRecurrence | null
+  tags: string[]
+}
+const templates = useLocalStorage<Template[]>('weekflow-task-templates', [
+  {
+    id: 'weekly-review',
+    title: t('pages.templates.defaultReview'),
+    note: t('pages.templates.defaultReviewNote'),
+    priority: 'medium',
+    recurrence: 'weekly',
+    tags: ['review']
+  },
+  {
+    id: 'client-call',
+    title: t('pages.templates.defaultCall'),
+    note: t('pages.templates.defaultCallNote'),
+    priority: 'high',
+    recurrence: null,
+    tags: ['client']
+  }
+])
+const selectedTemplateId = ref<string | null>(null)
+watch(selectedTemplateId, (id) => {
+  const template = templates.value.find((item) => item.id === id)
+  if (!template) return
+  title.value = template.title
+  note.value = template.note
+  priority.value = template.priority
+  recurrence.value = template.recurrence
+  tags.value = [...template.tags]
+  selectedTemplateId.value = null
+})
 const availableTags = computed(() =>
   [...new Set([...(props.tagOptions ?? []), ...recentTags.value])]
     .filter((tag) => !tags.value.includes(tag))
@@ -376,6 +413,20 @@ useTaskKeyboard({
     </div>
     <template #footer>
       <div class="flex w-full items-center justify-between gap-3">
+        <FormSelect
+          v-if="!task && templates.length"
+          v-model="selectedTemplateId"
+          class="w-44"
+          :placeholder="$t('task.loadTemplate')"
+        >
+          <option
+            v-for="item in templates"
+            :key="item.id"
+            :value="item.id"
+          >
+            {{ item.title }}
+          </option>
+        </FormSelect>
         <span class="text-secondary hidden text-xs sm:block">{{ $t('task.saveShortcut') }}</span>
         <div class="ml-auto flex gap-2">
           <AppButton

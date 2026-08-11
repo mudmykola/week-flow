@@ -97,7 +97,11 @@
     "newTask": "New task",
     "findTask": "Find a task…",
     "nothingFound": "Nothing found",
-    "addToInbox": "Add “{query}” to Inbox"
+    "addToInbox": "Add “{query}” to Inbox",
+    "goTo": "Go to",
+    "shortcuts": "Keyboard shortcuts",
+    "shortcutsHint": "Press \"?\" anywhere to open this list",
+    "section": { "daily": "Daily", "insights": "Insights", "team": "Team" }
   },
   "task": {
     "title": "Task",
@@ -162,6 +166,7 @@
     "quickCreatePlaceholder": "What needs to be done?",
     "quickOptions": "Quick options",
     "quickCreateHint": "Enter — create · Shift + Enter — full editor",
+    "loadTemplate": "Template…",
     "overdue": "Overdue",
     "commandPalette": "Quick actions",
     "commandCreate": "Create task",
@@ -274,6 +279,9 @@
     "saveChanges": "Save changes"
   },
   "pages": {
+    "today": {
+      "viewSwitch": "View switch"
+    },
     "activity": {
       "title": "Activity",
       "description": "A clear timeline of work across tasks and projects.",
@@ -387,6 +395,7 @@
       "previous": "Previous month",
       "next": "Next month",
       "today": "Today",
+      "mode": "Mode",
       "view": "Calendar view",
       "month": "Month",
       "agenda": "Agenda",

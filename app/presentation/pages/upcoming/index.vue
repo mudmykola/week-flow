@@ -1,8 +1,7 @@
+<script setup lang="ts">
+await navigateTo({ path: '/today', query: { mode: 'upcoming' } }, { redirectCode: 301 })
+</script>
+
 <template>
-  <TaskListView
-    class="upcoming-page"
-    mode="upcoming"
-    :title="$t('nav.upcoming')"
-    icon="i-lucide-clock-3"
-  />
+  <div class="upcoming-page" />
 </template>

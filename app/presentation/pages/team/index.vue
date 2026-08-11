@@ -13,6 +13,9 @@ const selectedTeamId = ref<string | null>(null)
 const { data, status, refresh } = await useFetch('/api/team', {
   query: computed(() => ({ team: selectedTeamId.value || undefined }))
 })
+useLiveRefresh('goals', refresh)
+useLiveRefresh('tasks', refresh)
+
 const teamName = ref(t('pages.team.defaultName'))
 const memberEmail = ref('')
 const goal = reactive({ title: '', description: '', assigneeId: null as string | null, dueDate: '' })

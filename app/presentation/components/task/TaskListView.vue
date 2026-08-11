@@ -57,6 +57,8 @@ onMounted(async () => {
   }
 })
 
+useLiveRefresh('tasks', () => tasksStore.loadListTasks(props.mode === 'archive' ? fetchArchivedTasks : fetchDueTasks))
+
 async function toggleDone(task: Task) {
   const snapshot = { ...task }
   await tasksStore.patchListTask(task.id, { status: task.status === 'done' ? 'todo' : 'done' })

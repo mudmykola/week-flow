@@ -17,6 +17,7 @@ export const useProjectsStore = defineStore('projects', () => {
   async function addProject(input: CreateProjectInput) {
     const project = await createProject(input)
     projects.value = [...projects.value, project]
+    broadcastSync('projects')
     return project
   }
 
@@ -25,6 +26,7 @@ export const useProjectsStore = defineStore('projects', () => {
     projects.value = projects.value.filter((p) => p.id !== id)
     try {
       await deleteProject(id)
+      broadcastSync('projects')
     } catch (error) {
       projects.value = previous
       throw error

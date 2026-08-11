@@ -71,7 +71,7 @@ function keydown(event: KeyboardEvent) {
 
 <template>
   <div
-    class="task-quick-create rounded-xl border border-[var(--color-accent)] bg-[var(--color-panel-bg)] p-2.5 shadow-lg"
+    class="task-quick-create rounded-xl border border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-panel-border))] bg-[var(--color-panel-bg)] p-2.5 shadow-lg"
   >
     <div class="flex items-center gap-2">
       <UIcon

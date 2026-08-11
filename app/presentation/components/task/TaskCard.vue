@@ -95,7 +95,7 @@ const overdue = computed(() =>
           /><input
             v-if="editingTitle"
             v-model="draftTitle"
-            class="min-w-0 flex-1 rounded-md border border-[var(--color-accent)] bg-transparent px-1 text-sm font-semibold outline-none"
+            class="min-w-0 flex-1 rounded-md border border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-panel-border))] bg-transparent px-1 text-sm font-semibold outline-none"
             autofocus
             @click.stop
             @keyup.enter="saveTitle"

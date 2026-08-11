@@ -67,13 +67,21 @@ async function invite() {
           />
           {{ project.name }}
         </span>
-        <IconButton
-          icon="i-lucide-trash-2"
-          :label="$t('projectEditor.delete')"
-          variant="danger"
-          size="sm"
-          @click="emit('delete', project.id)"
-        />
+        <div class="flex items-center gap-1">
+          <IconButton
+            icon="i-lucide-workflow"
+            :label="$t('nav.workflows')"
+            size="sm"
+            @click="navigateTo(`/workflows?projectId=${project.id}`)"
+          />
+          <IconButton
+            icon="i-lucide-trash-2"
+            :label="$t('projectEditor.delete')"
+            variant="danger"
+            size="sm"
+            @click="emit('delete', project.id)"
+          />
+        </div>
       </div>
     </div>
     <p
