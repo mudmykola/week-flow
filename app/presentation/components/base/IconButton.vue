@@ -1,13 +1,25 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ icon: string; label: string; variant?: 'ghost' | 'danger'; size?: 'sm' | 'md' }>(), {
-  variant: 'ghost',
-  size: 'md'
-})
+const props = withDefaults(
+  defineProps<{
+    icon: string
+    label: string
+    variant?: 'ghost' | 'danger'
+    size?: 'sm' | 'md'
+    loading?: boolean
+    disabled?: boolean
+  }>(),
+  { variant: 'ghost', size: 'md' }
+)
 </script>
 
 <template>
-  <button
-    type="button"
+  <AppButton
+    :icon="props.icon"
+    :variant="props.variant"
+    :size="props.size"
+    :loading="props.loading"
+    :disabled="props.disabled"
+    icon-only
     class="icon-button ui-icon-button"
     :class="[
       `icon-button--${variant}`,
@@ -18,7 +30,5 @@ withDefaults(defineProps<{ icon: string; label: string; variant?: 'ghost' | 'dan
     :title="label"
     :aria-label="label"
     v-bind="$attrs"
-  >
-    <UIcon :name="icon" />
-  </button>
+  />
 </template>

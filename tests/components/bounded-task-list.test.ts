@@ -4,15 +4,16 @@ import { describe, expect, it } from 'vitest'
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
 const primitive = read('app/presentation/components/base/BoundedTaskList.vue')
+const primitiveStyles = read('app/presentation/assets/css/components/bounded-task-list.css')
 
 describe('bounded task list UX contract', () => {
   it('provides a persisted, accessible preview and bounded expanded viewport', () => {
     expect(primitive).toContain('useLocalStorage')
     expect(primitive).toContain(':aria-expanded="expanded"')
     expect(primitive).toContain(':aria-controls="contentId"')
-    expect(primitive).toContain('max-height: min(58vh, 38rem)')
-    expect(primitive).toContain('overflow-y: auto')
-    expect(primitive).toContain('overscroll-behavior: contain')
+    expect(primitiveStyles).toContain('max-height: min(58vh, 38rem)')
+    expect(primitiveStyles).toContain('overflow-y: auto')
+    expect(primitiveStyles).toContain('overscroll-behavior: contain')
   })
 
   it.each([

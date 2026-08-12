@@ -2,8 +2,9 @@
 import VisAxis from '@unovis/vue/components/axis'
 import VisGroupedBar from '@unovis/vue/components/grouped-bar'
 import VisXYContainer from '@unovis/vue/containers/xy-container'
+import type { ChartLegendItem } from './ChartLegendButton.vue'
 
-type BreakdownItem = { label: string; value: number; color: string; key?: string }
+type BreakdownItem = ChartLegendItem
 
 const props = defineProps<{ items: BreakdownItem[] }>()
 const emit = defineEmits<{ select: [item: BreakdownItem] }>()
@@ -46,19 +47,12 @@ const xTick = (index: number) => props.items[index]?.label ?? ''
       />
     </VisXYContainer>
     <div class="mt-3 flex flex-wrap gap-2">
-      <button
+      <ChartLegendButton
         v-for="item in items"
         :key="item.label"
-        type="button"
-        class="text-secondary inline-flex items-center gap-2 rounded-lg border border-[var(--color-panel-border)] px-2.5 py-1.5 text-xs transition hover:text-[var(--color-text-primary)]"
-        @click="emit('select', item)"
-      >
-        <span
-          class="size-2 rounded-full"
-          :style="{ background: item.color }"
-        />
-        {{ item.label }} · {{ item.value }}
-      </button>
+        :item="item"
+        @select="emit('select', $event)"
+      />
     </div>
   </div>
 </template>

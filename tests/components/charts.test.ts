@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it, vi } from 'vitest'
 import BarBreakdown from '~/presentation/components/analytics/BarBreakdown.vue'
+import ChartLegendButton from '~/presentation/components/analytics/ChartLegendButton.vue'
 import DonutBreakdown from '~/presentation/components/analytics/DonutBreakdown.vue'
 import TrendChart from '~/presentation/components/analytics/TrendChart.vue'
 
@@ -24,6 +27,19 @@ vi.mock('@unovis/vue/components/tooltip', () => ({ default: { name: 'VisTooltip'
 vi.mock('@unovis/vue/components/crosshair', () => ({ default: { name: 'VisCrosshair', template: '<div />' } }))
 
 describe('dashboard visualizations', () => {
+  it('reuses a typed accessible legend button in inline and split layouts', async () => {
+    const wrapper = await mountSuspended(ChartLegendButton, {
+      props: { item: { key: 'high', label: 'High', value: 2, color: '#f00' }, layout: 'split' },
+      global: { stubs: { UIcon: true } }
+    })
+    expect(wrapper.classes()).toContain('chart-legend-button--split')
+    expect(wrapper.classes()).toContain('app-button')
+    expect(wrapper.attributes('aria-label')).toBe('High: 2')
+    expect(wrapper.get('.chart-legend-button__swatch').attributes('aria-hidden')).toBe('true')
+    await wrapper.trigger('click')
+    expect(wrapper.emitted('select')?.[0]?.[0]).toMatchObject({ key: 'high', value: 2 })
+  })
+
   it('passes throughput series to the interactive line chart with an accessible summary', async () => {
     const wrapper = await mountSuspended(TrendChart, {
       props: {
@@ -63,8 +79,21 @@ describe('dashboard visualizations', () => {
       }
     })
     expect(wrapper.get('[data-series="bar"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('High · 2')
+    expect(wrapper.findAll('.chart-legend-button__label')[0]?.text()).toBe('High')
+    expect(wrapper.findAll('.chart-legend-button__value')[0]?.text()).toBe('2')
     await wrapper.findAll('button')[0]!.trigger('click')
     expect(wrapper.emitted('select')?.[0]?.[0]).toMatchObject({ key: 'high', value: 2 })
+  })
+
+  it('keeps chart legend markup out of chart containers', () => {
+    const bar = readFileSync(resolve(process.cwd(), 'app/presentation/components/analytics/BarBreakdown.vue'), 'utf8')
+    const donut = readFileSync(
+      resolve(process.cwd(), 'app/presentation/components/analytics/DonutBreakdown.vue'),
+      'utf8'
+    )
+    expect(bar).toContain('<ChartLegendButton')
+    expect(donut).toContain('<ChartLegendButton')
+    expect(bar).not.toContain('class="size-2 rounded-full"')
+    expect(donut).not.toContain('class="size-2.5 rounded-full"')
   })
 })

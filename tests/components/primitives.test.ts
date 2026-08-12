@@ -26,6 +26,30 @@ describe('UI primitives', () => {
     expect(wrapper.get('button').exists()).toBe(true)
   })
 
+  it('centralizes disabled, loading and icon-only button behavior', async () => {
+    const wrapper = await mountSuspended(AppButton, {
+      props: { icon: 'i-lucide-refresh-cw', iconOnly: true, loading: true, type: 'submit' },
+      global: { stubs }
+    })
+    const button = wrapper.get('button')
+    expect(button.attributes('type')).toBe('submit')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.attributes('aria-busy')).toBe('true')
+    expect(button.classes()).toContain('ui-button--icon-only')
+  })
+
+  it('composes an accessible icon button from AppButton', async () => {
+    const wrapper = await mountSuspended(IconButton, {
+      props: { icon: 'i-lucide-x', label: 'Закрити', size: 'sm' },
+      global: { stubs }
+    })
+    const button = wrapper.get('button')
+    expect(button.attributes('aria-label')).toBe('Закрити')
+    expect(button.classes()).toContain('app-button')
+    expect(button.classes()).toContain('icon-button')
+    expect(button.classes()).toContain('ui-button--icon-only')
+  })
+
   it('provides a typed v-model input and forwards attributes', async () => {
     const wrapper = await mountSuspended(FormInput, {
       props: { modelValue: '', placeholder: 'Назва' },

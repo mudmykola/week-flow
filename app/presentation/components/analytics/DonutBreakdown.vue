@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import VisDonut from '@unovis/vue/components/donut'
 import VisSingleContainer from '@unovis/vue/containers/single-container'
+import type { ChartLegendItem } from './ChartLegendButton.vue'
 
-type BreakdownItem = { label: string; value: number; color: string; key?: string }
+type BreakdownItem = ChartLegendItem
 
 const props = defineProps<{ items: BreakdownItem[] }>()
 const emit = defineEmits<{ select: [item: BreakdownItem] }>()
@@ -34,20 +35,13 @@ const total = computed(() => props.items.reduce((sum, item) => sum + item.value,
       </div>
     </div>
     <div class="mt-3 grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-      <button
+      <ChartLegendButton
         v-for="item in items"
         :key="item.label"
-        type="button"
-        class="text-secondary flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-[var(--color-bg-alt)] hover:text-[var(--color-text-primary)]"
-        @click="emit('select', item)"
-      >
-        <span
-          class="size-2.5 rounded-full"
-          :style="{ background: item.color }"
-        />
-        <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
-        <strong class="text-[var(--color-text-primary)]">{{ item.value }}</strong>
-      </button>
+        :item="item"
+        layout="split"
+        @select="emit('select', $event)"
+      />
     </div>
   </div>
 </template>

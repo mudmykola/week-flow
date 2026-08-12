@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
+@import './components/bounded-task-list.css';
+@import './components/calendar-workspace.css';
 
 :root {
   --color-bg: #ffffff;
@@ -443,6 +445,15 @@ a {
   min-height: var(--control-height-sm);
   padding-inline: 0.7rem;
   font-size: 0.75rem;
+}
+.ui-button--icon-only {
+  width: var(--control-height);
+  min-width: var(--control-height);
+  padding-inline: 0;
+}
+.ui-button--icon-only.ui-button--sm {
+  width: var(--control-height-sm);
+  min-width: var(--control-height-sm);
 }
 .ui-button--primary {
   background: var(--color-accent);
