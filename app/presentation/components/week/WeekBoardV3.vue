@@ -156,6 +156,13 @@ function forwardSelect(id: string, selected: boolean) {
 function forwardTitle(id: string, title: string) {
   emit('patch', id, { title })
 }
+function laneTone(lane: Lane) {
+  if (lane.patch.status === 'done') return 'success'
+  if (lane.patch.status === 'in_progress') return 'info'
+  if (lane.patch.priority === 'urgent') return 'danger'
+  if (lane.patch.priority === 'high') return 'attention'
+  return 'neutral'
+}
 </script>
 
 <template>
@@ -184,12 +191,10 @@ function forwardTitle(id: string, title: string) {
         :class="{ 'week-board-v3__lane--mobile-active': mobileLane === index }"
       >
         <header>
-          <span
-            class="week-board-v3__lane-icon"
-            :style="lane.color ? { color: lane.color } : undefined"
-            ><UIcon :name="lane.icon"
-          /></span>
-          <h2>{{ lane.title }}</h2>
+          <SemanticDot
+            :tone="laneTone(lane)"
+            :label="lane.title"
+          />
           <span>{{ laneLists[lane.id]?.length || 0 }}</span
           ><IconButton
             icon="i-lucide-plus"

@@ -388,10 +388,10 @@ function auditLabel(action: string) {
                 ><small>{{ account.email }}</small></span
               >
             </button>
-            <span
-              class="admin-role"
-              :class="`admin-role--${account.role}`"
-              ><UIcon :name="roleIcon(account.role)" />{{ roleLabel(account.role) }}</span
+            <SemanticBadge
+              :tone="account.role === 'admin' ? 'violet' : account.role === 'pm' ? 'info' : 'neutral'"
+              :icon="roleIcon(account.role)"
+              >{{ roleLabel(account.role) }}</SemanticBadge
             >
             <span class="admin-user__workload"
               ><strong>{{ account.taskDone }}/{{ account.taskTotal }}</strong
@@ -399,10 +399,10 @@ function auditLabel(action: string) {
                 $t('pages.admin.overdueCount', { count: account.taskOverdue })
               }}</small></span
             >
-            <span
-              class="admin-status"
-              :class="account.disabledAt ? 'admin-status--disabled' : 'admin-status--active'"
-              ><i />{{ account.disabledAt ? $t('pages.admin.disabled') : $t('pages.admin.active') }}</span
+            <SemanticBadge
+              :tone="account.disabledAt ? 'danger' : 'success'"
+              :icon="account.disabledAt ? 'i-lucide-ban' : 'i-lucide-circle-check'"
+              >{{ account.disabledAt ? $t('pages.admin.disabled') : $t('pages.admin.active') }}</SemanticBadge
             >
             <IconButton
               icon="i-lucide-chevron-right"

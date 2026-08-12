@@ -683,9 +683,11 @@ async function confirmDelete() {
               <div class="automation-rule__body">
                 <div class="automation-rule__heading">
                   <p class="automation-rule__name">{{ item.name }}</p>
-                  <span class="automation-rule__status">{{
-                    item.enabled ? $t('pages.workflows.enabled') : $t('pages.workflows.disabled')
-                  }}</span>
+                  <SemanticBadge
+                    :tone="item.enabled ? 'success' : 'neutral'"
+                    :icon="item.enabled ? 'i-lucide-zap' : 'i-lucide-pause'"
+                    >{{ item.enabled ? $t('pages.workflows.enabled') : $t('pages.workflows.disabled') }}</SemanticBadge
+                  >
                 </div>
                 <p class="text-secondary text-xs">
                   <strong>{{ $t('pages.workflows.when') }}</strong> {{ triggerLabel(item) }}
@@ -950,6 +952,17 @@ async function confirmDelete() {
               :key="entry.id"
               class="automation-rule surface-card"
             >
+              <SemanticBadge
+                :tone="entry.status === 'success' ? 'success' : entry.status === 'failed' ? 'danger' : 'warning'"
+                :icon="
+                  entry.status === 'success'
+                    ? 'i-lucide-circle-check'
+                    : entry.status === 'failed'
+                      ? 'i-lucide-circle-x'
+                      : 'i-lucide-skip-forward'
+                "
+                >{{ entry.status }}</SemanticBadge
+              >
               <span class="automation-rule__icon"
                 ><UIcon
                   :name="

@@ -47,12 +47,6 @@ const statusDotColor: Record<Task['status'], string> = {
   in_progress: 'var(--color-status-in-progress)',
   done: 'var(--color-status-done)'
 }
-const priorityColor: Record<Task['priority'], string> = {
-  low: '#94a3b8',
-  medium: '#3b82f6',
-  high: '#f59e0b',
-  urgent: '#ef4444'
-}
 const today = localDateKey()
 const overdue = computed(() =>
   Boolean(props.task.dueDate && props.task.dueDate < today && props.task.status !== 'done')
@@ -90,10 +84,7 @@ const overdue = computed(() =>
       />
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2">
-          <span
-            class="h-4 w-1 shrink-0 rounded-full"
-            :style="{ backgroundColor: priorityColor[task.priority ?? 'medium'] }"
-          /><input
+          <input
             v-if="editingTitle"
             v-model="draftTitle"
             class="min-w-0 flex-1 rounded-md border border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-panel-border))] bg-transparent px-1 text-sm font-semibold outline-none"
@@ -122,6 +113,28 @@ const overdue = computed(() =>
           :project="project"
           class="mt-2.5"
         />
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          <StatusBadge :status="task.status" />
+          <PriorityBadge :priority="task.priority" />
+          <SemanticBadge
+            v-if="task.blockedByTaskId"
+            tone="danger"
+            icon="i-lucide-lock-keyhole"
+            >{{ $t('board.blocked') }}</SemanticBadge
+          >
+          <SemanticBadge
+            v-else-if="task.workState === 'review'"
+            tone="violet"
+            icon="i-lucide-scan-search"
+            >{{ $t('task.workStateValue.review') }}</SemanticBadge
+          >
+          <SemanticBadge
+            v-else-if="task.workState === 'waiting'"
+            tone="warning"
+            icon="i-lucide-hourglass"
+            >{{ $t('task.workStateValue.waiting') }}</SemanticBadge
+          >
+        </div>
         <div
           v-if="
             task.dueDate ||

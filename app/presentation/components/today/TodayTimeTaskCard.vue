@@ -57,6 +57,21 @@ function updateTime(event: Event) {
       <span v-if="projectName"><UIcon name="i-lucide-folder" />{{ projectName }}</span>
       <span v-if="assigneeName"><UIcon name="i-lucide-user-round" />{{ assigneeName }}</span>
     </div>
+    <div class="today-time-task-card__labels">
+      <PriorityBadge :priority="task.priority" />
+      <SemanticBadge
+        v-if="task.workState === 'review'"
+        tone="violet"
+        icon="i-lucide-scan-search"
+        >{{ $t('task.workStateValue.review') }}</SemanticBadge
+      >
+      <SemanticBadge
+        v-if="task.blockedByTaskId"
+        tone="danger"
+        icon="i-lucide-lock-keyhole"
+        >{{ $t('board.blocked') }}</SemanticBadge
+      >
+    </div>
     <footer class="today-time-task-card__footer">
       <label class="today-time-task-card__time">
         <UIcon name="i-lucide-clock-3" />
@@ -171,6 +186,12 @@ function updateTime(event: Event) {
   padding-left: 1.8rem;
   color: var(--color-text-secondary);
   font-size: 0.68rem;
+}
+.today-time-task-card__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-left: 1.8rem;
 }
 .today-time-task-card__context span,
 .today-time-task-card__footer,

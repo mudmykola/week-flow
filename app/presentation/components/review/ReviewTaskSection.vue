@@ -15,8 +15,11 @@ defineEmits<{ open: [task: ReviewTask] }>()
     :class="`review-task-section--${tone}`"
   >
     <header>
-      <UIcon :name="icon" />
-      <h2>{{ title }}</h2>
+      <SemanticBadge
+        :tone="tone === 'accent' ? 'info' : tone"
+        :icon="icon"
+        >{{ title }}</SemanticBadge
+      >
       <span>{{ tasks.length }}</span>
     </header>
     <BoundedTaskList
@@ -32,8 +35,10 @@ defineEmits<{ open: [task: ReviewTask] }>()
           :key="task.id"
           @click="$emit('open', task)"
         >
-          <i /><span
-            ><strong>{{ task.title }}</strong
+          <SemanticDot
+            :tone="tone === 'accent' ? 'info' : tone"
+            :label="task.title"
+          /><span
             ><small
               >{{ task.projectName || $t('task.noProject')
               }}<template v-if="task.plannedTime"> · {{ task.plannedTime }}</template></small
@@ -55,10 +60,6 @@ defineEmits<{ open: [task: ReviewTask] }>()
   align-items: center;
   gap: 0.45rem;
   padding-bottom: 0.55rem;
-}
-.review-task-section header h2 {
-  font-size: 0.82rem;
-  font-weight: 800;
 }
 .review-task-section header span {
   margin-left: auto;

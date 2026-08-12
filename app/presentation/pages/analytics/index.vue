@@ -468,10 +468,7 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
               class="flex w-full items-center gap-3 py-3 text-left"
               @click="openTasks({ week: task.week, priority: task.priority })"
             >
-              <span
-                class="size-2 rounded-full"
-                :style="{ background: priorityColors[task.priority] }"
-              />
+              <PriorityBadge :priority="task.priority" />
               <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ task.title }}</span>
               <span class="text-secondary text-xs">{{ task.dueDate || $t(priorityLabels[task.priority]) }}</span>
               <UIcon

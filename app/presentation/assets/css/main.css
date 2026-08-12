@@ -16,8 +16,11 @@
   --color-status-in-progress: #0f0f0f;
   --color-status-done: #fe5011;
   --color-success: #16a34a;
+  --color-info: #2563eb;
   --color-warning: #d97706;
   --color-danger: #dc2626;
+  --color-violet: #7c3aed;
+  --color-neutral: #64748b;
   --radius-control: 0.65rem;
   --radius-card: 0.85rem;
   --control-height-sm: 2.25rem;
@@ -39,6 +42,12 @@
   --color-skeleton-highlight: rgba(255, 255, 255, 0.055);
   --color-text-primary: #f7f7f7;
   --color-text-secondary: #999999;
+  --color-success: #34d399;
+  --color-info: #60a5fa;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-violet: #a78bfa;
+  --color-neutral: #94a3b8;
 }
 
 button,
