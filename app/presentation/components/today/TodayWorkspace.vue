@@ -13,6 +13,8 @@ import {
   type TodayFilters
 } from '~/domain/services/today'
 import { getCurrentWeek } from '~/domain/services/week'
+import { autoPlanDay } from '~/domain/services/daySchedule'
+import { defaultDaySchedule, type DaySchedule } from '#shared/types/daySchedule'
 
 const { t } = useI18n()
 const { user } = useUserSession()
@@ -30,7 +32,8 @@ const editingTask = ref<Task | null>(null)
 const selected = ref<string[]>([])
 const doneOpen = ref(false)
 const quickOpen = ref(true)
-const view = useLocalStorage<'list' | 'timeline'>('weekflow-today-view-v1', 'list')
+const view = useLocalStorage<'list' | 'timeline'>('weekflow-today-view-v2', 'timeline')
+const schedule = ref<DaySchedule>({ ...defaultDaySchedule })
 const filters = useLocalStorage<TodayFilters>('weekflow-today-filters-v1', {
   search: '',
   projectId: null,
@@ -42,6 +45,7 @@ const filters = useLocalStorage<TodayFilters>('weekflow-today-filters-v1', {
 const undoAction = ref<null | { label: string; restore: Task[] }>(null)
 let undoTimer: ReturnType<typeof setTimeout> | undefined
 const focusTimer = useFocusTimer()
+const tasksStore = useTasksStore()
 
 const visible = computed(() => filterTodayTasks(tasks.value, filters.value))
 const sections = computed(() => todaySections(visible.value, date.value))
@@ -61,15 +65,17 @@ async function load() {
   try {
     const target = new Date(`${date.value}T12:00:00`)
     const range = localDayRange(target)
-    const [plan, projectItems, people] = await Promise.all([
+    const [plan, projectItems, people, preferences] = await Promise.all([
       fetchTodayPlan(date.value, range.start, range.end),
       fetchProjects(),
-      $fetch<AssignableUser[]>('/api/users/assignable')
+      $fetch<AssignableUser[]>('/api/users/assignable'),
+      $fetch<{ daySchedule: DaySchedule }>('/api/settings')
     ])
     tasks.value = plan.tasks
     focusMinutes.value = plan.focusMinutes
     projects.value = projectItems
     assignees.value = people
+    schedule.value = preferences.daySchedule
     const requestedTask = typeof route.query.task === 'string' ? route.query.task : null
     const linkedTask = requestedTask ? tasks.value.find((task) => task.id === requestedTask) : null
     if (linkedTask) {
@@ -94,6 +100,7 @@ function sync(task: Task) {
   const index = tasks.value.findIndex((item) => item.id === task.id)
   if (index === -1) tasks.value.push(task)
   else tasks.value[index] = task
+  tasksStore.syncListTask(task)
 }
 async function patchTask(task: Task, patch: UpdateTaskInput) {
   const before = { ...task }
@@ -187,6 +194,26 @@ async function startFocus(task: Task) {
     body: { taskId: task.id, kind: 'focus', plannedSeconds: duration }
   })
   focusTimer.start({ sessionId: focus.id, taskId: task.id, taskTitle: task.title, kind: focus.kind, duration })
+}
+async function saveSchedule(value: DaySchedule) {
+  schedule.value = { ...value }
+  await $fetch('/api/settings', { method: 'PATCH', body: { daySchedule: value } })
+}
+async function moveToTimeZone(task: Task, plannedTime: string | null) {
+  await patchTask(task, { plannedDate: date.value, plannedTime })
+}
+async function autoPlan() {
+  if (saving.value) return
+  const plan = autoPlanDay(tasks.value, date.value, schedule.value).filter((item) => item.plannedTime)
+  if (!plan.length) return
+  saving.value = true
+  try {
+    const updated = await Promise.all(plan.map((item) => updateTask(item.id, { plannedTime: item.plannedTime })))
+    updated.forEach(sync)
+    broadcastSync('tasks')
+  } finally {
+    saving.value = false
+  }
 }
 function relativeDate(offset: number) {
   return format(addDays(new Date(`${date.value}T12:00:00`), offset), 'yyyy-MM-dd')
@@ -374,63 +401,100 @@ function relativeDate(offset: number) {
       class="today-workspace__sections"
       :class="`today-workspace__sections--${view}`"
     >
-      <section
-        v-for="section in [
-          ['overdue', sections.overdue, 'i-lucide-triangle-alert'],
-          ['top', sections.top, 'i-lucide-star'],
-          ['inProgress', sections.inProgress, 'i-lucide-loader-circle'],
-          ['planned', sections.planned, 'i-lucide-calendar-check']
-        ] as const"
-        :key="section[0]"
-        v-show="section[1].length"
-        class="today-workspace__section"
-      >
-        <h2>
-          <UIcon :name="section[2]" />{{ $t(`pages.today.sections.${section[0]}`) }}<span>{{ section[1].length }}</span>
-        </h2>
-        <TodayTaskRow
-          v-for="task in section[1]"
-          :key="task.id"
-          :task="task"
-          :selected="selected.includes(task.id)"
-          :project-name="projectName(task.projectId)"
-          :assignee-name="assigneeName(task.assigneeId)"
-          @select="selectTask(task.id, $event)"
-          @toggle="patchTask(task, { status: task.status === 'done' ? 'todo' : 'done' })"
-          @edit="edit(task)"
-          @patch="$event.dayRank !== undefined ? rank(task, $event.dayRank) : patchTask(task, $event)"
-          @focus="startFocus(task)"
-        />
-      </section>
-      <section
-        v-if="sections.done.length"
-        class="today-workspace__section"
-      >
-        <button
-          class="today-workspace__done-toggle"
-          @click="doneOpen = !doneOpen"
-        >
-          <UIcon name="i-lucide-circle-check-big" />{{ $t('pages.today.sections.done') }}
-          <span>{{ sections.done.length }}</span
-          ><UIcon :name="doneOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" /></button
-        ><TodayTaskRow
-          v-for="task in doneOpen ? sections.done : []"
-          :key="task.id"
-          :task="task"
-          :selected="selected.includes(task.id)"
-          @select="selectTask(task.id, $event)"
-          @toggle="patchTask(task, { status: 'todo' })"
-          @edit="edit(task)"
-          @patch="patchTask(task, $event)"
-          @focus="startFocus(task)"
-        />
-      </section>
-      <EmptyState
-        v-if="!visible.length"
-        icon="i-lucide-sun"
-        :title="$t('pages.today.empty')"
-        :description="$t('pages.today.emptyHint')"
+      <TodayTimePlanner
+        v-if="view === 'timeline'"
+        :tasks="visible"
+        :date="date"
+        :schedule="schedule"
+        :projects="projects"
+        :assignees="assignees"
+        :saving="saving"
+        @move="moveToTimeZone"
+        @patch="patchTask"
+        @edit="edit"
+        @focus="startFocus"
+        @auto-plan="autoPlan"
+        @save-schedule="saveSchedule"
       />
+      <template v-else>
+        <section
+          v-for="section in [
+            ['overdue', sections.overdue, 'i-lucide-triangle-alert'],
+            ['top', sections.top, 'i-lucide-star'],
+            ['inProgress', sections.inProgress, 'i-lucide-loader-circle'],
+            ['planned', sections.planned, 'i-lucide-calendar-check']
+          ] as const"
+          :key="section[0]"
+          v-show="section[1].length"
+          class="today-workspace__section"
+        >
+          <h2>
+            <UIcon :name="section[2]" />{{ $t(`pages.today.sections.${section[0]}`)
+            }}<span>{{ section[1].length }}</span>
+          </h2>
+          <BoundedTaskList
+            :count="section[1].length"
+            :preview="6"
+            :row-height="70"
+            :storage-key="`today-list-${section[0]}`"
+          >
+            <div class="today-workspace__task-list">
+              <TodayTaskRow
+                v-for="task in section[1]"
+                :key="task.id"
+                :task="task"
+                :selected="selected.includes(task.id)"
+                :project-name="projectName(task.projectId)"
+                :assignee-name="assigneeName(task.assigneeId)"
+                @select="selectTask(task.id, $event)"
+                @toggle="patchTask(task, { status: task.status === 'done' ? 'todo' : 'done' })"
+                @edit="edit(task)"
+                @patch="$event.dayRank !== undefined ? rank(task, $event.dayRank) : patchTask(task, $event)"
+                @focus="startFocus(task)"
+              />
+            </div>
+          </BoundedTaskList>
+        </section>
+        <section
+          v-if="sections.done.length"
+          class="today-workspace__section"
+        >
+          <button
+            class="today-workspace__done-toggle"
+            @click="doneOpen = !doneOpen"
+          >
+            <UIcon name="i-lucide-circle-check-big" />{{ $t('pages.today.sections.done') }}
+            <span>{{ sections.done.length }}</span
+            ><UIcon :name="doneOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" /></button
+          ><BoundedTaskList
+            v-if="doneOpen"
+            :count="sections.done.length"
+            :preview="6"
+            :row-height="70"
+            storage-key="today-list-done"
+          >
+            <div class="today-workspace__task-list">
+              <TodayTaskRow
+                v-for="task in sections.done"
+                :key="task.id"
+                :task="task"
+                :selected="selected.includes(task.id)"
+                @select="selectTask(task.id, $event)"
+                @toggle="patchTask(task, { status: 'todo' })"
+                @edit="edit(task)"
+                @patch="patchTask(task, $event)"
+                @focus="startFocus(task)"
+              />
+            </div>
+          </BoundedTaskList>
+        </section>
+        <EmptyState
+          v-if="!visible.length"
+          icon="i-lucide-sun"
+          :title="$t('pages.today.empty')"
+          :description="$t('pages.today.emptyHint')"
+        />
+      </template>
     </div>
 
     <div

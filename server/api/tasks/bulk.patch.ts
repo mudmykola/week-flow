@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
     await requireTaskAccess(event, body.patch.blockedByTaskId)
   }
   await requireAssignableUser(event, body.patch.assigneeId)
+  await requireAssignableUser(event, body.patch.reviewerId)
   const updated = []
   for (const id of body.ids) {
     await requireTaskAccess(event, id, { write: true })
@@ -22,7 +23,9 @@ export default defineEventHandler(async (event) => {
       .update(tasks)
       .set({
         ...body.patch,
-        ...(body.patch.status ? { doneAt: body.patch.status === 'done' ? Date.now() : null } : {})
+        ...(body.patch.status ? { doneAt: body.patch.status === 'done' ? Date.now() : null } : {}),
+        ...(body.patch.workState === 'review' ? { reviewRequestedAt: Date.now() } : {}),
+        ...(body.patch.workState === 'active' ? { approvedAt: Date.now() } : {})
       })
       .where(eq(tasks.id, id))
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id))

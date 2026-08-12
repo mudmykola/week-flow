@@ -303,17 +303,26 @@ onKeyStroke('Escape', () => (immersive.value = false))
         />
         <section class="surface-card p-3">
           <h2 class="mb-2 text-sm font-semibold">{{ $t('task.subtasks') }}</h2>
-          <label
-            v-for="item in subtasks"
-            :key="item.id"
-            class="flex gap-2 py-2 text-sm"
-            ><input
-              type="checkbox"
-              class="ui-checkbox"
-              :checked="item.done"
-              @change="toggleSubtask(item)"
-            /><span :class="item.done ? 'text-secondary line-through' : ''">{{ item.title }}</span></label
+          <BoundedTaskList
+            :count="subtasks.length"
+            :preview="6"
+            :row-height="40"
+            storage-key="focus-subtasks"
           >
+            <div>
+              <label
+                v-for="item in subtasks"
+                :key="item.id"
+                class="flex gap-2 py-2 text-sm"
+                ><input
+                  type="checkbox"
+                  class="ui-checkbox"
+                  :checked="item.done"
+                  @change="toggleSubtask(item)"
+                /><span :class="item.done ? 'text-secondary line-through' : ''">{{ item.title }}</span></label
+              >
+            </div>
+          </BoundedTaskList>
           <p
             v-if="!subtasks.length"
             class="text-secondary text-xs"

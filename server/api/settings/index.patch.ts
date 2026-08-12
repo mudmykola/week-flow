@@ -2,6 +2,7 @@ import { useDb } from '../../db'
 import { userSettings } from '../../db/schema'
 import { requireAppUser } from '../../utils/auth'
 import { updateSettingsSchema } from '../../utils/validators'
+import { defaultDaySchedule } from '../../../shared/types/daySchedule'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
@@ -12,6 +13,7 @@ export default defineEventHandler(async (event) => {
     locale: body.locale ?? 'uk',
     weekStartsOn: body.weekStartsOn ?? 1,
     notifications: body.notifications ?? true,
+    daySchedule: body.daySchedule ?? defaultDaySchedule,
     updatedAt: Date.now()
   }
   await useDb(event)

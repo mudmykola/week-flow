@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AssignableUser, Task, TaskPriority, TaskRecurrence } from '~/domain/entities/task'
-import { createTask, fetchAllTasks, fetchDueTasks } from '~/data/repositories/tasksRepository'
+import { createTask, fetchAllTasks, fetchTodayTasks } from '~/data/repositories/tasksRepository'
 import { captureInboxItems, fetchInboxItems } from '~/data/repositories/inboxRepository'
 import { createStickyNote } from '~/data/repositories/stickyNotesRepository'
 import type { InboxItem } from '~/domain/entities/inbox'
@@ -13,7 +13,7 @@ import {
   taskBoardLink,
   type NavigationSection
 } from '~/domain/services/navigation'
-import { localDateKey } from '~/domain/services/today'
+import { localDateKey, todayNavigationCount } from '~/domain/services/today'
 import { getCurrentWeek } from '~/domain/services/week'
 
 const route = useRoute()
@@ -44,7 +44,8 @@ const tasksStore = useTasksStore()
 const inboxItems = useState<InboxItem[]>('inbox-items', () => [])
 
 const shortcutsOpen = ref(false)
-const today = localDateKey()
+const clock = useNow({ interval: 60_000 })
+const today = computed(() => localDateKey(clock.value))
 
 globalCreateBus.on(handleCreateAction)
 
@@ -52,10 +53,11 @@ onMounted(() => {
   fetchInboxItems()
     .then((items) => (inboxItems.value = items))
     .catch(() => {})
-  tasksStore.loadListTasks(fetchDueTasks).catch(() => {})
+  tasksStore.loadListTasks(() => fetchTodayTasks(today.value)).catch(() => {})
 })
 
-useLiveRefresh('tasks', () => tasksStore.loadListTasks(fetchDueTasks).catch(() => {}))
+useLiveRefresh('tasks', () => tasksStore.loadListTasks(() => fetchTodayTasks(today.value)).catch(() => {}))
+watch(today, () => tasksStore.loadListTasks(() => fetchTodayTasks(today.value)).catch(() => {}))
 
 const reusableTags = computed(() =>
   [...new Set(allTasks.value.flatMap((task) => task.tags ?? []))].sort((a, b) => a.localeCompare(b, 'uk'))
@@ -74,12 +76,7 @@ const groupedNavigation = computed(() =>
     .filter((group) => group.items.length)
 )
 
-const overdueCount = computed(
-  () =>
-    tasksStore.listTasks.filter(
-      (task) => !task.archivedAt && task.dueDate && task.dueDate < today && task.status !== 'done'
-    ).length
-)
+const todayCount = computed(() => todayNavigationCount(tasksStore.listTasks, today.value))
 
 const results = computed(() => {
   const term = query.value.trim().toLowerCase()
@@ -140,6 +137,7 @@ async function saveTask(payload: {
   const task = await createTask({ ...payload, week: getCurrentWeek(), sort: 0 })
   allTasks.value.push(task)
   if (isInboxTask(task)) tasksStore.inboxTasks.unshift(task)
+  tasksStore.syncListTask(task)
   taskCreatedBus.emit(task)
   broadcastSync('tasks')
   taskEditorOpen.value = false
@@ -155,7 +153,7 @@ function showCreateFeedback(message: string) {
 
 function handleCreateAction(action: GlobalCreateAction) {
   if (action === 'task' || action === 'today') {
-    void openTaskEditor(action === 'today' ? today : null)
+    void openTaskEditor(action === 'today' ? today.value : null)
     return
   }
   quickCreateKind.value = action
@@ -293,7 +291,7 @@ useEventListener('keydown', (event) => {
               v-for="item in group.items"
               :key="item.to"
               :to="item.to"
-              class="text-secondary flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-black/[0.04] hover:text-[var(--color-text-primary)] dark:hover:bg-white/[0.05]"
+              class="text-secondary relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-black/[0.04] hover:text-[var(--color-text-primary)] dark:hover:bg-white/[0.05]"
               :class="
                 route.path === item.to ? 'bg-black/[0.06] text-[var(--color-text-primary)] dark:bg-white/[0.08]' : ''
               "
@@ -305,18 +303,18 @@ useEventListener('keydown', (event) => {
                 class="size-4.5 shrink-0"
               /><span
                 class="flex-1"
-                :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                :class="sidebarCollapsed ? 'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]' : ''"
                 >{{ item.label }}</span
               ><span
                 v-if="item.to === '/inbox' && inboxItems.length"
                 class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
-                :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                :class="sidebarCollapsed ? 'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]' : ''"
                 >{{ inboxItems.length }}</span
               ><span
-                v-else-if="item.to === '/today' && overdueCount"
-                class="rounded-full bg-[var(--color-danger)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-danger)]"
+                v-else-if="item.to === '/today' && todayCount"
+                class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
                 :class="sidebarCollapsed ? 'lg:hidden' : ''"
-                >{{ overdueCount }}</span
+                >{{ todayCount }}</span
               >
             </NuxtLink>
           </div>

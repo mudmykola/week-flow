@@ -18,6 +18,7 @@ export const appNavigation: AppNavigationItem[] = [
   { label: 'nav.calendar', icon: 'i-lucide-calendar-days', to: '/calendar', section: 'insights' },
   { label: 'nav.analytics', icon: 'i-lucide-chart-no-axes-combined', to: '/analytics', section: 'insights' },
   { label: 'nav.review', icon: 'i-lucide-sparkles', to: '/review', section: 'insights' },
+  { label: 'nav.delegation', icon: 'i-lucide-git-pull-request-arrow', to: '/delegation', section: 'insights' },
   { label: 'nav.notes', icon: 'i-lucide-sticky-note', to: '/notes', section: 'insights' },
   { label: 'nav.activity', icon: 'i-lucide-activity', to: '/activity', section: 'insights' },
   { label: 'nav.settings', icon: 'i-lucide-settings-2', to: '/settings', section: 'team' },

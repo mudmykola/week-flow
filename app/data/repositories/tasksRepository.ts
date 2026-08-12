@@ -19,6 +19,10 @@ export function fetchDueTasks() {
   return apiRequest<Task[]>('/api/tasks', { query: { scope: 'due' } })
 }
 
+export function fetchTodayTasks(date: string) {
+  return apiRequest<Task[]>('/api/tasks', { query: { scope: 'today', date } })
+}
+
 export function fetchTodayPlan(date: string, start: number, end: number) {
   return apiRequest<{ date: string; tasks: Task[]; focusMinutes: number }>('/api/today', {
     query: { date, start, end }

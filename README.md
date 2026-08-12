@@ -1,26 +1,31 @@
 # WeekFlow
 
-WeekFlow — персональний і командний workspace для планування навколо тижневого робочого циклу. Він поєднує задачі, календар, процеси, цілі, щоденні нотатки та командне керування в одному адаптивному PWA.
+WeekFlow — персональний і командний workspace для планування, виконання та осмислення роботи навколо тижневого циклу. Він поєднує задачі, календарне планування, фокус, дейліки, процеси, цілі та командне керування в одному адаптивному PWA.
 
 **Production:** [weekflow.pp.ua](https://weekflow.pp.ua)
 
-## Можливості
+## Основні робочі простори
 
-- Google OAuth, окремі дані користувачів і ролі `user`, `pm`, `admin`.
-- Тижнева дошка з drag-and-drop, компактним режимом, WIP-сигналами та швидким перенесенням задач.
-- Пріоритети, дедлайни, теги, повторення, підзадачі та коментарі.
-- Представлення «Сьогодні», «Майбутні», «Прострочені», календар і таймлайн.
-- Інтерактивна аналітика з KPI, трендами, фільтрами й переходами від графіка до відповідних задач.
-- Інтерактивний календар із місячним та agenda-представленнями, фільтрами й оцінкою навантаження.
-- Тижневий огляд, персональна дошка датованих checklist-стікерів, журнал активності та архів.
-- Focus-таймер, Inbox для швидкого захоплення задач і персональні шаблони.
+- **Week Board 3.0** — групування задач за статусом, днем, виконавцем, проєктом або пріоритетом; drag-and-drop змінює властивість відповідної колонки. Є Top 3 тижня, smart quick-create, залежності, workload/risk indicators, bulk planning та Undo.
+- **Today Workspace 2.0** — Top 3 дня, прострочене, активне, заплановане й завершене в одному timezone-safe представленні. Підтримуються list/timeline режими, оцінки часу, фільтри, масові дії та запуск Focus.
+- **Inbox Processing 2.0** — швидке захоплення думок без забруднення дошок. Вставлення багатьох рядків, stale indicators, keyboard processing і перетворення записів у задачі, плани на сьогодні, стікери, проєкти або командні цілі.
+- **Calendar 3.0** — Month, Week та Agenda, backlog незапланованих задач, часові слоти, drag-and-drop, денне навантаження, конфлікти, Top 3 дня, швидке створення, Undo та capacity-aware smart scheduling.
+- **Review 2.0** — готовий дейлік із реальних даних: завершене в попередній робочий день, сьогоднішній план, змістовна активність, підзадачі, Focus-хвилини, перенесення й блокери. Детермінована рефлексія не використовує AI-токени, редагується, автоматично зберігається в D1 та має історію snapshots.
+- **Focus 2.0** — черга задач, повноекранний таймер, короткі й довгі перерви, нотатки, результати сесій та статистика фокуса.
+- **Workflows** — візуальний builder етапів із drag-and-drop, WIP-лімітами, правилами переходів і керованими автоматизаціями.
+- **Analytics та Activity** — KPI, тренди, breakdowns, фільтри й переходи до задач; згрупований журнал значущих подій без шуму від autosave.
+
+## Можливості платформи
+
+- Google OAuth, ізоляція даних користувачів і системні ролі `user`, `pm`, `admin`.
+- Повноекранний адаптивний редактор задач із deep link `?task=<id>`, autosave, описом, коментарями, активністю та розширеними підзадачами.
+- Пріоритети, дедлайни, планові дата/час, оцінки, теги, повторення, залежності, виконавці, проєкти та workflow stages.
+- Global Create Hub для задачі, плану на сьогодні, Inbox-запису, стікера чи проєкту без втрати контексту поточної сторінки.
 - Спільні проєкти із запрошеннями та ролями `editor` і `viewer`.
-- Збережені фільтри, глобальний пошук `⌘/Ctrl + K`, JSON/CSV-експорт.
-- Адаптивний інтерфейс, світла й темна теми, Lucide-іконки та installable PWA.
-- Admin Control Center із системними метриками, пошуком, bulk actions, аудитом, керуванням ролями, доступом і PM-командами.
-- PM-команди: учасники, персональні й командні цілі, task progress та загальний dashboard.
-- Гнучка робота із задачами: drawer деталей, inline editing, виконавці, масові операції, дублювання, undo та табличний вигляд.
-- Візуальний workflow builder: перевпорядкування етапів, WIP-ліміти та керовані автоматизації для створення задач і зміни статусів.
+- PM-команди з учасниками, цілями, прогресом, блокерами та командним режимом Review; адміністратор має системний огляд усіх доступних команд.
+- Admin Control Center із метриками, пошуком, bulk actions, аудитом, ролями та керуванням доступом.
+- Глобальний пошук `⌘/Ctrl + K`, збережені views, JSON/CSV-експорт, optimistic updates і live sync між вкладками.
+- Українська й англійська локалізації, світла/темна теми, Lucide-іконки, responsive layout та installable PWA.
 
 ## Ролі та доступ
 
@@ -54,6 +59,8 @@ app/data/          репозиторії й типізовані запити �
 ```
 
 Компоненти працюють зі станом через application layer, а мережеві запити зосереджені в data layer. Серверні маршрути розташовані в `server/api/`, авторизація та правила доступу — у `server/utils/`, схема бази — у `server/db/schema.ts`, а SQL-міграції — у `server/db/migrations/`.
+
+Ключові агреговані workspace read models (`Today`, `Calendar`, `Review`) формуються окремими domain services та API endpoints. Review snapshots зберігаються в D1, а точний час завершення задач і підзадач дозволяє відтворити фактичні результати дня без припущень за `updatedAt`.
 
 UI primitives розділені на `base`, `form`, `layout` і `overlay`; правила повторного використання описані в [`docs/ui-components.md`](docs/ui-components.md).
 Сторінки використовують directory-first Nuxt routing (`<route>/index.vue`, `[param]/index.vue`); конвенції описані в [`docs/page-routing.md`](docs/page-routing.md).
@@ -137,6 +144,8 @@ pnpm build
 
 Тести на Vitest покривають domain services, Zod-валідатори, API repositories, Pinia stores та ключові взаємодії Vue-компонентів. Coverage gate вимагає щонайменше 85% для lines/functions/statements і 75% для branches; GitHub Actions виконує його перед production build та deploy.
 
+Останній повний gate для Review 2.0: 45 test suites, 172 tests, 87.52% statements, 76.82% branches і 85.84% functions. Ці числа є snapshot релізу; джерелом істини для поточного стану завжди залишається `pnpm quality:gate`.
+
 Для розробки доступний watch-режим:
 
 ```bash
@@ -183,6 +192,18 @@ pnpm deploy
 
 Push у гілку `main` автоматично запускає GitHub Actions workflow: frozen install, повний quality gate, перевірку Cloudflare credentials, recovery metadata, D1 migrations, Worker deploy, перевірку сайту та D1-aware API health check. Workflow також можна запустити вручну через **Actions → Deploy production → Run workflow**.
 
+Migration і Worker публікуються як одна delivery-послідовність. Не застосовуйте нову remote migration задовго до deploy коду, який її використовує. Для поточного Review 2.0 production має отримати `0014_nice_nightcrawler.sql` через стандартний workflow.
+
+## Основні клавіатурні команди
+
+- `N` — відкрити Global Create Hub.
+- `⌘/Ctrl + K` — глобальний пошук і command palette.
+- `/` — перейти до пошуку в контексті сторінки.
+- `T` — повернутися до сьогодні у календарних workspace.
+- `← / →` — змінити день у Calendar або Review, якщо фокус не знаходиться в полі вводу.
+- `⌘/Ctrl + Enter` — завершити основну дію в редакторах, які підтримують швидке підтвердження.
+- `Esc` — закрити активний overlay або редактор.
+
 Для CI/CD у GitHub мають бути налаштовані repository secrets:
 
 ```text
@@ -224,7 +245,8 @@ wrangler.toml           Cloudflare Worker, observability та D1 bindings
 - [Page routing](docs/page-routing.md) — directory-first Nuxt routing.
 - [Localization](docs/localization.md) — правила i18n та словників.
 - [Upgrade roadmap](docs/upgrade-roadmap-2026-08.md) — технічний аудит і послідовність розвитку.
-- [Dev Log](updates/2026-08-01.md) — реалізовані зміни, issue references та перевірки.
+- [Dev Log — 2026-08-12](updates/2026-08-12.md) — Review 2.0, issue reference та delivery verification.
+- [Dev Log — 2026-08-11](updates/2026-08-11.md) — Today, Inbox, Week Board, Brand, Calendar та cross-page integration.
 
 ## Безпека
 

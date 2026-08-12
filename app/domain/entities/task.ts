@@ -1,6 +1,7 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type TaskRecurrence = 'daily' | 'weekly' | 'monthly'
+export type TaskWorkState = 'active' | 'waiting' | 'review' | 'deferred' | 'cancelled'
 
 export interface Task {
   id: string
@@ -25,6 +26,21 @@ export interface Task {
   archivedAt: number | null
   assigneeId: string | null
   stageId: string | null
+  ownerId: string | null
+  workState: TaskWorkState
+  waitingFor: string | null
+  waitingUntil: string | null
+  reviewerId: string | null
+  reviewNote: string | null
+  reviewRequestedAt: number | null
+  approvedAt: number | null
+  actualMinutes: number | null
+  carryoverReason: string | null
+  rescheduleCount: number
+  originalPlannedDate: string | null
+  readyCriteria: string[]
+  doneCriteria: string[]
+  reminderAt: number | null
   subtaskCount?: number
   completedSubtaskCount?: number
   commentCount?: number
@@ -49,6 +65,16 @@ export interface CreateTaskInput {
   recurrence?: TaskRecurrence | null
   assigneeId?: string | null
   stageId?: string | null
+  workState?: TaskWorkState
+  waitingFor?: string | null
+  waitingUntil?: string | null
+  reviewerId?: string | null
+  reviewNote?: string | null
+  actualMinutes?: number | null
+  carryoverReason?: string | null
+  readyCriteria?: string[]
+  doneCriteria?: string[]
+  reminderAt?: number | null
 }
 
 export interface UpdateTaskInput {
@@ -71,6 +97,16 @@ export interface UpdateTaskInput {
   archivedAt?: number | null
   assigneeId?: string | null
   stageId?: string | null
+  workState?: TaskWorkState
+  waitingFor?: string | null
+  waitingUntil?: string | null
+  reviewerId?: string | null
+  reviewNote?: string | null
+  actualMinutes?: number | null
+  carryoverReason?: string | null
+  readyCriteria?: string[]
+  doneCriteria?: string[]
+  reminderAt?: number | null
 }
 
 export interface AssignableUser {

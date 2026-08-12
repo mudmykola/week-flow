@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
   const body = await readValidatedBody(event, createTaskSchema.parse)
   await requireAssignableUser(event, body.assigneeId)
+  await requireAssignableUser(event, body.reviewerId)
 
   if (body.projectId) {
     const [project] = await db
@@ -54,7 +55,21 @@ export default defineEventHandler(async (event) => {
     blockedByTaskId: body.blockedByTaskId ?? null,
     tags: body.tags,
     recurrence: body.recurrence ?? null,
-    archivedAt: null
+    archivedAt: null,
+    workState: body.workState,
+    waitingFor: body.waitingFor ?? null,
+    waitingUntil: body.waitingUntil ?? null,
+    reviewerId: body.reviewerId ?? null,
+    reviewNote: body.reviewNote ?? null,
+    reviewRequestedAt: body.workState === 'review' ? Date.now() : null,
+    approvedAt: null,
+    actualMinutes: body.actualMinutes ?? null,
+    carryoverReason: body.carryoverReason ?? null,
+    rescheduleCount: 0,
+    originalPlannedDate: body.plannedDate ?? null,
+    readyCriteria: body.readyCriteria,
+    doneCriteria: body.doneCriteria,
+    reminderAt: body.reminderAt ?? null
   }
 
   await db.insert(tasks).values(task)

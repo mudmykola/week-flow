@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index, primaryKey, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import type { DaySchedule } from '../../shared/types/daySchedule'
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -55,7 +56,23 @@ export const tasks = sqliteTable(
     blockedByTaskId: text('blocked_by_task_id'),
     tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
     recurrence: text('recurrence', { enum: ['daily', 'weekly', 'monthly'] }),
-    archivedAt: integer('archived_at')
+    archivedAt: integer('archived_at'),
+    workState: text('work_state', { enum: ['active', 'waiting', 'review', 'deferred', 'cancelled'] })
+      .notNull()
+      .default('active'),
+    waitingFor: text('waiting_for'),
+    waitingUntil: text('waiting_until'),
+    reviewerId: text('reviewer_id').references(() => users.id, { onDelete: 'set null' }),
+    reviewNote: text('review_note'),
+    reviewRequestedAt: integer('review_requested_at'),
+    approvedAt: integer('approved_at'),
+    actualMinutes: integer('actual_minutes'),
+    carryoverReason: text('carryover_reason'),
+    rescheduleCount: integer('reschedule_count').notNull().default(0),
+    originalPlannedDate: text('original_planned_date'),
+    readyCriteria: text('ready_criteria', { mode: 'json' }).$type<string[]>().notNull().default([]),
+    doneCriteria: text('done_criteria', { mode: 'json' }).$type<string[]>().notNull().default([]),
+    reminderAt: integer('reminder_at')
   },
   (table) => [
     index('tasks_week_idx').on(table.week),
@@ -63,7 +80,10 @@ export const tasks = sqliteTable(
     index('tasks_project_id_idx').on(table.projectId),
     index('tasks_owner_id_idx').on(table.ownerId),
     index('tasks_assignee_id_idx').on(table.assigneeId),
-    index('tasks_planned_date_idx').on(table.plannedDate, table.dayRank)
+    index('tasks_planned_date_idx').on(table.plannedDate, table.dayRank),
+    index('tasks_work_state_idx').on(table.workState, table.waitingUntil),
+    index('tasks_reviewer_idx').on(table.reviewerId, table.workState),
+    index('tasks_reminder_idx').on(table.reminderAt)
   ]
 )
 
@@ -147,9 +167,40 @@ export const subtasks = sqliteTable(
     dueDate: text('due_date'),
     assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
     sort: integer('sort').notNull().default(0),
-    createdAt: integer('created_at').notNull()
+    createdAt: integer('created_at').notNull(),
+    doneAt: integer('done_at')
   },
   (table) => [index('subtasks_task_id_idx').on(table.taskId), index('subtasks_assignee_id_idx').on(table.assigneeId)]
+)
+
+export const dailyReviews = sqliteTable(
+  'daily_reviews',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reviewDate: text('review_date').notNull(),
+    content: text('content').notNull().default(''),
+    structuredContent: text('structured_content', { mode: 'json' })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    excludedTaskIds: text('excluded_task_ids', { mode: 'json' }).$type<string[]>().notNull().default([]),
+    status: text('status', { enum: ['draft', 'submitted'] })
+      .notNull()
+      .default('draft'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    submittedAt: integer('submitted_at')
+  },
+  (table) => [
+    index('daily_reviews_owner_date_idx').on(table.ownerId, table.reviewDate),
+    uniqueIndex('daily_reviews_user_date_idx').on(table.userId, table.reviewDate)
+  ]
 )
 
 export const comments = sqliteTable(
@@ -314,6 +365,7 @@ export const userSettings = sqliteTable('user_settings', {
   locale: text('locale').notNull().default('uk'),
   weekStartsOn: integer('week_starts_on').notNull().default(1),
   notifications: integer('notifications', { mode: 'boolean' }).notNull().default(true),
+  daySchedule: text('day_schedule', { mode: 'json' }).$type<DaySchedule>(),
   updatedAt: integer('updated_at').notNull()
 })
 
@@ -379,3 +431,4 @@ export type Team = typeof teams.$inferSelect
 export type Goal = typeof goals.$inferSelect
 export type StickyNote = typeof stickyNotes.$inferSelect
 export type InboxItem = typeof inboxItems.$inferSelect
+export type DailyReview = typeof dailyReviews.$inferSelect

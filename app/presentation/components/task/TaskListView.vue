@@ -184,38 +184,120 @@ async function undo() {
         class="mb-4"
       >
         <h2 class="mb-2 text-sm font-semibold text-[var(--color-danger)]">{{ $t('taskActions.overdueSection') }}</h2>
+        <BoundedTaskList
+          :count="overdueTasks.length"
+          :preview="4"
+          :row-height="78"
+          :storage-key="`${mode}-overdue`"
+        >
+          <div class="space-y-3">
+            <article
+              v-for="task in overdueTasks"
+              :key="task.id"
+              class="glass-card flex items-center gap-3 border-l-2 border-[var(--color-danger)] p-3"
+              @click="openEditor(task)"
+            >
+              <button
+                :title="$t('taskActions.complete')"
+                @click.stop="toggleDone(task)"
+              >
+                <UIcon
+                  name="i-lucide-circle"
+                  class="text-secondary size-5"
+                />
+              </button>
+              <span
+                class="size-2 shrink-0 rounded-full"
+                :style="{ background: priorityColors[task.priority] }"
+              />
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium">{{ task.title }}</p>
+                <div class="text-secondary mt-1 flex flex-wrap items-center gap-2 text-xs">
+                  <span class="text-[var(--color-danger)]">{{ task.dueDate }}</span>
+                  <ProjectBadge :project="projectsStore.getProject(task.projectId)" />
+                </div>
+              </div>
+              <IconButton
+                icon="i-lucide-calendar-arrow-up"
+                :label="$t('taskActions.snooze')"
+                size="sm"
+                @click.stop="snooze(task)"
+              />
+              <IconButton
+                icon="i-lucide-trash-2"
+                :label="$t('taskActions.delete')"
+                size="sm"
+                @click.stop="dismiss(task)"
+              />
+            </article>
+          </div>
+        </BoundedTaskList>
+      </section>
+
+      <h2
+        v-if="mode === 'today' && overdueTasks.length && visibleTasks.length"
+        class="mb-2 text-sm font-semibold"
+      >
+        {{ $t('taskActions.todaySection') }}
+      </h2>
+      <BoundedTaskList
+        v-if="visibleTasks.length"
+        :count="visibleTasks.length"
+        :preview="6"
+        :row-height="78"
+        :storage-key="`task-list-${mode}`"
+      >
         <div class="space-y-3">
           <article
-            v-for="task in overdueTasks"
+            v-for="task in visibleTasks"
             :key="task.id"
-            class="glass-card flex items-center gap-3 border-l-2 border-[var(--color-danger)] p-3"
+            class="glass-card flex items-center gap-3 p-3"
             @click="openEditor(task)"
           >
             <button
-              :title="$t('taskActions.complete')"
+              :title="task.status === 'done' ? $t('taskActions.return') : $t('taskActions.complete')"
               @click.stop="toggleDone(task)"
             >
               <UIcon
-                name="i-lucide-circle"
-                class="text-secondary size-5"
+                :name="task.status === 'done' ? 'i-lucide-circle-check-big' : 'i-lucide-circle'"
+                class="size-5"
+                :class="task.status === 'done' ? 'text-[var(--color-accent)]' : 'text-secondary'"
               />
             </button>
             <span
+              v-if="task.status !== 'done'"
               class="size-2 shrink-0 rounded-full"
               :style="{ background: priorityColors[task.priority] }"
             />
             <div class="min-w-0 flex-1">
-              <p class="truncate font-medium">{{ task.title }}</p>
+              <p
+                class="truncate font-medium"
+                :class="task.status === 'done' ? 'text-secondary line-through' : ''"
+              >
+                {{ task.title }}
+              </p>
               <div class="text-secondary mt-1 flex flex-wrap items-center gap-2 text-xs">
-                <span class="text-[var(--color-danger)]">{{ task.dueDate }}</span>
+                <span v-if="task.dueDate">{{ task.dueDate }}</span>
                 <ProjectBadge :project="projectsStore.getProject(task.projectId)" />
+                <span
+                  v-for="tag in task.tags"
+                  :key="tag"
+                  >#{{ tag }}</span
+                >
               </div>
             </div>
             <IconButton
+              v-if="mode === 'today' || mode === 'overdue'"
               icon="i-lucide-calendar-arrow-up"
               :label="$t('taskActions.snooze')"
               size="sm"
               @click.stop="snooze(task)"
+            />
+            <IconButton
+              :icon="task.archivedAt ? 'i-lucide-archive-restore' : 'i-lucide-archive'"
+              :label="task.archivedAt ? $t('taskActions.restore') : $t('taskActions.archive')"
+              size="sm"
+              @click.stop="toggleArchive(task)"
             />
             <IconButton
               icon="i-lucide-trash-2"
@@ -225,77 +307,7 @@ async function undo() {
             />
           </article>
         </div>
-      </section>
-
-      <h2
-        v-if="mode === 'today' && overdueTasks.length && visibleTasks.length"
-        class="mb-2 text-sm font-semibold"
-      >
-        {{ $t('taskActions.todaySection') }}
-      </h2>
-      <div
-        v-if="visibleTasks.length"
-        class="space-y-3"
-      >
-        <article
-          v-for="task in visibleTasks"
-          :key="task.id"
-          class="glass-card flex items-center gap-3 p-3"
-          @click="openEditor(task)"
-        >
-          <button
-            :title="task.status === 'done' ? $t('taskActions.return') : $t('taskActions.complete')"
-            @click.stop="toggleDone(task)"
-          >
-            <UIcon
-              :name="task.status === 'done' ? 'i-lucide-circle-check-big' : 'i-lucide-circle'"
-              class="size-5"
-              :class="task.status === 'done' ? 'text-[var(--color-accent)]' : 'text-secondary'"
-            />
-          </button>
-          <span
-            v-if="task.status !== 'done'"
-            class="size-2 shrink-0 rounded-full"
-            :style="{ background: priorityColors[task.priority] }"
-          />
-          <div class="min-w-0 flex-1">
-            <p
-              class="truncate font-medium"
-              :class="task.status === 'done' ? 'text-secondary line-through' : ''"
-            >
-              {{ task.title }}
-            </p>
-            <div class="text-secondary mt-1 flex flex-wrap items-center gap-2 text-xs">
-              <span v-if="task.dueDate">{{ task.dueDate }}</span>
-              <ProjectBadge :project="projectsStore.getProject(task.projectId)" />
-              <span
-                v-for="tag in task.tags"
-                :key="tag"
-                >#{{ tag }}</span
-              >
-            </div>
-          </div>
-          <IconButton
-            v-if="mode === 'today' || mode === 'overdue'"
-            icon="i-lucide-calendar-arrow-up"
-            :label="$t('taskActions.snooze')"
-            size="sm"
-            @click.stop="snooze(task)"
-          />
-          <IconButton
-            :icon="task.archivedAt ? 'i-lucide-archive-restore' : 'i-lucide-archive'"
-            :label="task.archivedAt ? $t('taskActions.restore') : $t('taskActions.archive')"
-            size="sm"
-            @click.stop="toggleArchive(task)"
-          />
-          <IconButton
-            icon="i-lucide-trash-2"
-            :label="$t('taskActions.delete')"
-            size="sm"
-            @click.stop="dismiss(task)"
-          />
-        </article>
-      </div>
+      </BoundedTaskList>
       <EmptyState
         v-else-if="!(mode === 'today' && overdueTasks.length)"
         :title="emptyTitle"

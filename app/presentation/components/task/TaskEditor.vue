@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import type { Project } from '~/domain/entities/project'
-import type { AssignableUser, Task, TaskPriority, TaskRecurrence, UpdateTaskInput } from '~/domain/entities/task'
+import type {
+  AssignableUser,
+  Task,
+  TaskPriority,
+  TaskRecurrence,
+  TaskWorkState,
+  UpdateTaskInput
+} from '~/domain/entities/task'
 
 const props = defineProps<{
   open: boolean
@@ -10,6 +17,7 @@ const props = defineProps<{
   projects: Project[]
   assignees?: AssignableUser[]
   tagOptions?: string[]
+  initialMode?: 'view' | 'edit'
 }>()
 const emit = defineEmits<{
   close: []
@@ -28,6 +36,16 @@ const emit = defineEmits<{
       recurrence: TaskRecurrence | null
       assigneeId: string | null
       stageId: string | null
+      workState: TaskWorkState
+      waitingFor: string | null
+      waitingUntil: string | null
+      reviewerId: string | null
+      reviewNote: string | null
+      actualMinutes: number | null
+      carryoverReason: string | null
+      readyCriteria: string[]
+      doneCriteria: string[]
+      reminderAt: number | null
     }
   ]
 }>()
@@ -42,6 +60,7 @@ const {
   load: loadDetails
 } = useTaskDetails(taskRef)
 const titleEditor = useTemplateRef<{ focus: () => void }>('titleEditor')
+const mode = ref<'view' | 'edit'>('view')
 
 const title = ref('')
 const note = ref('')
@@ -57,6 +76,16 @@ const recurrence = ref<TaskRecurrence | null>(null)
 const assigneeId = ref<string | null>(null)
 const stageId = ref<string | null>(null)
 const tags = ref<string[]>([])
+const workState = ref<TaskWorkState>('active')
+const waitingFor = ref('')
+const waitingUntil = ref('')
+const reviewerId = ref<string | null>(null)
+const reviewNote = ref('')
+const actualMinutes = ref<number | null>(null)
+const carryoverReason = ref('')
+const readyCriteriaText = ref('')
+const doneCriteriaText = ref('')
+const reminderAt = ref('')
 const workflowStages = ref<Array<{ id: string; name: string; category: Task['status'] }>>([])
 const hydrated = ref(false)
 const submitting = ref(false)
@@ -146,7 +175,23 @@ function payload() {
     tags: tags.value,
     recurrence: recurrence.value,
     assigneeId: assigneeId.value,
-    stageId: stageId.value
+    stageId: stageId.value,
+    workState: workState.value,
+    waitingFor: waitingFor.value.trim() || null,
+    waitingUntil: waitingUntil.value || null,
+    reviewerId: reviewerId.value,
+    reviewNote: reviewNote.value.trim() || null,
+    actualMinutes: actualMinutes.value,
+    carryoverReason: carryoverReason.value.trim() || null,
+    readyCriteria: readyCriteriaText.value
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean),
+    doneCriteria: doneCriteriaText.value
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean),
+    reminderAt: reminderAt.value ? new Date(reminderAt.value).getTime() : null
   }
 }
 
@@ -155,6 +200,7 @@ watch(
   ([open]) => {
     if (!open) return
     const task = props.task
+    mode.value = task ? (props.initialMode ?? 'view') : 'edit'
     hydrated.value = false
     cancelSave()
     const savedDraft = !task ? readStoredDraft() : null
@@ -173,8 +219,18 @@ watch(
     assigneeId.value = task?.assigneeId ?? (savedDraft?.assigneeId as string | null) ?? taskDefaults.value.assigneeId
     stageId.value = task?.stageId ?? null
     tags.value = task?.tags ? [...task.tags] : []
+    workState.value = task?.workState ?? 'active'
+    waitingFor.value = task?.waitingFor ?? ''
+    waitingUntil.value = task?.waitingUntil ?? ''
+    reviewerId.value = task?.reviewerId ?? null
+    reviewNote.value = task?.reviewNote ?? ''
+    actualMinutes.value = task?.actualMinutes ?? null
+    carryoverReason.value = task?.carryoverReason ?? ''
+    readyCriteriaText.value = task?.readyCriteria?.join('\n') ?? ''
+    doneCriteriaText.value = task?.doneCriteria?.join('\n') ?? ''
+    reminderAt.value = task?.reminderAt ? new Date(task.reminderAt).toISOString().slice(0, 16) : ''
     hydrated.value = true
-    void nextTick(() => titleEditor.value?.focus())
+    if (mode.value === 'edit') void nextTick(() => titleEditor.value?.focus())
   },
   { immediate: true }
 )
@@ -194,10 +250,20 @@ watch(
     recurrence,
     assigneeId,
     stageId,
-    tags
+    tags,
+    workState,
+    waitingFor,
+    waitingUntil,
+    reviewerId,
+    reviewNote,
+    actualMinutes,
+    carryoverReason,
+    readyCriteriaText,
+    doneCriteriaText,
+    reminderAt
   ],
   () => {
-    if (!hydrated.value || !props.open) return
+    if (!hydrated.value || !props.open || mode.value !== 'edit') return
     const value = payload()
     if (props.task) scheduleSave(value as UpdateTaskInput)
     else draft.value = value
@@ -275,7 +341,7 @@ function updateComments(value: typeof comments.value) {
   if (props.task) emit('updated', { ...props.task, commentCount: value.length })
 }
 async function close() {
-  if (props.task) {
+  if (props.task && mode.value === 'edit') {
     scheduleSave(payload())
     if (!(await flushSave())) return
   }
@@ -284,13 +350,20 @@ async function close() {
 useTaskKeyboard({
   enabled: computed(() => props.open),
   onCreate: () => {},
-  onEdit: () => {},
+  onEdit: () => {
+    if (props.task) mode.value = 'edit'
+  },
   onClose: close,
   onSave: submit,
   onSearch: () => {},
   onMove: () => {},
   onCommands: () => {}
 })
+async function quickPatch(value: UpdateTaskInput) {
+  if (!props.task) return
+  const updated = await $fetch<Task>(`/api/tasks/${props.task.id}`, { method: 'PATCH', body: value })
+  emit('updated', updated)
+}
 </script>
 
 <template>
@@ -304,104 +377,128 @@ useTaskKeyboard({
     @close="close"
   >
     <div class="task-workspace__content space-y-4">
-      <header class="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-4">
-        <div class="mb-2 flex items-center justify-between gap-3">
-          <span class="text-secondary text-xs">{{ task ? $t('task.editing') : $t('task.newDraft') }}</span>
-          <span
-            class="inline-flex items-center gap-1.5 text-xs"
-            :class="saveState === 'error' ? 'text-[var(--color-danger)]' : 'text-secondary'"
-          >
-            <UIcon
-              :name="
-                saveState === 'saving'
-                  ? 'i-lucide-loader-circle'
-                  : saveState === 'error'
-                    ? 'i-lucide-circle-alert'
-                    : 'i-lucide-cloud-check'
-              "
-              :class="{ 'animate-spin': saveState === 'saving' }"
-            />
-            {{
-              saveState === 'saving'
-                ? $t('task.saving')
-                : saveState === 'error'
-                  ? $t('task.saveFailed')
-                  : task
-                    ? $t('task.saved')
-                    : $t('task.draftSaved')
-            }}
-          </span>
-        </div>
-        <TaskTitleEditor
-          ref="titleEditor"
-          v-model="title"
-          :placeholder="$t('task.namePlaceholder')"
-        />
-        <p
-          v-if="saveError"
-          class="mt-2 text-xs text-[var(--color-danger)]"
-        >
-          {{ saveError }}
-        </p>
-      </header>
-
-      <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
-        <div class="space-y-4">
-          <TaskDescription v-model="note" />
-          <section class="rounded-2xl border border-[var(--color-panel-border)] p-4">
-            <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <UIcon name="i-lucide-tags" />{{ $t('task.tags') }}
-            </h3>
-            <div class="flex flex-wrap gap-1.5">
-              <button
-                v-for="tag in tags"
-                :key="tag"
-                type="button"
-                class="rounded-full bg-[var(--color-bg-alt)] px-2.5 py-1 text-xs"
-                :aria-label="$t('task.removeTag', { tag })"
-                @click="tags = tags.filter((item) => item !== tag)"
-              >
-                #{{ tag }} <UIcon name="i-lucide-x" />
-              </button>
-            </div>
-            <FormInput
-              class="mt-2"
-              :placeholder="$t('task.tagsPlaceholder')"
-              @keyup.enter="addTag"
-            />
-            <div
-              v-if="availableTags.length"
-              class="mt-2 flex flex-wrap gap-1.5"
+      <TaskOverview
+        v-if="task && mode === 'view'"
+        :task="task"
+        :subtasks="subtasks"
+        :projects="projects"
+        :assignees="assignees ?? []"
+        @edit="mode = 'edit'"
+        @patch="quickPatch"
+      />
+      <template v-else>
+        <header class="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-4">
+          <div class="mb-2 flex items-center justify-between gap-3">
+            <span class="text-secondary text-xs">{{ task ? $t('task.editing') : $t('task.newDraft') }}</span>
+            <span
+              class="inline-flex items-center gap-1.5 text-xs"
+              :class="saveState === 'error' ? 'text-[var(--color-danger)]' : 'text-secondary'"
             >
-              <button
-                v-for="tag in availableTags"
-                :key="tag"
-                type="button"
-                class="text-secondary rounded-full border border-dashed border-[var(--color-panel-border)] px-2.5 py-1 text-xs hover:text-[var(--color-accent)]"
-                @click="addTagValue(tag)"
+              <UIcon
+                :name="
+                  saveState === 'saving'
+                    ? 'i-lucide-loader-circle'
+                    : saveState === 'error'
+                      ? 'i-lucide-circle-alert'
+                      : 'i-lucide-cloud-check'
+                "
+                :class="{ 'animate-spin': saveState === 'saving' }"
+              />
+              {{
+                saveState === 'saving'
+                  ? $t('task.saving')
+                  : saveState === 'error'
+                    ? $t('task.saveFailed')
+                    : task
+                      ? $t('task.saved')
+                      : $t('task.draftSaved')
+              }}
+            </span>
+          </div>
+          <TaskTitleEditor
+            ref="titleEditor"
+            v-model="title"
+            :placeholder="$t('task.namePlaceholder')"
+          />
+          <p
+            v-if="saveError"
+            class="mt-2 text-xs text-[var(--color-danger)]"
+          >
+            {{ saveError }}
+          </p>
+        </header>
+
+        <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+          <div class="space-y-4">
+            <TaskDescription v-model="note" />
+            <section class="rounded-2xl border border-[var(--color-panel-border)] p-4">
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <UIcon name="i-lucide-tags" />{{ $t('task.tags') }}
+              </h3>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="tag in tags"
+                  :key="tag"
+                  type="button"
+                  class="rounded-full bg-[var(--color-bg-alt)] px-2.5 py-1 text-xs"
+                  :aria-label="$t('task.removeTag', { tag })"
+                  @click="tags = tags.filter((item) => item !== tag)"
+                >
+                  #{{ tag }} <UIcon name="i-lucide-x" />
+                </button>
+              </div>
+              <FormInput
+                class="mt-2"
+                :placeholder="$t('task.tagsPlaceholder')"
+                @keyup.enter="addTag"
+              />
+              <div
+                v-if="availableTags.length"
+                class="mt-2 flex flex-wrap gap-1.5"
               >
-                <UIcon name="i-lucide-plus" />{{ tag }}
-              </button>
-            </div>
-          </section>
+                <button
+                  v-for="tag in availableTags"
+                  :key="tag"
+                  type="button"
+                  class="text-secondary rounded-full border border-dashed border-[var(--color-panel-border)] px-2.5 py-1 text-xs hover:text-[var(--color-accent)]"
+                  @click="addTagValue(tag)"
+                >
+                  <UIcon name="i-lucide-plus" />{{ tag }}
+                </button>
+              </div>
+            </section>
+          </div>
+          <TaskProperties
+            v-model:status="status"
+            v-model:project-id="projectId"
+            v-model:assignee-id="assigneeId"
+            v-model:priority="priority"
+            v-model:due-date="dueDate"
+            v-model:planned-date="plannedDate"
+            v-model:planned-time="plannedTime"
+            v-model:estimate-minutes="estimateMinutes"
+            v-model:day-rank="dayRank"
+            v-model:stage-id="stageId"
+            v-model:recurrence="recurrence"
+            :projects="projects"
+            :assignees="assignees ?? []"
+            :stages="workflowStages"
+          />
         </div>
-        <TaskProperties
-          v-model:status="status"
-          v-model:project-id="projectId"
-          v-model:assignee-id="assigneeId"
-          v-model:priority="priority"
-          v-model:due-date="dueDate"
-          v-model:planned-date="plannedDate"
-          v-model:planned-time="plannedTime"
-          v-model:estimate-minutes="estimateMinutes"
-          v-model:day-rank="dayRank"
-          v-model:stage-id="stageId"
-          v-model:recurrence="recurrence"
-          :projects="projects"
+        <TaskLifecyclePanel
+          v-model:work-state="workState"
+          v-model:waiting-for="waitingFor"
+          v-model:waiting-until="waitingUntil"
+          v-model:reviewer-id="reviewerId"
+          v-model:review-note="reviewNote"
+          v-model:actual-minutes="actualMinutes"
+          v-model:carryover-reason="carryoverReason"
+          v-model:ready-criteria-text="readyCriteriaText"
+          v-model:done-criteria-text="doneCriteriaText"
+          v-model:reminder-at="reminderAt"
           :assignees="assignees ?? []"
-          :stages="workflowStages"
         />
-      </div>
+      </template>
 
       <template v-if="task">
         <div
@@ -470,6 +567,12 @@ useTaskKeyboard({
             icon="i-lucide-x"
             @click="close"
             >{{ $t('common.close') }}</AppButton
+          ><AppButton
+            v-if="task && mode === 'view'"
+            variant="primary"
+            icon="i-lucide-pencil"
+            @click="mode = 'edit'"
+            >{{ $t('common.edit') }}</AppButton
           ><AppButton
             v-if="!task"
             variant="primary"

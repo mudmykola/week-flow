@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const taskStatusSchema = z.enum(['todo', 'in_progress', 'done'])
 export const taskPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent'])
 export const taskRecurrenceSchema = z.enum(['daily', 'weekly', 'monthly'])
+export const taskWorkStateSchema = z.enum(['active', 'waiting', 'review', 'deferred', 'cancelled'])
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 export const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 
@@ -26,7 +27,17 @@ export const createTaskSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
   recurrence: taskRecurrenceSchema.nullable().optional(),
   assigneeId: z.string().uuid().nullable().optional(),
-  stageId: z.string().uuid().nullable().optional()
+  stageId: z.string().uuid().nullable().optional(),
+  workState: taskWorkStateSchema.optional().default('active'),
+  waitingFor: z.string().trim().max(500).nullable().optional(),
+  waitingUntil: dateSchema.nullable().optional(),
+  reviewerId: z.string().uuid().nullable().optional(),
+  reviewNote: z.string().max(2000).nullable().optional(),
+  actualMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
+  carryoverReason: z.string().max(500).nullable().optional(),
+  readyCriteria: z.array(z.string().trim().min(1).max(200)).max(30).optional().default([]),
+  doneCriteria: z.array(z.string().trim().min(1).max(200)).max(30).optional().default([]),
+  reminderAt: z.number().int().nullable().optional()
 })
 
 export const updateTaskSchema = z.object({
@@ -48,7 +59,17 @@ export const updateTaskSchema = z.object({
   recurrence: taskRecurrenceSchema.nullable().optional(),
   archivedAt: z.number().int().nullable().optional(),
   assigneeId: z.string().uuid().nullable().optional(),
-  stageId: z.string().uuid().nullable().optional()
+  stageId: z.string().uuid().nullable().optional(),
+  workState: taskWorkStateSchema.optional(),
+  waitingFor: z.string().trim().max(500).nullable().optional(),
+  waitingUntil: dateSchema.nullable().optional(),
+  reviewerId: z.string().uuid().nullable().optional(),
+  reviewNote: z.string().max(2000).nullable().optional(),
+  actualMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
+  carryoverReason: z.string().max(500).nullable().optional(),
+  readyCriteria: z.array(z.string().trim().min(1).max(200)).max(30).optional(),
+  doneCriteria: z.array(z.string().trim().min(1).max(200)).max(30).optional(),
+  reminderAt: z.number().int().nullable().optional()
 })
 
 export const bulkTaskSchema = z.object({
@@ -67,7 +88,11 @@ export const bulkTaskSchema = z.object({
       weekRank: true,
       blockedByTaskId: true,
       assigneeId: true,
-      archivedAt: true
+      archivedAt: true,
+      workState: true,
+      waitingUntil: true,
+      reviewerId: true,
+      reminderAt: true
     })
     .strict()
 })
@@ -104,7 +129,30 @@ export const updateSettingsSchema = z.object({
   theme: z.enum(['system', 'light', 'dark']).optional(),
   locale: z.enum(['uk', 'en']).optional(),
   weekStartsOn: z.number().int().min(0).max(6).optional(),
-  notifications: z.boolean().optional()
+  notifications: z.boolean().optional(),
+  daySchedule: z
+    .object({
+      workStart: timeSchema,
+      morningEnd: timeSchema,
+      middayEnd: timeSchema,
+      workEnd: timeSchema,
+      lunchStart: timeSchema,
+      lunchMinutes: z.number().int().min(15).max(180)
+    })
+    .refine(
+      (value) =>
+        value.workStart < value.morningEnd && value.morningEnd < value.middayEnd && value.middayEnd < value.workEnd,
+      'Time zone boundaries must be ordered'
+    )
+    .optional()
+})
+
+export const saveDailyReviewSchema = z.object({
+  reviewDate: dateSchema,
+  content: z.string().max(20_000),
+  structuredContent: z.record(z.string(), z.unknown()).optional().default({}),
+  excludedTaskIds: z.array(z.string().uuid()).max(500).optional().default([]),
+  status: z.enum(['draft', 'submitted']).optional().default('draft')
 })
 
 export const moveWeekSchema = z.object({

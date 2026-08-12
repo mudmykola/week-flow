@@ -41,6 +41,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await requireAssignableUser(event, body.assigneeId)
+  await requireAssignableUser(event, body.reviewerId)
   await assertWorkflowWip(event, body.stageId, existing.stageId)
 
   const changedMetadata = Object.fromEntries(
@@ -55,6 +56,16 @@ export default defineEventHandler(async (event) => {
     patch.doneAt = Date.now()
   } else if (body.status) {
     patch.doneAt = null
+  }
+  if (body.plannedDate !== undefined && body.plannedDate !== existing.plannedDate) {
+    patch.originalPlannedDate = existing.originalPlannedDate ?? existing.plannedDate ?? body.plannedDate
+    patch.rescheduleCount = existing.plannedDate ? existing.rescheduleCount + 1 : existing.rescheduleCount
+  }
+  if (body.workState === 'review' && existing.workState !== 'review') patch.reviewRequestedAt = Date.now()
+  if (body.workState === 'active' && existing.workState === 'review') patch.approvedAt = Date.now()
+  if (body.workState && body.workState !== 'waiting') {
+    if (body.waitingFor === undefined) patch.waitingFor = null
+    if (body.waitingUntil === undefined) patch.waitingUntil = null
   }
 
   await db.update(tasks).set(patch).where(taskAccess)
@@ -86,6 +97,15 @@ export default defineEventHandler(async (event) => {
       blockedByTaskId: null,
       doneAt: null,
       archivedAt: null,
+      workState: 'active',
+      waitingFor: null,
+      waitingUntil: null,
+      reviewRequestedAt: null,
+      approvedAt: null,
+      carryoverReason: null,
+      rescheduleCount: 0,
+      originalPlannedDate: null,
+      reminderAt: null,
       createdAt: Date.now()
     })
   }

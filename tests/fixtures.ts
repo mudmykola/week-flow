@@ -25,6 +25,21 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     archivedAt: null,
     assigneeId: null,
     stageId: null,
+    ownerId: 'user-1',
+    workState: 'active',
+    waitingFor: null,
+    waitingUntil: null,
+    reviewerId: null,
+    reviewNote: null,
+    reviewRequestedAt: null,
+    approvedAt: null,
+    actualMinutes: null,
+    carryoverReason: null,
+    rescheduleCount: 0,
+    originalPlannedDate: null,
+    readyCriteria: [],
+    doneCriteria: [],
+    reminderAt: null,
     ...overrides
   }
 }

@@ -15,6 +15,7 @@ import {
   fetchStickyNotes,
   updateStickyNote
 } from '~/data/repositories/stickyNotesRepository'
+import { fetchDailyReview, fetchReviewHistory, saveDailyReview } from '~/data/repositories/reviewsRepository'
 
 const fetchMock = vi.hoisted(() => vi.fn())
 mockNuxtImport('$fetch', () => fetchMock)
@@ -72,5 +73,23 @@ describe('API repositories', () => {
     })
     await deleteStickyNote('note-1')
     expect(fetchMock).toHaveBeenLastCalledWith('/api/sticky-notes/note-1', { method: 'DELETE' })
+  })
+
+  it('maps daily review aggregation, history and autosave to review endpoints', async () => {
+    await fetchDailyReview('2026-08-12', 100, 200)
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/reviews/daily', {
+      query: { date: '2026-08-12', start: 100, end: 200, user: undefined }
+    })
+    await fetchDailyReview('2026-08-12', 100, 200, 'user-1')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/reviews/daily', {
+      query: { date: '2026-08-12', start: 100, end: 200, user: 'user-1' }
+    })
+    await fetchReviewHistory('2026-08-12')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/reviews', { query: { date: '2026-08-12' } })
+    await saveDailyReview({ reviewDate: '2026-08-12', content: 'Ready', status: 'submitted' })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/reviews', {
+      method: 'PATCH',
+      body: { reviewDate: '2026-08-12', content: 'Ready', status: 'submitted' }
+    })
   })
 })

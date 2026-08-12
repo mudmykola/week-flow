@@ -63,3 +63,9 @@ export function todayProgress(tasks: Task[], today: string) {
   const done = planned.filter((task) => task.status === 'done').length
   return { total: planned.length, done, percent: planned.length ? Math.round((done / planned.length) * 100) : 0 }
 }
+
+export function todayNavigationCount(tasks: Task[], today: string) {
+  return tasks.filter(
+    (task) => !task.archivedAt && task.status !== 'done' && task.plannedDate === today && task.workState !== 'cancelled'
+  ).length
+}

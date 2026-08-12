@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { filterTodayTasks, localDateKey, nextWorkday, todayProgress, todaySections } from '~/domain/services/today'
+import {
+  filterTodayTasks,
+  localDateKey,
+  nextWorkday,
+  todayNavigationCount,
+  todayProgress,
+  todaySections
+} from '~/domain/services/today'
 import { makeTask } from '../fixtures'
 
 describe('today planning', () => {
@@ -48,5 +55,17 @@ describe('today planning', () => {
 
   it('skips weekends for the next workday', () => {
     expect(nextWorkday(new Date(2026, 7, 14))).toBe('2026-08-17')
+  })
+
+  it('counts only active unfinished tasks planned for today in navigation', () => {
+    const tasks = [
+      makeTask({ id: 'today', plannedDate: '2026-08-11' }),
+      makeTask({ id: 'without-deadline', plannedDate: '2026-08-11', dueDate: null }),
+      makeTask({ id: 'done', plannedDate: '2026-08-11', status: 'done' }),
+      makeTask({ id: 'cancelled', plannedDate: '2026-08-11', workState: 'cancelled' }),
+      makeTask({ id: 'archived', plannedDate: '2026-08-11', archivedAt: 1 }),
+      makeTask({ id: 'tomorrow', plannedDate: '2026-08-12' })
+    ]
+    expect(todayNavigationCount(tasks, '2026-08-11')).toBe(2)
   })
 })

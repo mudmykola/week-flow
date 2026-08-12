@@ -39,4 +39,12 @@ describe('Brand and Global Create 2.0 contracts', () => {
     expect(focus).toContain("globalCreateBus.emit('task')")
     expect(focus).not.toContain('/?new=1')
   })
+
+  it('keeps Today and Inbox counters visible when the desktop sidebar is collapsed', () => {
+    const shell = read('app/presentation/components/shell/AppShell.vue')
+    expect(shell).toContain('todayNavigationCount(tasksStore.listTasks, today.value)')
+    expect(shell).toContain('tasksStore.syncListTask(task)')
+    expect(shell).toContain("'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]'")
+    expect(shell).not.toContain("item.to === '/today' && overdueCount")
+  })
 })

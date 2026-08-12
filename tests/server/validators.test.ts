@@ -12,6 +12,7 @@ import {
   createSubtaskSchema,
   createTaskSchema,
   moveWeekSchema,
+  saveDailyReviewSchema,
   updateSettingsSchema,
   updateFocusSessionSchema,
   updateStickyNoteSchema,
@@ -32,7 +33,10 @@ describe('server validators', () => {
       status: 'todo',
       sort: 0,
       priority: 'medium',
-      tags: []
+      tags: [],
+      workState: 'active',
+      readyCriteria: [],
+      doneCriteria: []
     })
   })
 
@@ -54,7 +58,14 @@ describe('server validators', () => {
         estimateMinutes: 45,
         dayRank: 2,
         weekRank: 1,
-        blockedByTaskId: '00000000-0000-4000-8000-000000000001'
+        blockedByTaskId: '00000000-0000-4000-8000-000000000001',
+        workState: 'review',
+        reviewerId: '00000000-0000-4000-8000-000000000002',
+        actualMinutes: 90,
+        waitingUntil: '2026-08-12',
+        readyCriteria: ['Scope accepted'],
+        doneCriteria: ['Tests pass'],
+        reminderAt: Date.now()
       }).success
     ).toBe(true)
     expect(updateTaskSchema.safeParse({ priority: 'critical' }).success).toBe(false)
@@ -62,6 +73,8 @@ describe('server validators', () => {
     expect(updateTaskSchema.safeParse({ estimateMinutes: 2 }).success).toBe(false)
     expect(updateTaskSchema.safeParse({ dayRank: 4 }).success).toBe(false)
     expect(updateTaskSchema.safeParse({ weekRank: 4 }).success).toBe(false)
+    expect(updateTaskSchema.safeParse({ workState: 'blocked' }).success).toBe(false)
+    expect(updateTaskSchema.safeParse({ actualMinutes: -1 }).success).toBe(false)
   })
 
   it('validates safe bulk task operations', () => {
@@ -105,6 +118,30 @@ describe('server validators', () => {
       updateSettingsSchema.safeParse({ theme: 'dark', locale: 'uk', weekStartsOn: 1, notifications: true }).success
     ).toBe(true)
     expect(updateSettingsSchema.safeParse({ weekStartsOn: 7 }).success).toBe(false)
+    expect(
+      updateSettingsSchema.safeParse({
+        daySchedule: {
+          workStart: '09:00',
+          morningEnd: '12:00',
+          middayEnd: '15:00',
+          workEnd: '18:00',
+          lunchStart: '13:30',
+          lunchMinutes: 60
+        }
+      }).success
+    ).toBe(true)
+    expect(
+      updateSettingsSchema.safeParse({
+        daySchedule: {
+          workStart: '12:00',
+          morningEnd: '09:00',
+          middayEnd: '15:00',
+          workEnd: '18:00',
+          lunchStart: '13:00',
+          lunchMinutes: 60
+        }
+      }).success
+    ).toBe(false)
     expect(moveWeekSchema.safeParse({ fromWeek: '2026-W31', toWeek: '2026-W32' }).success).toBe(true)
   })
 
@@ -122,5 +159,17 @@ describe('server validators', () => {
     ).toBe(true)
     expect(updateStickyNoteSchema.safeParse({ checkedItems: [-1] }).success).toBe(false)
     expect(updateStickyNoteSchema.safeParse({}).success).toBe(false)
+  })
+
+  it('validates bounded persisted daily reviews', () => {
+    expect(saveDailyReviewSchema.parse({ reviewDate: '2026-08-12', content: 'Daily report' })).toMatchObject({
+      status: 'draft',
+      structuredContent: {},
+      excludedTaskIds: []
+    })
+    expect(saveDailyReviewSchema.safeParse({ reviewDate: '12.08.2026', content: 'Invalid' }).success).toBe(false)
+    expect(saveDailyReviewSchema.safeParse({ reviewDate: '2026-08-12', content: 'x'.repeat(20_001) }).success).toBe(
+      false
+    )
   })
 })

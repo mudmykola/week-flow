@@ -358,40 +358,46 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
         <article class="section-card">
           <h2 class="font-display text-lg">{{ $t('pages.analytics.activeProjects') }}</h2>
           <p class="text-secondary mt-1 text-sm">{{ $t('pages.analytics.activeProjectsHint') }}</p>
-          <div
+          <BoundedTaskList
             v-if="projectWorkload.length"
-            class="mt-5 space-y-3"
+            class="mt-5"
+            :count="projectWorkload.length"
+            :preview="5"
+            :row-height="66"
+            storage-key="analytics-projects"
           >
-            <button
-              v-for="project in projectWorkload"
-              :key="project.id"
-              type="button"
-              class="w-full rounded-xl border border-transparent p-2 text-left transition hover:border-[var(--color-panel-border)] hover:bg-[var(--color-bg-alt)]"
-              @click="openTasks({ project: project.id })"
-            >
-              <span class="mb-2 flex items-center justify-between gap-3 text-sm">
-                <span class="flex min-w-0 items-center gap-2 font-medium">
-                  <span
-                    class="size-2.5 shrink-0 rounded-full"
-                    :style="{ background: project.color }"
-                  />
-                  <span class="truncate">{{ project.name }}</span>
+            <div class="space-y-3">
+              <button
+                v-for="project in projectWorkload"
+                :key="project.id"
+                type="button"
+                class="w-full rounded-xl border border-transparent p-2 text-left transition hover:border-[var(--color-panel-border)] hover:bg-[var(--color-bg-alt)]"
+                @click="openTasks({ project: project.id })"
+              >
+                <span class="mb-2 flex items-center justify-between gap-3 text-sm">
+                  <span class="flex min-w-0 items-center gap-2 font-medium">
+                    <span
+                      class="size-2.5 shrink-0 rounded-full"
+                      :style="{ background: project.color }"
+                    />
+                    <span class="truncate">{{ project.name }}</span>
+                  </span>
+                  <span class="text-secondary shrink-0 text-xs"
+                    >{{ project.done }} / {{ project.count + project.done }}</span
+                  >
                 </span>
-                <span class="text-secondary shrink-0 text-xs"
-                  >{{ project.done }} / {{ project.count + project.done }}</span
-                >
-              </span>
-              <span class="block h-2 overflow-hidden rounded-full bg-[var(--color-bg-alt)]">
-                <span
-                  class="block h-full rounded-full"
-                  :style="{
-                    width: `${(project.done / Math.max(project.count + project.done, 1)) * 100}%`,
-                    background: project.color
-                  }"
-                />
-              </span>
-            </button>
-          </div>
+                <span class="block h-2 overflow-hidden rounded-full bg-[var(--color-bg-alt)]">
+                  <span
+                    class="block h-full rounded-full"
+                    :style="{
+                      width: `${(project.done / Math.max(project.count + project.done, 1)) * 100}%`,
+                      background: project.color
+                    }"
+                  />
+                </span>
+              </button>
+            </div>
+          </BoundedTaskList>
           <p
             v-else
             class="text-secondary py-16 text-center text-sm"
@@ -447,29 +453,34 @@ function openTasks(extra: { week?: string; status?: TaskStatus; priority?: TaskP
             {{ overdue.length }} {{ $t('pages.analytics.viewAll') }}
           </UButton>
         </div>
-        <div
+        <BoundedTaskList
           v-if="attention.length"
-          class="divide-y divide-[var(--color-panel-border)]"
+          :count="attention.length"
+          :preview="6"
+          :row-height="48"
+          storage-key="analytics-attention"
         >
-          <button
-            v-for="task in attention"
-            :key="task.id"
-            type="button"
-            class="flex w-full items-center gap-3 py-3 text-left"
-            @click="openTasks({ week: task.week, priority: task.priority })"
-          >
-            <span
-              class="size-2 rounded-full"
-              :style="{ background: priorityColors[task.priority] }"
-            />
-            <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ task.title }}</span>
-            <span class="text-secondary text-xs">{{ task.dueDate || $t(priorityLabels[task.priority]) }}</span>
-            <UIcon
-              name="i-lucide-chevron-right"
-              class="text-secondary size-4"
-            />
-          </button>
-        </div>
+          <div class="divide-y divide-[var(--color-panel-border)]">
+            <button
+              v-for="task in attention"
+              :key="task.id"
+              type="button"
+              class="flex w-full items-center gap-3 py-3 text-left"
+              @click="openTasks({ week: task.week, priority: task.priority })"
+            >
+              <span
+                class="size-2 rounded-full"
+                :style="{ background: priorityColors[task.priority] }"
+              />
+              <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ task.title }}</span>
+              <span class="text-secondary text-xs">{{ task.dueDate || $t(priorityLabels[task.priority]) }}</span>
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="text-secondary size-4"
+              />
+            </button>
+          </div>
+        </BoundedTaskList>
         <p
           v-else
           class="text-secondary py-8 text-center text-sm"

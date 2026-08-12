@@ -532,55 +532,62 @@ async function confirmDelete() {
             >{{ $t(`pages.workflows.templates.${template}`) }}</AppButton
           >
         </div>
-        <draggable
+        <BoundedTaskList
           v-if="stages.length"
-          v-model="stages"
-          item-key="id"
-          handle=".workflow-stage__drag"
-          class="workflow-panel__list"
-          @end="reorderStages"
+          :count="stages.length"
+          :preview="6"
+          :row-height="74"
+          storage-key="workflow-stages"
         >
-          <template #item="{ element: item }">
-            <article
-              class="workflow-stage surface-card"
-              :class="{ 'workflow-stage--over-limit': item.wipLimit && (stageUsage[item.id] ?? 0) > item.wipLimit }"
-            >
-              <button
-                class="workflow-stage__drag"
-                type="button"
-                :aria-label="$t('pages.workflows.reorder')"
+          <draggable
+            v-model="stages"
+            item-key="id"
+            handle=".workflow-stage__drag"
+            class="workflow-panel__list"
+            @end="reorderStages"
+          >
+            <template #item="{ element: item }">
+              <article
+                class="workflow-stage surface-card"
+                :class="{ 'workflow-stage--over-limit': item.wipLimit && (stageUsage[item.id] ?? 0) > item.wipLimit }"
               >
-                <UIcon name="i-lucide-grip-vertical" />
-              </button>
-              <span
-                class="workflow-stage__color"
-                :style="{ backgroundColor: item.color }"
-              />
-              <div class="workflow-stage__body">
-                <p class="workflow-stage__name">{{ item.name }}</p>
-                <p class="text-secondary text-xs">
-                  {{ categoryLabel(item.category) }} ·
-                  {{ $t('pages.workflows.taskCount', { count: stageUsage[item.id] ?? 0 })
-                  }}<span v-if="item.wipLimit"> · WIP {{ stageUsage[item.id] ?? 0 }}/{{ item.wipLimit }}</span>
-                  <span v-if="item.wipLimit"> · {{ $t(`pages.workflows.wipPolicy.${item.wipPolicy}`) }}</span>
-                </p>
-              </div>
-              <IconButton
-                icon="i-lucide-pencil"
-                :label="$t('pages.workflows.editStage')"
-                size="sm"
-                @click="editStage(item)"
-              />
-              <IconButton
-                icon="i-lucide-trash-2"
-                :label="$t('pages.workflows.deleteStage')"
-                variant="danger"
-                size="sm"
-                @click="deleteTarget = { type: 'stage', id: item.id, name: item.name }"
-              />
-            </article>
-          </template>
-        </draggable>
+                <button
+                  class="workflow-stage__drag"
+                  type="button"
+                  :aria-label="$t('pages.workflows.reorder')"
+                >
+                  <UIcon name="i-lucide-grip-vertical" />
+                </button>
+                <span
+                  class="workflow-stage__color"
+                  :style="{ backgroundColor: item.color }"
+                />
+                <div class="workflow-stage__body">
+                  <p class="workflow-stage__name">{{ item.name }}</p>
+                  <p class="text-secondary text-xs">
+                    {{ categoryLabel(item.category) }} ·
+                    {{ $t('pages.workflows.taskCount', { count: stageUsage[item.id] ?? 0 })
+                    }}<span v-if="item.wipLimit"> · WIP {{ stageUsage[item.id] ?? 0 }}/{{ item.wipLimit }}</span>
+                    <span v-if="item.wipLimit"> · {{ $t(`pages.workflows.wipPolicy.${item.wipPolicy}`) }}</span>
+                  </p>
+                </div>
+                <IconButton
+                  icon="i-lucide-pencil"
+                  :label="$t('pages.workflows.editStage')"
+                  size="sm"
+                  @click="editStage(item)"
+                />
+                <IconButton
+                  icon="i-lucide-trash-2"
+                  :label="$t('pages.workflows.deleteStage')"
+                  variant="danger"
+                  size="sm"
+                  @click="deleteTarget = { type: 'stage', id: item.id, name: item.name }"
+                />
+              </article>
+            </template>
+          </draggable>
+        </BoundedTaskList>
         <EmptyState
           v-else
           :title="$t('pages.workflows.noStages')"
@@ -658,64 +665,69 @@ async function confirmDelete() {
             >
           </div>
         </header>
-        <div
+        <BoundedTaskList
           v-if="rules.length"
-          class="workflow-panel__list"
+          :count="rules.length"
+          :preview="6"
+          :row-height="82"
+          storage-key="workflow-rules"
         >
-          <article
-            v-for="item in rules"
-            :key="item.id"
-            class="automation-rule surface-card"
-            :class="{ 'automation-rule--disabled': !item.enabled }"
-          >
-            <span class="automation-rule__icon"><UIcon name="i-lucide-zap" /></span>
-            <div class="automation-rule__body">
-              <div class="automation-rule__heading">
-                <p class="automation-rule__name">{{ item.name }}</p>
-                <span class="automation-rule__status">{{
-                  item.enabled ? $t('pages.workflows.enabled') : $t('pages.workflows.disabled')
-                }}</span>
+          <div class="workflow-panel__list">
+            <article
+              v-for="item in rules"
+              :key="item.id"
+              class="automation-rule surface-card"
+              :class="{ 'automation-rule--disabled': !item.enabled }"
+            >
+              <span class="automation-rule__icon"><UIcon name="i-lucide-zap" /></span>
+              <div class="automation-rule__body">
+                <div class="automation-rule__heading">
+                  <p class="automation-rule__name">{{ item.name }}</p>
+                  <span class="automation-rule__status">{{
+                    item.enabled ? $t('pages.workflows.enabled') : $t('pages.workflows.disabled')
+                  }}</span>
+                </div>
+                <p class="text-secondary text-xs">
+                  <strong>{{ $t('pages.workflows.when') }}</strong> {{ triggerLabel(item) }}
+                  <UIcon name="i-lucide-arrow-right" /> <strong>{{ $t('pages.workflows.then') }}</strong>
+                  {{ actionLabel(item) }}
+                </p>
               </div>
-              <p class="text-secondary text-xs">
-                <strong>{{ $t('pages.workflows.when') }}</strong> {{ triggerLabel(item) }}
-                <UIcon name="i-lucide-arrow-right" /> <strong>{{ $t('pages.workflows.then') }}</strong>
-                {{ actionLabel(item) }}
-              </p>
-            </div>
-            <IconButton
-              icon="i-lucide-flask-conical"
-              :label="$t('pages.workflows.testRule')"
-              size="sm"
-              :disabled="!testTaskId"
-              @click="testRule(item)"
-            />
-            <IconButton
-              :icon="item.enabled ? 'i-lucide-pause' : 'i-lucide-play'"
-              :label="item.enabled ? $t('pages.workflows.disable') : $t('pages.workflows.enable')"
-              size="sm"
-              @click="toggleRule(item)"
-            />
-            <IconButton
-              icon="i-lucide-copy"
-              :label="$t('pages.workflows.duplicateRule')"
-              size="sm"
-              @click="duplicateRule(item)"
-            />
-            <IconButton
-              icon="i-lucide-pencil"
-              :label="$t('pages.workflows.editRule')"
-              size="sm"
-              @click="editRule(item)"
-            />
-            <IconButton
-              icon="i-lucide-trash-2"
-              :label="$t('pages.workflows.deleteRule')"
-              variant="danger"
-              size="sm"
-              @click="deleteTarget = { type: 'rule', id: item.id, name: item.name }"
-            />
-          </article>
-        </div>
+              <IconButton
+                icon="i-lucide-flask-conical"
+                :label="$t('pages.workflows.testRule')"
+                size="sm"
+                :disabled="!testTaskId"
+                @click="testRule(item)"
+              />
+              <IconButton
+                :icon="item.enabled ? 'i-lucide-pause' : 'i-lucide-play'"
+                :label="item.enabled ? $t('pages.workflows.disable') : $t('pages.workflows.enable')"
+                size="sm"
+                @click="toggleRule(item)"
+              />
+              <IconButton
+                icon="i-lucide-copy"
+                :label="$t('pages.workflows.duplicateRule')"
+                size="sm"
+                @click="duplicateRule(item)"
+              />
+              <IconButton
+                icon="i-lucide-pencil"
+                :label="$t('pages.workflows.editRule')"
+                size="sm"
+                @click="editRule(item)"
+              />
+              <IconButton
+                icon="i-lucide-trash-2"
+                :label="$t('pages.workflows.deleteRule')"
+                variant="danger"
+                size="sm"
+                @click="deleteTarget = { type: 'rule', id: item.id, name: item.name }"
+              />
+            </article>
+          </div>
+        </BoundedTaskList>
         <EmptyState
           v-else
           :title="$t('pages.workflows.noRules')"
@@ -925,41 +937,49 @@ async function confirmDelete() {
           <UIcon name="i-lucide-flask-conical" />
           <pre>{{ JSON.stringify(testResult, null, 2) }}</pre>
         </div>
-        <div class="workflow-panel__list">
-          <article
-            v-for="entry in executions"
-            :key="entry.id"
-            class="automation-rule surface-card"
-          >
-            <span class="automation-rule__icon"
-              ><UIcon
-                :name="
-                  entry.status === 'success'
-                    ? 'i-lucide-circle-check'
-                    : entry.status === 'failed'
-                      ? 'i-lucide-circle-x'
-                      : 'i-lucide-skip-forward'
-                "
-            /></span>
-            <div class="automation-rule__body">
-              <p class="automation-rule__name">
-                {{ entry.ruleName }} · {{ entry.taskTitle || $t('pages.workflows.deletedTask') }}
-              </p>
-              <p class="text-secondary text-xs">
-                {{ entry.trigger }} · {{ new Date(entry.createdAt).toLocaleString() }} ·
-                {{ entry.error || Object.keys(entry.changes).join(', ') }}
-              </p>
-            </div>
-            <AppButton
-              v-if="entry.taskId"
-              size="sm"
-              variant="ghost"
-              icon="i-lucide-arrow-up-right"
-              @click="navigateTo({ path: '/', query: { task: entry.taskId } })"
-              >{{ $t('pages.workflows.openTask') }}</AppButton
+        <BoundedTaskList
+          v-if="executions.length"
+          :count="executions.length"
+          :preview="7"
+          :row-height="76"
+          storage-key="workflow-history"
+        >
+          <div class="workflow-panel__list">
+            <article
+              v-for="entry in executions"
+              :key="entry.id"
+              class="automation-rule surface-card"
             >
-          </article>
-        </div>
+              <span class="automation-rule__icon"
+                ><UIcon
+                  :name="
+                    entry.status === 'success'
+                      ? 'i-lucide-circle-check'
+                      : entry.status === 'failed'
+                        ? 'i-lucide-circle-x'
+                        : 'i-lucide-skip-forward'
+                  "
+              /></span>
+              <div class="automation-rule__body">
+                <p class="automation-rule__name">
+                  {{ entry.ruleName }} · {{ entry.taskTitle || $t('pages.workflows.deletedTask') }}
+                </p>
+                <p class="text-secondary text-xs">
+                  {{ entry.trigger }} · {{ new Date(entry.createdAt).toLocaleString() }} ·
+                  {{ entry.error || Object.keys(entry.changes).join(', ') }}
+                </p>
+              </div>
+              <AppButton
+                v-if="entry.taskId"
+                size="sm"
+                variant="ghost"
+                icon="i-lucide-arrow-up-right"
+                @click="navigateTo({ path: '/', query: { task: entry.taskId } })"
+                >{{ $t('pages.workflows.openTask') }}</AppButton
+              >
+            </article>
+          </div>
+        </BoundedTaskList>
         <EmptyState
           v-if="!executions.length"
           :title="$t('pages.workflows.noExecutions')"

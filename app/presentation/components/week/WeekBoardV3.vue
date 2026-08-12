@@ -198,33 +198,43 @@ function forwardTitle(id: string, title: string) {
             @click="quickLane = lane.id"
           />
         </header>
-        <draggable
-          v-model="laneLists[lane.id]"
-          group="week-board-v3"
-          item-key="id"
-          class="week-board-v3__cards"
-          ghost-class="week-board-v3__ghost"
-          @change="moved(lane)"
+        <BoundedTaskList
+          :count="laneLists[lane.id]?.length || 0"
+          :preview="density === 'comfortable' ? 4 : density === 'compact' ? 6 : 8"
+          :row-height="density === 'comfortable' ? 112 : density === 'compact' ? 82 : 54"
+          :storage-key="`board-${mode}-${lane.id}`"
         >
-          <template #item="{ element: task }"
-            ><TaskCard
-              :task="task"
-              :project="project(task)"
-              :assignee-name="assignee(task)"
-              :compact="density !== 'comfortable'"
-              :selected="selectedIds.includes(task.id)"
-              @edit="emit('edit', $event)"
-              @cycle-status="
-                emit('patch', task.id, {
-                  status: task.status === 'done' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'done'
-                })
-              "
-              @select="forwardSelect"
-              @inline-title="forwardTitle"
-              @delete="emit('delete', $event)"
-              @duplicate="emit('duplicate', $event)"
-          /></template>
-        </draggable>
+          <draggable
+            v-model="laneLists[lane.id]"
+            group="week-board-v3"
+            item-key="id"
+            class="week-board-v3__cards"
+            ghost-class="week-board-v3__ghost"
+            :scroll="true"
+            :scroll-sensitivity="80"
+            :scroll-speed="12"
+            @change="moved(lane)"
+          >
+            <template #item="{ element: task }"
+              ><TaskCard
+                :task="task"
+                :project="project(task)"
+                :assignee-name="assignee(task)"
+                :compact="density !== 'comfortable'"
+                :selected="selectedIds.includes(task.id)"
+                @edit="emit('edit', $event)"
+                @cycle-status="
+                  emit('patch', task.id, {
+                    status: task.status === 'done' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'done'
+                  })
+                "
+                @select="forwardSelect"
+                @inline-title="forwardTitle"
+                @delete="emit('delete', $event)"
+                @duplicate="emit('duplicate', $event)"
+            /></template>
+          </draggable>
+        </BoundedTaskList>
         <form
           v-if="quickLane === lane.id"
           class="week-board-v3__quick"

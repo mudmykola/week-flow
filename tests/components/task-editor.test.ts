@@ -10,7 +10,7 @@ describe('task editor hydration', () => {
     vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ subtasks: [], comments: [], activity: [] }))
     const task = makeTask({ title: 'Initial title' })
     const wrapper = await mountSuspended(TaskEditor, {
-      props: { open: true, task, projects: [], assignees: [] },
+      props: { open: true, task, initialMode: 'edit', projects: [], assignees: [] },
       global: {
         stubs: {
           UIcon: { template: '<span />' },
@@ -27,7 +27,13 @@ describe('task editor hydration', () => {
   it('hydrates the form when the selected task id changes', async () => {
     vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ subtasks: [], comments: [], activity: [] }))
     const wrapper = await mountSuspended(TaskEditor, {
-      props: { open: true, task: makeTask({ id: 'task-1', title: 'First task' }), projects: [], assignees: [] },
+      props: {
+        open: true,
+        task: makeTask({ id: 'task-1', title: 'First task' }),
+        initialMode: 'edit',
+        projects: [],
+        assignees: []
+      },
       global: {
         stubs: {
           UIcon: { template: '<span />' },

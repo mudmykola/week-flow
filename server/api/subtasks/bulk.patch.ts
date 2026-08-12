@@ -15,6 +15,9 @@ export default defineEventHandler(async (event) => {
   const patch = { ...body.patch }
   if (body.patch.done !== undefined) patch.status = body.patch.done ? 'done' : 'todo'
   if (body.patch.status !== undefined) patch.done = body.patch.status === 'done'
+  if (body.patch.done !== undefined || body.patch.status !== undefined) {
+    Object.assign(patch, { doneAt: patch.status === 'done' ? Date.now() : null })
+  }
   await db.update(subtasks).set(patch).where(inArray(subtasks.id, body.ids))
   return db.select().from(subtasks).where(inArray(subtasks.id, body.ids))
 })
