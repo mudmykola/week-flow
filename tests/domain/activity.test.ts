@@ -56,4 +56,16 @@ describe('activity feed presentation', () => {
     expect(activityTone('task.deleted')).toBe('danger')
     expect(activityTone('task.updated')).toBe('accent')
   })
+
+  it('maps every known action to its icon and falls back for unknown actions', () => {
+    expect(activityIcon('task.deleted')).toBe('i-lucide-trash-2')
+    expect(activityIcon('subtask.created')).toBe('i-lucide-list-plus')
+    expect(activityIcon('goal.created')).toBe('i-lucide-target')
+    expect(activityIcon('goal.progress_updated')).toBe('i-lucide-trending-up')
+    expect(activityIcon('goal.project_linked')).toBe('i-lucide-link')
+    expect(activityIcon('goal.project_unlinked')).toBe('i-lucide-link-2-off')
+    expect(activityIcon('task.updated')).toBe('i-lucide-pencil-line')
+    expect(activityTone('subtask.created')).toBe('success')
+    expect(activityTone('goal.created')).toBe('success')
+  })
 })

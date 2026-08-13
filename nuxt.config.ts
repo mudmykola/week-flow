@@ -84,8 +84,7 @@ export default defineNuxtConfig({
         method: 'GET',
         params: { title: 'title', text: 'text', url: 'url' }
       }
-    },
-    workbox: { navigateFallback: '/login' }
+    }
   },
   typescript: {
     strict: true,

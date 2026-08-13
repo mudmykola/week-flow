@@ -226,6 +226,7 @@ function laneTone(lane: Lane) {
                 :project="project(task)"
                 :assignee-name="assignee(task)"
                 :compact="density !== 'comfortable'"
+                :hide-status="mode === 'status'"
                 :selected="selectedIds.includes(task.id)"
                 @edit="emit('edit', $event)"
                 @cycle-status="

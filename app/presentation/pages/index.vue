@@ -37,6 +37,7 @@ const viewMode = useLocalStorage<'board' | 'table'>('weekflow-task-view', 'board
 type BoardMode = 'status' | 'day' | 'assignee' | 'project' | 'priority'
 const boardMode = useLocalStorage<BoardMode>('weekflow-board-mode-v3', 'status')
 const boardDensity = useLocalStorage<'comfortable' | 'compact' | 'titles'>('weekflow-board-density-v3', 'comfortable')
+const boardOverviewOpen = useLocalStorage('weekflow-board-overview-open', false)
 const selectedIds = ref<string[]>([])
 const assignees = ref<AssignableUser[]>([])
 const undoAction = ref<null | { label: string; run: () => Promise<void> }>(null)
@@ -443,6 +444,25 @@ async function saveView() {
           class="size-4"
         /><span class="hidden sm:inline">{{ $t('board.saveView') }}</span>
       </button>
+      <div class="week-board-page__density">
+        <button
+          v-for="density in ['comfortable', 'compact', 'titles'] as const"
+          :key="density"
+          :class="{ 'week-board-page__density-button--active': boardDensity === density }"
+          :title="$t(`board.density.${density}`)"
+          @click="boardDensity = density"
+        >
+          <UIcon
+            :name="
+              density === 'comfortable'
+                ? 'i-lucide-rows-3'
+                : density === 'compact'
+                  ? 'i-lucide-rows-4'
+                  : 'i-lucide-list'
+            "
+          />
+        </button>
+      </div>
       <div class="flex rounded-lg bg-[var(--color-bg-alt)] p-1">
         <button
           class="grid size-8 place-items-center rounded-md"
@@ -489,78 +509,70 @@ async function saveView() {
           /><span>{{ $t(`board.mode.${mode}`) }}</span>
         </button>
       </div>
-      <div class="week-board-page__density">
-        <button
-          v-for="density in ['comfortable', 'compact', 'titles'] as const"
-          :key="density"
-          :class="{ 'week-board-page__density-button--active': boardDensity === density }"
-          :title="$t(`board.density.${density}`)"
-          @click="boardDensity = density"
-        >
-          <UIcon
-            :name="
-              density === 'comfortable'
-                ? 'i-lucide-rows-3'
-                : density === 'compact'
-                  ? 'i-lucide-rows-4'
-                  : 'i-lucide-list'
-            "
-          />
-        </button>
-      </div>
+      <button
+        type="button"
+        class="week-board-page__overview-toggle"
+        @click="boardOverviewOpen = !boardOverviewOpen"
+      >
+        <UIcon :name="boardOverviewOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" />{{
+          boardOverviewOpen ? $t('board.hideOverview') : $t('board.showOverview')
+        }}
+      </button>
     </div>
 
-    <section
-      class="week-board-page__insights"
-      :aria-label="$t('board.insights')"
-    >
-      <div>
-        <UIcon name="i-lucide-hourglass" /><strong>{{ boardInsights.estimate }}</strong
-        ><span>{{ $t('board.minutesPlanned') }}</span>
-      </div>
-      <div :class="{ 'week-board-page__insight--warning': boardInsights.overdue }">
-        <UIcon name="i-lucide-triangle-alert" /><strong>{{ boardInsights.overdue }}</strong
-        ><span>{{ $t('nav.overdue') }}</span>
-      </div>
-      <div>
-        <UIcon name="i-lucide-user-x" /><strong>{{ boardInsights.unassigned }}</strong
-        ><span>{{ $t('board.unassignedTasks') }}</span>
-      </div>
-      <div>
-        <UIcon name="i-lucide-calendar-x" /><strong>{{ boardInsights.unplanned }}</strong
-        ><span>{{ $t('board.unplannedTasks') }}</span>
-      </div>
-    </section>
-
-    <section class="week-board-page__top">
-      <header>
+    <template v-if="boardOverviewOpen">
+      <section
+        class="week-board-page__insights"
+        :aria-label="$t('board.insights')"
+      >
         <div>
-          <UIcon name="i-lucide-trophy" />
-          <h2>{{ $t('board.weekTop') }}</h2>
-          <span>{{ weekTop.length }}/3</span>
+          <UIcon name="i-lucide-hourglass" /><strong>{{ boardInsights.estimate }}</strong
+          ><span>{{ $t('board.minutesPlanned') }}</span>
         </div>
-        <p>{{ $t('board.weekTopHint') }}</p>
-      </header>
-      <div class="week-board-page__top-list">
-        <button
-          v-for="task in weekTop"
-          :key="task.id"
-          @click="openEdit(task)"
-        >
-          <b>{{ task.weekRank }}</b
-          ><span>{{ task.title }}</span
-          ><UIcon name="i-lucide-arrow-up-right" /></button
-        ><button
-          v-if="weekTop.length < 3"
-          class="week-board-page__top-add"
-          @click="addSelectedToTop"
-        >
-          <UIcon name="i-lucide-plus" />{{
-            selectedIds.length ? $t('board.addSelectedTop') : $t('board.selectTopHint')
-          }}
-        </button>
-      </div>
-    </section>
+        <div :class="{ 'week-board-page__insight--warning': boardInsights.overdue }">
+          <UIcon name="i-lucide-triangle-alert" /><strong>{{ boardInsights.overdue }}</strong
+          ><span>{{ $t('nav.overdue') }}</span>
+        </div>
+        <div>
+          <UIcon name="i-lucide-user-x" /><strong>{{ boardInsights.unassigned }}</strong
+          ><span>{{ $t('board.unassignedTasks') }}</span>
+        </div>
+        <div>
+          <UIcon name="i-lucide-calendar-x" /><strong>{{ boardInsights.unplanned }}</strong
+          ><span>{{ $t('board.unplannedTasks') }}</span>
+        </div>
+      </section>
+
+      <section class="week-board-page__top">
+        <header>
+          <div>
+            <UIcon name="i-lucide-trophy" />
+            <h2>{{ $t('board.weekTop') }}</h2>
+            <span>{{ weekTop.length }}/3</span>
+          </div>
+          <p>{{ $t('board.weekTopHint') }}</p>
+        </header>
+        <div class="week-board-page__top-list">
+          <button
+            v-for="task in weekTop"
+            :key="task.id"
+            @click="openEdit(task)"
+          >
+            <b>{{ task.weekRank }}</b
+            ><span>{{ task.title }}</span
+            ><UIcon name="i-lucide-arrow-up-right" /></button
+          ><button
+            v-if="weekTop.length < 3"
+            class="week-board-page__top-add"
+            @click="addSelectedToTop"
+          >
+            <UIcon name="i-lucide-plus" />{{
+              selectedIds.length ? $t('board.addSelectedTop') : $t('board.selectTopHint')
+            }}
+          </button>
+        </div>
+      </section>
+    </template>
 
     <div class="mb-4 grid gap-3 lg:grid-cols-[minmax(24rem,.9fr)_minmax(28rem,1.1fr)]">
       <WeekSwitcher
@@ -778,6 +790,21 @@ async function saveView() {
   height: 2rem;
   border-radius: 0.5rem;
   color: var(--color-text-secondary);
+}
+.week-board-page__overview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.week-board-page__overview-toggle:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-alt);
 }
 .week-board-page__insights {
   display: grid;

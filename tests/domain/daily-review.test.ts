@@ -70,6 +70,91 @@ describe('daily review service', () => {
     expect(standup).toContain('Today:')
   })
 
+  it('renders every reflection and standup section when it has content', () => {
+    const data = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      workedTaskIds: ['worked'],
+      completedSubtasks: [{ id: 'sub', taskId: 'done', title: 'Reviewed spec', doneAt: dayStart + 500 }],
+      tasks: [
+        makeTask({ id: 'done', title: 'Finished API', status: 'done', doneAt: dayStart + 1000 }),
+        makeTask({ id: 'worked', title: 'Drafted proposal', status: 'in_progress' }),
+        makeTask({ id: 'planned', title: 'Build UI', plannedDate: '2026-08-11' }),
+        makeTask({ id: 'old', title: 'Old carryover', plannedDate: '2026-08-10' }),
+        makeTask({ id: 'blocked', title: 'Waiting on design', blockedByTaskId: 'done' })
+      ]
+    })
+    const labels = {
+      results: 'Results',
+      workedOn: 'Worked',
+      unfinished: 'Unfinished',
+      nextFocus: 'Next',
+      blockers: 'Blockers',
+      summary: 'Summary',
+      subtask: 'subtask',
+      emptyResults: 'none',
+      emptyWorkedOn: 'none',
+      emptyUnfinished: 'none',
+      emptyNextFocus: 'none',
+      emptyBlockers: 'none',
+      summaryText: '{completed}/{percent}/{focus}'
+    }
+    const reflection = generateDailyReflection(data, labels)
+    expect(reflection).toContain('Reviewed spec (subtask)')
+    expect(reflection).toContain('Drafted proposal')
+    expect(reflection).toContain('Old carryover')
+    expect(reflection).toContain('Waiting on design')
+
+    const standup = generateStandup(data, {
+      yesterday: 'Yesterday',
+      today: 'Today',
+      blockers: 'Blockers',
+      emptyYesterday: 'none',
+      emptyToday: 'none',
+      emptyBlockers: 'none'
+    })
+    expect(standup).toContain('Waiting on design')
+  })
+
+  it('sorts multiple completions newest first and reports zero completion with nothing planned', () => {
+    const review = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      tasks: [
+        makeTask({ id: 'earlier', status: 'done', doneAt: dayStart + 1000 }),
+        makeTask({ id: 'later', status: 'done', doneAt: dayStart + 5000 })
+      ]
+    })
+    expect(review.completed.map((task) => task.id)).toEqual(['later', 'earlier'])
+
+    const empty = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      tasks: []
+    })
+    expect(empty.metrics).toMatchObject({ planned: 0, completed: 0, completionPercent: 0 })
+  })
+
+  it('breaks a tied Top-3 rank by priority', () => {
+    const review = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      tasks: [
+        makeTask({ id: 'low', title: 'Low priority', plannedDate: '2026-08-11', priority: 'low' }),
+        makeTask({ id: 'urgent', title: 'Urgent', plannedDate: '2026-08-11', priority: 'urgent' })
+      ]
+    })
+    expect(review.planned.map((task) => task.id)).toEqual(['urgent', 'low'])
+  })
+
   it('derives local boundaries, sorts Top 3 before priority and includes due work with default estimates', () => {
     const inside = new Date('2026-08-11T12:00:00').getTime()
     const review = buildDailyReview({

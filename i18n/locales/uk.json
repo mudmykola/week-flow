@@ -367,7 +367,9 @@
     "addSelectedTop": "Додати вибрану",
     "selectTopHint": "Спершу виберіть задачу",
     "blocked": "Заблоковано",
-    "blockedBy": "Заблоковано задачею…"
+    "blockedBy": "Заблоковано задачею…",
+    "showOverview": "Огляд і Top 3",
+    "hideOverview": "Сховати огляд"
   },
   "settings": {
     "title": "Налаштування",

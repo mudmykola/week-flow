@@ -61,6 +61,12 @@ describe('calendar services', () => {
     expect([...conflictingTaskIds([first, second, other])].sort()).toEqual(['first', 'second'])
   })
 
+  it('defaults missing estimate to 30 minutes and unassigned tasks to the same bucket when checking overlaps', () => {
+    const first = task({ id: 'first', plannedTime: '09:00', estimateMinutes: null, assigneeId: null })
+    const second = task({ id: 'second', plannedTime: '09:15', estimateMinutes: null, assigneeId: null })
+    expect([...conflictingTaskIds([first, second])].sort()).toEqual(['first', 'second'])
+  })
+
   it('builds a priority-aware plan within daily capacity and skips blocked work', () => {
     const tasks = [
       task({ id: 'medium', dueDate: '2026-08-14', estimateMinutes: 60 }),
@@ -71,5 +77,27 @@ describe('calendar services', () => {
       { taskId: 'urgent', plannedDate: '2026-08-12', plannedTime: '09:00', estimateMinutes: 90 },
       { taskId: 'medium', plannedDate: '2026-08-12', plannedTime: '10:30', estimateMinutes: 60 }
     ])
+  })
+
+  it('breaks equal-priority ties by the earlier due date, pushes undated work last, and defaults a missing estimate to 30 minutes', () => {
+    const tasks = [
+      task({ id: 'later', dueDate: '2026-08-20', estimateMinutes: null }),
+      task({ id: 'no-date', dueDate: null, estimateMinutes: null }),
+      task({ id: 'sooner', dueDate: '2026-08-10', estimateMinutes: null })
+    ]
+    expect(buildSmartSchedule(tasks, ['2026-08-12'], 150).map((plan) => plan.taskId)).toEqual([
+      'sooner',
+      'later',
+      'no-date'
+    ])
+    expect(buildSmartSchedule(tasks, ['2026-08-12'], 150)[0]).toMatchObject({
+      plannedTime: '09:00',
+      estimateMinutes: 30
+    })
+  })
+
+  it('leaves a task unscheduled when no day has enough remaining capacity', () => {
+    const tasks = [task({ id: 'oversized', estimateMinutes: 90 })]
+    expect(buildSmartSchedule(tasks, ['2026-08-12'], 60)).toEqual([])
   })
 })

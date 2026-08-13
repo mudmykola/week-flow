@@ -2,6 +2,7 @@
 import type { Project } from '~/domain/entities/project'
 import type { Task } from '~/domain/entities/task'
 import { getStatusLabel } from '~/domain/services/taskStatus'
+import { priorityColors } from '~/domain/services/taskLabels'
 import { localDateKey } from '~/domain/services/today'
 
 const props = defineProps<{
@@ -10,6 +11,7 @@ const props = defineProps<{
   compact?: boolean
   selected?: boolean
   assigneeName?: string
+  hideStatus?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -60,6 +62,7 @@ const overdue = computed(() =>
       { 'task-card--done task-done': task.status === 'done' },
       compact ? 'task-card--compact p-2.5' : 'task-card--comfortable p-3'
     ]"
+    :style="{ borderLeftColor: priorityColors[task.priority], borderLeftWidth: '3px' }"
     role="button"
     tabindex="0"
     @click="emit('edit', task)"
@@ -113,9 +116,14 @@ const overdue = computed(() =>
           :project="project"
           class="mt-2.5"
         />
-        <div class="mt-2 flex flex-wrap gap-1.5">
-          <StatusBadge :status="task.status" />
-          <PriorityBadge :priority="task.priority" />
+        <div
+          v-if="!hideStatus || task.blockedByTaskId || task.workState === 'review' || task.workState === 'waiting'"
+          class="mt-2 flex flex-wrap gap-1.5"
+        >
+          <StatusBadge
+            v-if="!hideStatus"
+            :status="task.status"
+          />
           <SemanticBadge
             v-if="task.blockedByTaskId"
             tone="danger"

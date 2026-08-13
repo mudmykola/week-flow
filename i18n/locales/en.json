@@ -367,7 +367,9 @@
     "addSelectedTop": "Add selected",
     "selectTopHint": "Select a task first",
     "blocked": "Blocked",
-    "blockedBy": "Blocked by task…"
+    "blockedBy": "Blocked by task…",
+    "showOverview": "Overview & Top 3",
+    "hideOverview": "Hide overview"
   },
   "settings": {
     "title": "Settings",

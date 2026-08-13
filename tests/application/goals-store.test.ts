@@ -65,4 +65,16 @@ describe('goals store', () => {
     await store.patchGoal(goal.id, { progress: 60 })
     expect(store.goals[0]).toEqual(updated)
   })
+
+  it('patches a goal that is not (or no longer) in the local list without touching the array', async () => {
+    const store = useGoalsStore()
+    store.goals = []
+    goalApi.updateGoal.mockResolvedValue(makeGoal({ progress: 60 }))
+    await store.patchGoal('goal-1', { progress: 60 })
+    expect(store.goals).toEqual([])
+
+    goalApi.updateGoal.mockRejectedValue(new Error('gone'))
+    await expect(store.patchGoal('goal-1', { progress: 90 })).rejects.toThrow('gone')
+    expect(store.goals).toEqual([])
+  })
 })

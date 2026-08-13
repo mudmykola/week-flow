@@ -2,12 +2,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   analyticsWeeks,
+  averageGoalProgress,
   buildAnalyticsTrend,
   completionRate,
   countByStatus,
+  countGoalsByStatus,
   filterAnalyticsTasks
 } from '~/domain/services/analytics'
-import { makeTask } from '../fixtures'
+import { makeGoal, makeTask } from '../fixtures'
 
 const tasks = [
   makeTask({ id: '1', week: '2026-W30', projectId: 'p1', assigneeId: 'u1', priority: 'high', status: 'done' }),
@@ -42,10 +44,32 @@ describe('analytics domain service', () => {
     ])
   })
 
+  it('reports zero completion for a week with no tasks', () => {
+    expect(
+      buildAnalyticsTrend(
+        tasks.filter((task) => !task.archivedAt),
+        ['2026-W29'],
+        '2026-08-02'
+      )
+    ).toEqual([{ week: '2026-W29', label: 'W29', created: 0, done: 0, overdue: 0, completion: 0 }])
+  })
+
   it('summarizes statuses and completion rate', () => {
     const active = tasks.filter((task) => !task.archivedAt)
     expect(countByStatus(active)).toEqual({ todo: 1, in_progress: 1, done: 1 })
     expect(completionRate(active)).toBe(33)
     expect(completionRate([])).toBe(0)
+  })
+
+  it('summarizes goal status counts and average progress', () => {
+    const goals = [
+      makeGoal({ id: 'g1', status: 'active', progress: 20 }),
+      makeGoal({ id: 'g2', status: 'active', progress: 60 }),
+      makeGoal({ id: 'g3', status: 'done', progress: 100 })
+    ]
+    expect(countGoalsByStatus(goals)).toEqual({ active: 2, done: 1 })
+    expect(averageGoalProgress(goals)).toBe(60)
+    expect(countGoalsByStatus([])).toEqual({ active: 0, done: 0 })
+    expect(averageGoalProgress([])).toBe(0)
   })
 })

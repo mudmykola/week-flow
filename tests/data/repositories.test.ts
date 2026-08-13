@@ -2,10 +2,17 @@ import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createProject, deleteProject, fetchProjects } from '~/data/repositories/projectsRepository'
 import {
+  bulkUpdateTasks,
   createTask,
   deleteTask,
+  duplicateTask,
   fetchAllTasks,
+  fetchArchivedTasks,
+  fetchDueTasks,
+  fetchInboxTasks,
   fetchTasks,
+  fetchTodayPlan,
+  fetchTodayTasks,
   moveWeekTasks,
   updateTask
 } from '~/data/repositories/tasksRepository'
@@ -16,6 +23,14 @@ import {
   updateStickyNote
 } from '~/data/repositories/stickyNotesRepository'
 import { fetchDailyReview, fetchReviewHistory, saveDailyReview } from '~/data/repositories/reviewsRepository'
+import { createTeamGoal, fetchMyGoals, updateGoal } from '~/data/repositories/goalsRepository'
+import {
+  captureInboxItems,
+  deleteInboxItem,
+  fetchInboxItems,
+  resolveInboxItem,
+  updateInboxItem
+} from '~/data/repositories/inboxRepository'
 
 const fetchMock = vi.hoisted(() => vi.fn())
 mockNuxtImport('$fetch', () => fetchMock)
@@ -55,6 +70,57 @@ describe('API repositories', () => {
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks/move-week', {
       method: 'POST',
       body: { fromWeek: '2026-W31', toWeek: '2026-W32' }
+    })
+  })
+
+  it('maps scoped task queries and bulk/duplicate mutations to their endpoints', async () => {
+    await fetchInboxTasks()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'inbox' } })
+    await fetchDueTasks()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'due' } })
+    await fetchTodayTasks('2026-08-12')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'today', date: '2026-08-12' } })
+    await fetchTodayPlan('2026-08-12', 480, 1080)
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/today', { query: { date: '2026-08-12', start: 480, end: 1080 } })
+    await fetchArchivedTasks()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'archived' } })
+    await bulkUpdateTasks(['t1', 't2'], { status: 'done' })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks/bulk', {
+      method: 'PATCH',
+      body: { ids: ['t1', 't2'], patch: { status: 'done' } }
+    })
+    await duplicateTask('t1')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks/t1/duplicate', { method: 'POST' })
+  })
+
+  it('maps goal fetch and mutation operations to their endpoints', async () => {
+    await fetchMyGoals()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/goals')
+    await updateGoal('goal-1', { progress: 50 })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/goals/goal-1', { method: 'PATCH', body: { progress: 50 } })
+    await createTeamGoal({ title: 'Ship v2' })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/team/goals', { method: 'POST', body: { title: 'Ship v2' } })
+  })
+
+  it('maps inbox capture, update and resolve operations to their endpoints', async () => {
+    await fetchInboxItems()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/inbox')
+    await captureInboxItems('Call the client')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/inbox', {
+      method: 'POST',
+      body: { content: 'Call the client' }
+    })
+    await updateInboxItem('item-1', 'Call the client tomorrow')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/inbox/item-1', {
+      method: 'PATCH',
+      body: { content: 'Call the client tomorrow' }
+    })
+    await deleteInboxItem('item-1')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/inbox/item-1', { method: 'DELETE' })
+    await resolveInboxItem('item-1', { destination: 'task', dueDate: '2026-08-20' })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/inbox/item-1/resolve', {
+      method: 'POST',
+      body: { destination: 'task', dueDate: '2026-08-20' }
     })
   })
 

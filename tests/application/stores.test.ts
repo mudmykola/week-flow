@@ -11,7 +11,9 @@ const taskApi = vi.hoisted(() => ({
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
-  moveWeekTasks: vi.fn()
+  moveWeekTasks: vi.fn(),
+  bulkUpdateTasks: vi.fn(),
+  duplicateTask: vi.fn()
 }))
 
 vi.mock('~/data/repositories/projectsRepository', () => projectApi)
@@ -35,6 +37,7 @@ describe('Pinia stores', () => {
     await store.loadProjects()
     expect(store.loading).toBe(false)
     expect(store.getProject(project.id)).toEqual(project)
+    expect(store.getProject('missing-project')).toBeNull()
     expect(store.getProject(null)).toBeNull()
     await store.addProject({ name: 'New', color: '#112233' })
     expect(store.projects).toHaveLength(2)
@@ -64,15 +67,35 @@ describe('Pinia stores', () => {
     const tasks = [
       makeTask({ id: 'b', sort: 2, projectId: 'p1' }),
       makeTask({ id: 'a', sort: 1, projectId: 'p1' }),
-      makeTask({ id: 'done', status: 'done', projectId: 'p2' })
+      makeTask({ id: 'progress-b', status: 'in_progress', sort: 2, projectId: 'p2' }),
+      makeTask({ id: 'progress-a', status: 'in_progress', sort: 1, projectId: 'p2' }),
+      makeTask({ id: 'done-b', status: 'done', sort: 2, projectId: 'p2' }),
+      makeTask({ id: 'done-a', status: 'done', sort: 1, projectId: 'p2' })
     ]
     taskApi.fetchTasks.mockResolvedValue(tasks)
     const store = useTasksStore()
     await store.loadTasks('2026-W31')
     expect(store.loading).toBe(false)
     expect(store.tasksByStatus.todo.map((task) => task.id)).toEqual(['a', 'b'])
+    expect(store.tasksByStatus.in_progress.map((task) => task.id)).toEqual(['progress-a', 'progress-b'])
+    expect(store.tasksByStatus.done.map((task) => task.id)).toEqual(['done-a', 'done-b'])
     store.filterProjectId = 'p2'
-    expect(store.filteredTasks.map((task) => task.id)).toEqual(['done'])
+    expect(store.filteredTasks.map((task) => task.id)).toEqual(['progress-b', 'progress-a', 'done-b', 'done-a'])
+  })
+
+  it('bulk-patches and duplicates tasks', async () => {
+    const store = useTasksStore()
+    const task = makeTask()
+    store.tasks = [task]
+    const bulkUpdated = { ...task, status: 'done' as const }
+    taskApi.bulkUpdateTasks.mockResolvedValue([bulkUpdated])
+    await expect(store.bulkPatch([task.id], { status: 'done' })).resolves.toEqual([bulkUpdated])
+    expect(store.tasks[0]).toEqual(bulkUpdated)
+
+    const duplicated = makeTask({ id: 'task-copy' })
+    taskApi.duplicateTask.mockResolvedValue(duplicated)
+    await store.duplicate(task.id)
+    expect(store.tasks).toContainEqual(duplicated)
   })
 
   it('adds, patches, cycles and removes tasks', async () => {
@@ -155,6 +178,26 @@ describe('Pinia stores', () => {
     expect(store.inboxTasks).toEqual([])
   })
 
+  it('adds a new inbox task to the front of the list', async () => {
+    const task = makeTask()
+    taskApi.createTask.mockResolvedValue(task)
+    const store = useTasksStore()
+    store.inboxTasks = [makeTask({ id: 'existing' })]
+    await store.addInboxTask({ title: task.title, week: task.week })
+    expect(store.inboxTasks.map((item) => item.id)).toEqual([task.id, 'existing'])
+  })
+
+  it('patches an inbox task that is not loaded locally without touching the list', async () => {
+    const store = useTasksStore()
+    taskApi.updateTask.mockResolvedValue(makeTask({ id: 'remote' }))
+    await expect(store.patchInboxTask('remote', { priority: 'urgent' })).resolves.toMatchObject({ id: 'remote' })
+    expect(store.inboxTasks).toEqual([])
+
+    taskApi.updateTask.mockRejectedValue(new Error('network'))
+    await expect(store.patchInboxTask('missing', { priority: 'urgent' })).rejects.toThrow('network')
+    expect(store.inboxTasks).toEqual([])
+  })
+
   it('keeps a still-qualifying inbox task updated in place', async () => {
     const task = makeTask()
     const store = useTasksStore()
@@ -174,6 +217,11 @@ describe('Pinia stores', () => {
     await expect(patch).rejects.toThrow('network')
     expect(store.inboxTasks[0]).toEqual(task)
 
+    taskApi.deleteTask.mockResolvedValue({ ok: true })
+    await store.removeInboxTask(task.id)
+    expect(store.inboxTasks).toEqual([])
+
+    store.inboxTasks = [task]
     taskApi.deleteTask.mockRejectedValue(new Error('network'))
     const deletion = store.removeInboxTask(task.id)
     expect(store.inboxTasks).toEqual([])
@@ -225,11 +273,26 @@ describe('Pinia stores', () => {
     await store.addListTask({ title: created.title, week: created.week })
     expect(store.listTasks[0]).toEqual(created)
 
+    const persisted = { ...task, status: 'done' as const }
+    taskApi.updateTask.mockResolvedValue(persisted)
+    await store.patchListTask(task.id, { status: 'done' })
+    expect(store.listTasks.find((item) => item.id === task.id)).toEqual(persisted)
+
     taskApi.updateTask.mockRejectedValue(new Error('network'))
     const patch = store.patchListTask(task.id, { status: 'done' })
-    expect(store.listTasks.find((item) => item.id === task.id)?.status).toBe('done')
     await expect(patch).rejects.toThrow('network')
-    expect(store.listTasks.find((item) => item.id === task.id)).toEqual(task)
+    expect(store.listTasks.find((item) => item.id === task.id)).toEqual(persisted)
+  })
+
+  it('patches a list task that is not loaded locally without touching the list', async () => {
+    const store = useTasksStore()
+    taskApi.updateTask.mockResolvedValue(makeTask({ id: 'remote' }))
+    await expect(store.patchListTask('remote', { status: 'done' })).resolves.toMatchObject({ id: 'remote' })
+    expect(store.listTasks).toEqual([])
+
+    taskApi.updateTask.mockRejectedValue(new Error('network'))
+    await expect(store.patchListTask('missing', { status: 'done' })).rejects.toThrow('network')
+    expect(store.listTasks).toEqual([])
   })
 
   it('removes a list task and restores it via recreateListTask on undo', async () => {
@@ -244,6 +307,17 @@ describe('Pinia stores', () => {
     taskApi.createTask.mockResolvedValue(recreated)
     await store.recreateListTask(task)
     expect(store.listTasks).toEqual([recreated])
+  })
+
+  it('restores a list task when optimistic deletion fails', async () => {
+    const task = makeTask()
+    const store = useTasksStore()
+    store.listTasks = [task]
+    taskApi.deleteTask.mockRejectedValue(new Error('network'))
+    const deletion = store.removeListTask(task.id)
+    expect(store.listTasks).toEqual([])
+    await expect(deletion).rejects.toThrow('network')
+    expect(store.listTasks).toEqual([task])
   })
 
   it('upserts a task into the list via syncListTask', () => {

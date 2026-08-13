@@ -44,6 +44,13 @@ describe('domain services', () => {
     expect(grouped[0]?.changedFields).toEqual(['title', 'note'])
   })
 
+  it('tolerates activity records missing metadata from the API', () => {
+    const grouped = groupTaskActivity([
+      { id: '1', action: 'task.created', actorName: 'Mykola', metadata: undefined as never, createdAt: 100_000 }
+    ])
+    expect(grouped[0]?.changedFields).toEqual([])
+  })
+
   it('keeps unrelated or distant activity events separate', () => {
     const grouped = groupTaskActivity([
       { id: '3', action: 'task.updated', actorName: 'Mykola', metadata: {}, createdAt: 300_001 },

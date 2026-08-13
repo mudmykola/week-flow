@@ -65,6 +65,50 @@ describe('task guidance service', () => {
     expect(risky.issues).toEqual(expect.arrayContaining(['blocked', 'frequentlyRescheduled', 'tooLarge']))
   })
 
+  it('flags a done task with unmet done-criteria and unfinished subtasks', () => {
+    const result = taskHealth(
+      makeTask({
+        note: 'Clear scope',
+        assigneeId: 'user-1',
+        plannedDate: '2026-08-12',
+        estimateMinutes: 30,
+        status: 'done',
+        doneCriteria: ['Reviewed']
+      }),
+      [
+        {
+          id: 'sub',
+          taskId: 'task-1',
+          title: 'Ship it',
+          note: null,
+          done: false,
+          status: 'todo',
+          priority: 'medium',
+          dueDate: null,
+          assigneeId: null,
+          sort: 0,
+          createdAt: 1,
+          doneAt: null
+        }
+      ],
+      '2026-08-12'
+    )
+    expect(result.issues).toContain('doneIncomplete')
+  })
+
+  it('flags a task with neither a due date nor a planned date, and in-progress work with no ready criteria', () => {
+    const result = taskHealth(
+      makeTask({ dueDate: null, plannedDate: null, status: 'in_progress', readyCriteria: [] }),
+      [],
+      '2026-08-12'
+    )
+    expect(result.issues).toEqual(expect.arrayContaining(['missingDate', 'readyIncomplete']))
+  })
+
+  it('asks to assign an unassigned task before any other guidance', () => {
+    expect(taskNextAction(makeTask({ assigneeId: null })).kind).toBe('assignee')
+  })
+
   it('returns planning, overdue, start, complete and done guidance', () => {
     const base = { note: 'Scope', assigneeId: 'user-1', estimateMinutes: 30 }
     expect(taskNextAction(makeTask(base), [], '2026-08-12').kind).toBe('plan')

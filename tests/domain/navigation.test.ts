@@ -26,4 +26,11 @@ describe('application navigation', () => {
       query: { week: '2026-W33', task: 'task-1', project: 'project-1', priority: 'high' }
     })
   })
+
+  it('omits the project query when the task has no project', () => {
+    expect(taskBoardLink({ id: 'task-1', week: '2026-W33', projectId: null })).toEqual({
+      path: '/',
+      query: { week: '2026-W33', task: 'task-1', project: undefined, priority: undefined }
+    })
+  })
 })

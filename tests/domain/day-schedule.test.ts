@@ -25,6 +25,18 @@ describe('Today time-zone planning', () => {
     expect(zones.find((zone) => zone.key === 'midday')?.capacityMinutes).toBe(120)
   })
 
+  it('sorts tasks within a zone by planned time', () => {
+    const zones = buildDayTimeZones(
+      [
+        makeTask({ id: 'later', plannedDate: '2026-08-12', plannedTime: '10:30' }),
+        makeTask({ id: 'earlier', plannedDate: '2026-08-12', plannedTime: '09:15' })
+      ],
+      '2026-08-12',
+      defaultDaySchedule
+    )
+    expect(zones.find((zone) => zone.key === 'morning')?.tasks.map((task) => task.id)).toEqual(['earlier', 'later'])
+  })
+
   it('auto-plans Top 3 and priority while skipping lunch', () => {
     const schedule = { ...defaultDaySchedule, workStart: '12:00', lunchStart: '13:00' }
     const result = autoPlanDay(
@@ -55,5 +67,33 @@ describe('Today time-zone planning', () => {
         defaultDaySchedule
       )
     ).toEqual([{ id: 'huge', plannedTime: null }])
+  })
+
+  it('breaks ties on equal rank by priority and defaults a missing estimate to 25 minutes', () => {
+    const result = autoPlanDay(
+      [
+        makeTask({ id: 'low', plannedDate: '2026-08-12', estimateMinutes: null, priority: 'low' }),
+        makeTask({ id: 'urgent', plannedDate: '2026-08-12', estimateMinutes: null, priority: 'urgent' })
+      ],
+      '2026-08-12',
+      defaultDaySchedule
+    )
+    expect(result).toEqual([
+      { id: 'urgent', plannedTime: '09:00' },
+      { id: 'low', plannedTime: '09:25' }
+    ])
+  })
+
+  it('returns no suggestion for zones without a start and nudges past an overlapping lunch', () => {
+    const zones = buildDayTimeZones([], '2026-08-12', defaultDaySchedule)
+    const outside = zones.find((zone) => zone.key === 'outside')!
+    expect(nextZoneTime(outside, defaultDaySchedule)).toBeNull()
+
+    const [, midday] = buildDayTimeZones(
+      [makeTask({ plannedDate: '2026-08-12', plannedTime: '12:30', estimateMinutes: 75 })],
+      '2026-08-12',
+      defaultDaySchedule
+    )
+    expect(nextZoneTime(midday!, defaultDaySchedule)).toBe('14:00')
   })
 })

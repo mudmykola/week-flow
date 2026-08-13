@@ -1,3 +1,4 @@
+import type { Goal } from '~/domain/entities/goal'
 import type { Project } from '~/domain/entities/project'
 import type { Task } from '~/domain/entities/task'
 
@@ -46,4 +47,22 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
 
 export function makeProject(overrides: Partial<Project> = {}): Project {
   return { id: 'project-1', name: 'Project', color: '#fe5011', createdAt: 1, ...overrides }
+}
+
+export function makeGoal(overrides: Partial<Goal> = {}): Goal {
+  return {
+    id: 'goal-1',
+    teamId: 'team-1',
+    assigneeId: 'user-1',
+    title: 'Ship v2',
+    description: null,
+    progress: 20,
+    status: 'active',
+    dueDate: null,
+    projectId: null,
+    createdBy: 'manager-1',
+    createdAt: 1,
+    updatedAt: 1,
+    ...overrides
+  }
 }

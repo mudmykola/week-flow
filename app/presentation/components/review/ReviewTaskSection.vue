@@ -35,10 +35,8 @@ defineEmits<{ open: [task: ReviewTask] }>()
           :key="task.id"
           @click="$emit('open', task)"
         >
-          <SemanticDot
-            :tone="tone === 'accent' ? 'info' : tone"
-            :label="task.title"
-          /><span
+          <i /><span
+            ><strong>{{ task.title }}</strong
             ><small
               >{{ task.projectName || $t('task.noProject')
               }}<template v-if="task.plannedTime"> · {{ task.plannedTime }}</template></small
