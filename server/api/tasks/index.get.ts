@@ -1,31 +1,34 @@
-import { and, count, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm'
 import { useDb } from '../../db'
-import { comments, projectMembers, subtasks, tasks } from '../../db/schema'
-import { dateSchema, weekSchema } from '../../utils/validators'
-import { isAdmin, requireAppUser } from '../../utils/auth'
+import { comments, subtasks, tasks } from '../../db/schema'
+import { dateSchema, taskListQuerySchema, weekSchema } from '../../utils/validators'
+import { requireAppUser } from '../../utils/auth'
+import { taskIsolationCondition } from '../../utils/taskIsolation'
+import { decodeTaskCursor, encodeTaskCursor } from '../../utils/taskPagination'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
   const user = await requireAppUser(event)
-  const memberships = await db
-    .select({ projectId: projectMembers.projectId })
-    .from(projectMembers)
-    .where(eq(projectMembers.userId, user.id))
-  const sharedProjectIds = memberships.map((item) => item.projectId)
   const query = getQuery(event)
   const week = query.week ? weekSchema.parse(query.week) : undefined
   const projectId = typeof query.project === 'string' ? query.project : undefined
   const scope = query.scope
   const date = scope === 'today' ? dateSchema.parse(query.date) : undefined
+  const paginated = query.paginated === '1'
+  const pageQuery = paginated ? taskListQuerySchema.parse(query) : null
+  const cursor = decodeTaskCursor(pageQuery?.cursor)
 
   const conditions = [
-    isAdmin(user)
-      ? undefined
-      : sharedProjectIds.length
-        ? or(eq(tasks.ownerId, user.id), eq(tasks.assigneeId, user.id), inArray(tasks.projectId, sharedProjectIds))
-        : or(eq(tasks.ownerId, user.id), eq(tasks.assigneeId, user.id)),
+    taskIsolationCondition(user),
     week ? eq(tasks.week, week) : undefined,
     projectId ? eq(tasks.projectId, projectId) : undefined,
+    pageQuery?.search ? like(tasks.title, `%${pageQuery.search}%`) : undefined,
+    pageQuery?.status ? eq(tasks.status, pageQuery.status) : undefined,
+    pageQuery?.priority ? eq(tasks.priority, pageQuery.priority) : undefined,
+    pageQuery?.assignee ? eq(tasks.assigneeId, pageQuery.assignee) : undefined,
+    cursor
+      ? or(lt(tasks.createdAt, cursor.createdAt), and(eq(tasks.createdAt, cursor.createdAt), lt(tasks.id, cursor.id)))
+      : undefined,
     scope === 'inbox'
       ? and(isNull(tasks.projectId), isNull(tasks.dueDate), ne(tasks.status, 'done'), isNull(tasks.archivedAt))
       : scope === 'today'
@@ -37,12 +40,15 @@ export default defineEventHandler(async (event) => {
             : undefined
   ].filter((c) => c !== undefined)
 
-  const result = await db
+  const rows = await db
     .select()
     .from(tasks)
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(tasks.sort)
-  if (!result.length) return result
+    .orderBy(...(paginated ? [desc(tasks.createdAt), desc(tasks.id)] : [tasks.sort]))
+    .limit(paginated ? pageQuery!.limit + 1 : 10_000)
+  const hasNextPage = paginated && rows.length > pageQuery!.limit
+  const result = hasNextPage ? rows.slice(0, pageQuery!.limit) : rows
+  if (!result.length) return paginated ? { items: [], nextCursor: null } : result
   const ids = result.map((task) => task.id)
   const [subtaskCounts, commentCounts] = await Promise.all([
     db
@@ -60,10 +66,13 @@ export default defineEventHandler(async (event) => {
       .where(inArray(comments.taskId, ids))
       .groupBy(comments.taskId)
   ])
-  return result.map((task) => ({
+  const enriched = result.map((task) => ({
     ...task,
     subtaskCount: subtaskCounts.find((item) => item.taskId === task.id)?.total ?? 0,
     completedSubtaskCount: subtaskCounts.find((item) => item.taskId === task.id)?.completed ?? 0,
     commentCount: commentCounts.find((item) => item.taskId === task.id)?.total ?? 0
   }))
+  if (!paginated) return enriched
+  const last = result.at(-1)
+  return { items: enriched, nextCursor: hasNextPage && last ? encodeTaskCursor(last) : null }
 })

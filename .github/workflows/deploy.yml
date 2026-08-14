@@ -40,6 +40,12 @@ jobs:
       - name: Run merge and deployment quality gate
         run: pnpm quality:gate
 
+      - name: Install E2E browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run authenticated Worker and D1 E2E
+        run: pnpm test:e2e
+
       - name: Validate Cloudflare API token format
         run: pnpm cloudflare:token:check
         env:
@@ -79,7 +85,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           packageManager: pnpm
           wranglerVersion: 4.118.0
-          command: deploy .output/server/index.mjs --assets .output/public
+          command: deploy
 
       - name: Verify production endpoint
         run: curl --fail --silent --show-error --retry 6 --retry-delay 10 https://weekflow.pp.ua/ > /dev/null

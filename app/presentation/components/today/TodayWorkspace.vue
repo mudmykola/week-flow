@@ -46,6 +46,7 @@ const undoAction = ref<null | { label: string; restore: Task[] }>(null)
 let undoTimer: ReturnType<typeof setTimeout> | undefined
 const focusTimer = useFocusTimer()
 const tasksStore = useTasksStore()
+const offlineQueue = useOfflineMutationQueue()
 
 const visible = computed(() => filterTodayTasks(tasks.value, filters.value))
 const sections = computed(() => todaySections(visible.value, date.value))
@@ -106,7 +107,13 @@ async function patchTask(task: Task, patch: UpdateTaskInput) {
   const before = { ...task }
   sync({ ...task, ...patch })
   try {
-    sync(await updateTask(task.id, patch))
+    sync(
+      await offlineQueue.capture(
+        { url: `/api/tasks/${task.id}`, method: 'PATCH', body: patch },
+        () => updateTask(task.id, patch),
+        { ...task, ...patch }
+      )
+    )
     broadcastSync('tasks')
   } catch (cause) {
     sync(before)
@@ -269,6 +276,8 @@ function relativeDate(offset: number) {
         ><span>{{ $t('pages.today.minutesFocused') }}</span>
       </div>
     </section>
+
+    <TodayCommandCenter />
 
     <aside
       v-if="focusTimer.active.value"

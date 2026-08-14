@@ -77,4 +77,12 @@ describe('goals store', () => {
     await expect(store.patchGoal('goal-1', { progress: 90 })).rejects.toThrow('gone')
     expect(store.goals).toEqual([])
   })
+
+  it('clears account-scoped goals', () => {
+    const store = useGoalsStore()
+    store.goals = [makeGoal()]
+    store.reset()
+    expect(store.goals).toEqual([])
+    expect(store.loading).toBe(false)
+  })
 })

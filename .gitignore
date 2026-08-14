@@ -50,6 +50,10 @@ test-results
 # Local editor/AI state
 .vscode
 .history
-.claude
+.claude/
+claude/
 .codex
 .agents
+BACKLOG*.md
+backlog/
+CLAUDE*.md

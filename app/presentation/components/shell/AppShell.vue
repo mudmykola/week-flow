@@ -16,7 +16,6 @@ import {
 import { localDateKey, todayNavigationCount } from '~/domain/services/today'
 import { getCurrentWeek } from '~/domain/services/week'
 
-const route = useRoute()
 const { user, clear } = useUserSession()
 const { t } = useI18n()
 const { report } = useApiFeedback()
@@ -42,10 +41,17 @@ const stickyCreatedBus = useEventBus<StickyNote>('weekflow:sticky-created')
 const globalCreateBus = useEventBus<GlobalCreateAction>('weekflow:open-create')
 const tasksStore = useTasksStore()
 const inboxItems = useState<InboxItem[]>('inbox-items', () => [])
+const accountIsolation = useAccountIsolation()
 
 const shortcutsOpen = ref(false)
 const clock = useNow({ interval: 60_000 })
 const today = computed(() => localDateKey(clock.value))
+
+watch(
+  () => user.value?.id,
+  (id) => accountIsolation.bind(id),
+  { immediate: true }
+)
 
 globalCreateBus.on(handleCreateAction)
 
@@ -195,6 +201,7 @@ function toggleTheme() {
 }
 
 async function logout() {
+  accountIsolation.clear()
   await clear()
   await navigateTo('/login')
 }
@@ -229,135 +236,16 @@ useEventListener('keydown', (event) => {
 
 <template>
   <div class="app-shell min-h-screen bg-[var(--color-bg-alt)] text-[var(--color-text-primary)]">
-    <aside
-      class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-3 transition-[transform,width] lg:translate-x-0"
-      :class="[mobileOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:w-20' : 'lg:w-64']"
-    >
-      <div class="mb-5 flex shrink-0 items-center justify-between px-2 py-2">
-        <NuxtLink
-          to="/"
-          class="flex items-center gap-3"
-          @click="mobileOpen = false"
-        >
-          <BrandLogo
-            class="app-shell__brand"
-            :class="{ 'app-shell__brand--collapsed': sidebarCollapsed }"
-          />
-        </NuxtLink>
-        <button
-          class="lg:hidden"
-          :aria-label="$t('shell.closeMenu')"
-          @click="mobileOpen = false"
-        >
-          <UIcon
-            name="i-lucide-x"
-            class="size-5"
-          />
-        </button>
-      </div>
-
-      <button
-        class="text-secondary mb-3 flex w-full shrink-0 items-center gap-3 rounded-xl border border-[var(--color-panel-border)] px-3 py-2.5 text-left text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
-        @click="openCommand"
-      >
-        <UIcon
-          name="i-lucide-search"
-          class="size-4"
-        />
-        <span
-          class="flex-1"
-          :class="sidebarCollapsed ? 'lg:hidden' : ''"
-          >{{ $t('common.search') }}</span
-        ><kbd
-          class="text-xs"
-          :class="sidebarCollapsed ? 'lg:hidden' : ''"
-          >⌘K</kbd
-        >
-      </button>
-
-      <nav class="app-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-        <div
-          v-for="group in groupedNavigation"
-          :key="group.section"
-        >
-          <p
-            class="text-secondary mb-1 px-3 text-[10px] font-semibold tracking-wide uppercase"
-            :class="sidebarCollapsed ? 'lg:hidden' : ''"
-          >
-            {{ $t(`shell.section.${group.section}`) }}
-          </p>
-          <div class="space-y-1">
-            <NuxtLink
-              v-for="item in group.items"
-              :key="item.to"
-              :to="item.to"
-              class="text-secondary relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-black/[0.04] hover:text-[var(--color-text-primary)] dark:hover:bg-white/[0.05]"
-              :class="
-                route.path === item.to ? 'bg-black/[0.06] text-[var(--color-text-primary)] dark:bg-white/[0.08]' : ''
-              "
-              :title="sidebarCollapsed ? item.label : undefined"
-              @click="mobileOpen = false"
-            >
-              <UIcon
-                :name="item.icon"
-                class="size-4.5 shrink-0"
-              /><span
-                class="flex-1"
-                :class="sidebarCollapsed ? 'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]' : ''"
-                >{{ item.label }}</span
-              ><span
-                v-if="item.to === '/inbox' && inboxItems.length"
-                class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
-                :class="sidebarCollapsed ? 'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]' : ''"
-                >{{ inboxItems.length }}</span
-              ><span
-                v-else-if="item.to === '/today' && todayCount"
-                class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
-                :class="sidebarCollapsed ? 'lg:hidden' : ''"
-                >{{ todayCount }}</span
-              >
-            </NuxtLink>
-          </div>
-        </div>
-      </nav>
-
-      <button
-        class="text-secondary mt-2 ml-auto hidden size-7 shrink-0 place-items-center rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] lg:grid"
-        :title="sidebarCollapsed ? $t('shell.expandMenu') : $t('shell.collapseMenu')"
-        @click="sidebarCollapsed = !sidebarCollapsed"
-      >
-        <UIcon
-          :name="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-          class="size-4"
-        />
-      </button>
-      <div class="mt-2 flex shrink-0 items-center gap-3 rounded-xl border border-[var(--color-panel-border)] p-3">
-        <NuxtImg
-          v-if="user?.avatarUrl"
-          :src="user.avatarUrl"
-          width="32"
-          height="32"
-          class="size-8 rounded-full"
-          alt=""
-        />
-        <div
-          class="min-w-0 flex-1"
-          :class="sidebarCollapsed ? 'lg:hidden' : ''"
-        >
-          <p class="truncate text-sm font-medium">{{ user?.name }}</p>
-          <p class="text-secondary truncate text-xs">{{ user?.email }}</p>
-        </div>
-        <button
-          :title="$t('shell.logout')"
-          @click="logout"
-        >
-          <UIcon
-            name="i-lucide-log-out"
-            class="size-4"
-          />
-        </button>
-      </div>
-    </aside>
+    <ShellSidebar
+      v-model:mobile-open="mobileOpen"
+      v-model:collapsed="sidebarCollapsed"
+      :groups="groupedNavigation"
+      :user="user"
+      :inbox-count="inboxItems.length"
+      :today-count="todayCount"
+      @search="openCommand"
+      @logout="logout"
+    />
 
     <div
       class="transition-[padding]"
@@ -382,6 +270,7 @@ useEventListener('keydown', (event) => {
           class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-600"
           ><UIcon name="i-lucide-wifi-off" />Offline</span
         >
+        <ShellSyncStatus />
         <button
           class="text-secondary rounded-lg p-2 hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
           :title="$t('shell.changeTheme')"
@@ -392,6 +281,7 @@ useEventListener('keydown', (event) => {
             class="size-5"
           />
         </button>
+        <ShellReminders />
         <Transition name="fade">
           <span
             v-if="createFeedback"
@@ -600,11 +490,6 @@ useEventListener('keydown', (event) => {
   font-weight: 650;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-@media (min-width: 1024px) {
-  .app-shell__brand--collapsed :deep(.brand-logo__wordmark) {
-    display: none;
-  }
 }
 .fade-enter-active,
 .fade-leave-active {

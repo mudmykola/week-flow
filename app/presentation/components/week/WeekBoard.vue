@@ -60,10 +60,6 @@ function handleChange(status: Task['status']) {
   emit('reorder', status, localLists[status])
 }
 
-function toggleDensity() {
-  density.value = density.value === 'comfortable' ? 'compact' : 'comfortable'
-}
-
 function forwardSelect(id: string, selected: boolean) {
   emit('select', id, selected)
 }
@@ -77,32 +73,10 @@ function openQuick(status: Task['status']) {
 
 <template>
   <div class="week-board">
-    <div class="mb-3 flex items-center justify-between gap-3">
-      <p class="text-secondary hidden text-xs sm:block">
-        <UIcon
-          name="i-lucide-grip-vertical"
-          class="mr-1 inline size-3.5"
-        />{{ $t('board.dragHint') }}
-      </p>
-      <div class="ml-auto flex rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-1">
-        <button
-          class="text-secondary inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs hover:bg-[var(--color-bg-alt)]"
-          @click="toggleDensity"
-        >
-          <UIcon :name="density === 'comfortable' ? 'i-lucide-rows-3' : 'i-lucide-rows-4'" />{{
-            density === 'comfortable' ? $t('board.compact') : $t('board.comfortable')
-          }}
-        </button>
-        <button
-          class="text-secondary inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs hover:bg-[var(--color-bg-alt)]"
-          @click="collapsedDone = !collapsedDone"
-        >
-          <UIcon :name="collapsedDone ? 'i-lucide-panel-right-open' : 'i-lucide-panel-right-close'" />{{
-            collapsedDone ? $t('board.showDone') : $t('board.hideDone')
-          }}
-        </button>
-      </div>
-    </div>
+    <WeekBoardToolbar
+      v-model:density="density"
+      v-model:collapsed-done="collapsedDone"
+    />
     <div
       class="app-scrollbar flex snap-x overflow-x-auto pb-2"
       :class="density === 'compact' ? 'gap-2' : 'gap-3'"

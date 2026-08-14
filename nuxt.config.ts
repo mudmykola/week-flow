@@ -32,6 +32,10 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'cloudflare-module'
   },
+  runtimeConfig: {
+    testAuthEnabled: false,
+    testAuthSecret: ''
+  },
   dir: {
     pages: 'presentation/pages'
   },

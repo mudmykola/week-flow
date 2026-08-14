@@ -9,6 +9,15 @@ export const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 
 export const weekSchema = z.string().regex(/^\d{4}-W\d{2}$/, 'Expected format YYYY-Www')
 
+export const taskListQuerySchema = z.object({
+  cursor: z.string().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  search: z.string().trim().max(120).optional(),
+  status: taskStatusSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  assignee: z.string().uuid().optional()
+})
+
 export const createTaskSchema = z.object({
   title: z.string().min(1).max(200),
   note: z.string().max(2000).nullable().optional(),

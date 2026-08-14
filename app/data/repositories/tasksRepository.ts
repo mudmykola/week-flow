@@ -1,4 +1,4 @@
-import type { CreateTaskInput, Task, UpdateTaskInput } from '~/domain/entities/task'
+import type { CreateTaskInput, Task, TaskPage, UpdateTaskInput } from '~/domain/entities/task'
 import { apiRequest } from '~/data/http/apiClient'
 
 export function fetchTasks(week: string, projectId?: string | null) {
@@ -7,8 +7,19 @@ export function fetchTasks(week: string, projectId?: string | null) {
   })
 }
 
-export function fetchAllTasks() {
-  return apiRequest<Task[]>('/api/tasks')
+export function fetchTaskPage(cursor?: string, limit = 100) {
+  return apiRequest<TaskPage>('/api/tasks', { query: { paginated: '1', cursor, limit } })
+}
+
+export async function fetchAllTasks() {
+  const items: Task[] = []
+  let cursor: string | undefined
+  do {
+    const page = await fetchTaskPage(cursor)
+    items.push(...page.items)
+    cursor = page.nextCursor ?? undefined
+  } while (cursor)
+  return items
 }
 
 export function fetchInboxTasks() {

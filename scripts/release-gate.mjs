@@ -42,6 +42,7 @@ if (process.env.CLOUDFLARE_API_TOKEN) {
 }
 
 run('Локальний quality gate', 'pnpm', ['quality:gate'])
+run('Authenticated Worker E2E', 'pnpm', ['test:e2e'])
 run('Доступ до production D1', 'pnpm', [
   'exec',
   'wrangler',

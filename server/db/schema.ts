@@ -79,11 +79,36 @@ export const tasks = sqliteTable(
     index('tasks_week_status_idx').on(table.week, table.status),
     index('tasks_project_id_idx').on(table.projectId),
     index('tasks_owner_id_idx').on(table.ownerId),
+    index('tasks_owner_created_idx').on(table.ownerId, table.createdAt, table.id),
+    index('tasks_owner_week_status_idx').on(table.ownerId, table.week, table.status),
+    index('tasks_owner_planned_status_idx').on(table.ownerId, table.plannedDate, table.status),
+    index('tasks_owner_reminder_idx').on(table.ownerId, table.reminderAt),
     index('tasks_assignee_id_idx').on(table.assigneeId),
     index('tasks_planned_date_idx').on(table.plannedDate, table.dayRank),
     index('tasks_work_state_idx').on(table.workState, table.waitingUntil),
     index('tasks_reviewer_idx').on(table.reviewerId, table.workState),
     index('tasks_reminder_idx').on(table.reminderAt)
+  ]
+)
+
+export const reminderDeliveries = sqliteTable(
+  'reminder_deliveries',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    scheduledAt: integer('scheduled_at').notNull(),
+    deliveredAt: integer('delivered_at').notNull(),
+    readAt: integer('read_at'),
+    dismissedAt: integer('dismissed_at')
+  },
+  (table) => [
+    uniqueIndex('reminder_delivery_task_schedule_idx').on(table.taskId, table.scheduledAt),
+    index('reminder_delivery_owner_unread_idx').on(table.ownerId, table.readAt, table.deliveredAt)
   ]
 )
 

@@ -314,13 +314,6 @@ async function submit() {
     submitting.value = false
   }
 }
-function addTag(event: KeyboardEvent) {
-  const input = event.target as HTMLInputElement
-  const value = input.value.trim().replace(/^#/, '')
-  if (!value || tags.value.includes(value) || tags.value.length >= 10) return
-  addTagValue(value)
-  input.value = ''
-}
 function addTagValue(value: string) {
   const normalized = value.trim().replace(/^#/, '')
   if (!normalized || tags.value.includes(normalized) || tags.value.length >= 10) return
@@ -431,42 +424,11 @@ async function quickPatch(value: UpdateTaskInput) {
         <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
           <div class="space-y-4">
             <TaskDescription v-model="note" />
-            <section class="rounded-2xl border border-[var(--color-panel-border)] p-4">
-              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <UIcon name="i-lucide-tags" />{{ $t('task.tags') }}
-              </h3>
-              <div class="flex flex-wrap gap-1.5">
-                <button
-                  v-for="tag in tags"
-                  :key="tag"
-                  type="button"
-                  class="rounded-full bg-[var(--color-bg-alt)] px-2.5 py-1 text-xs"
-                  :aria-label="$t('task.removeTag', { tag })"
-                  @click="tags = tags.filter((item) => item !== tag)"
-                >
-                  #{{ tag }} <UIcon name="i-lucide-x" />
-                </button>
-              </div>
-              <FormInput
-                class="mt-2"
-                :placeholder="$t('task.tagsPlaceholder')"
-                @keyup.enter="addTag"
-              />
-              <div
-                v-if="availableTags.length"
-                class="mt-2 flex flex-wrap gap-1.5"
-              >
-                <button
-                  v-for="tag in availableTags"
-                  :key="tag"
-                  type="button"
-                  class="text-secondary rounded-full border border-dashed border-[var(--color-panel-border)] px-2.5 py-1 text-xs hover:text-[var(--color-accent)]"
-                  @click="addTagValue(tag)"
-                >
-                  <UIcon name="i-lucide-plus" />{{ tag }}
-                </button>
-              </div>
-            </section>
+            <TaskTagsEditor
+              v-model="tags"
+              :available="availableTags"
+              @add="addTagValue"
+            />
           </div>
           <TaskProperties
             v-model:status="status"

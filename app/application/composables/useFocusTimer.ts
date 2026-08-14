@@ -58,6 +58,18 @@ function createFocusTimer() {
   function reset() {
     state.value = { ...state.value, remainingAtStart: state.value.duration, startedAt: Date.now(), running: false }
   }
+  function clear() {
+    state.value = {
+      sessionId: null,
+      taskId: null,
+      taskTitle: '',
+      kind: 'focus',
+      duration: 1500,
+      remainingAtStart: 1500,
+      startedAt: Date.now(),
+      running: false
+    }
+  }
   async function finish(status: 'completed' | 'interrupted', note?: string, result?: string) {
     if (!state.value.sessionId || finishing.value) return
     finishing.value = true
@@ -80,7 +92,7 @@ function createFocusTimer() {
       finishing.value = false
     }
   }
-  return { state, active, seconds, progress, display, finishing, start, pause, resume, reset, finish }
+  return { state, active, seconds, progress, display, finishing, start, pause, resume, reset, clear, finish }
 }
 
 export const useFocusTimer = createSharedComposable(createFocusTimer)

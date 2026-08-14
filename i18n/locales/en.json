@@ -386,7 +386,25 @@
     "dataHint": "Download a copy of tasks and projects.",
     "exportJson": "Export JSON",
     "exportCsv": "Export CSV",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "dangerZone": "Danger zone",
+    "deleteHint": "Export your data first. Deleting the account, owned tasks, projects and related data cannot be undone.",
+    "confirmEmail": "Enter the account email to confirm",
+    "deleteAccount": "Permanently delete account"
+  },
+  "reminders": {
+    "title": "Reminders",
+    "empty": "No new reminders",
+    "dismiss": "Dismiss reminder",
+    "notificationTitle": "WeekFlow reminder"
+  },
+  "sync": {
+    "title": "Synchronization",
+    "pending": "Pending: {count}",
+    "pendingHint": "{count} local changes will be sent when the connection is restored.",
+    "syncing": "Synchronizing…",
+    "conflictHint": "Server data changed. Automatic overwriting has been paused.",
+    "discard": "Discard local change"
   },
   "pages": {
     "delegation": {
@@ -398,6 +416,14 @@
       "empty": "No tasks here yet"
     },
     "today": {
+      "commandCenter": {
+        "eyebrow": "Unified input",
+        "title": "Daily command center",
+        "capture": "Quickly capture a thought to Inbox…",
+        "saveCapture": "Save to Inbox",
+        "inboxEmpty": "Inbox cleared",
+        "notesEmpty": "No active checklist items"
+      },
       "viewSwitch": "View switch",
       "workspace": "Daily plan",
       "goToday": "Today",

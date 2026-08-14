@@ -46,6 +46,11 @@ export interface Task {
   commentCount?: number
 }
 
+export interface TaskPage {
+  items: Task[]
+  nextCursor: string | null
+}
+
 export interface CreateTaskInput {
   title: string
   note?: string | null

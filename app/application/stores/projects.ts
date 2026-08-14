@@ -38,5 +38,10 @@ export const useProjectsStore = defineStore('projects', () => {
     return projects.value.find((p) => p.id === id) ?? null
   }
 
-  return { projects, loading, loadProjects, addProject, removeProject, getProject }
+  function reset() {
+    projects.value = []
+    loading.value = false
+  }
+
+  return { projects, loading, loadProjects, addProject, removeProject, getProject, reset }
 })

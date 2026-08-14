@@ -329,4 +329,23 @@ describe('Pinia stores', () => {
     store.syncListTask(updated)
     expect(store.listTasks).toEqual([updated])
   })
+
+  it('clears every account-scoped task and project collection', () => {
+    const taskStore = useTasksStore()
+    const projectStore = useProjectsStore()
+    taskStore.tasks = [makeTask()]
+    taskStore.inboxTasks = [makeTask({ id: 'inbox' })]
+    taskStore.listTasks = [makeTask({ id: 'today' })]
+    taskStore.filterProjectId = 'project-1'
+    projectStore.projects = [makeProject()]
+
+    taskStore.reset()
+    projectStore.reset()
+
+    expect(taskStore.tasks).toEqual([])
+    expect(taskStore.inboxTasks).toEqual([])
+    expect(taskStore.listTasks).toEqual([])
+    expect(taskStore.filterProjectId).toBeNull()
+    expect(projectStore.projects).toEqual([])
+  })
 })

@@ -14,6 +14,7 @@ import { getNextStatus } from '~/domain/services/taskStatus'
 import { getNextWeek } from '~/domain/services/week'
 
 export const useTasksStore = defineStore('tasks', () => {
+  const offlineQueue = useOfflineMutationQueue()
   const tasks = ref<Task[]>([])
   const loading = ref(false)
   const filterProjectId = ref<string | null>(null)
@@ -53,7 +54,14 @@ export const useTasksStore = defineStore('tasks', () => {
     const previous = index === -1 ? null : { ...tasks.value[index]! }
     if (index !== -1) tasks.value[index] = { ...tasks.value[index]!, ...patch }
     try {
-      const task = await updateTask(id, patch)
+      const fallback = tasks.value.find((item) => item.id === id)
+      const task = fallback
+        ? await offlineQueue.capture(
+            { url: `/api/tasks/${id}`, method: 'PATCH', body: patch },
+            () => updateTask(id, patch),
+            fallback
+          )
+        : await updateTask(id, patch)
       const currentIndex = tasks.value.findIndex((t) => t.id === id)
       if (currentIndex !== -1) tasks.value[currentIndex] = task
       broadcastSync('tasks')
@@ -73,7 +81,9 @@ export const useTasksStore = defineStore('tasks', () => {
     const previous = tasks.value
     tasks.value = tasks.value.filter((t) => t.id !== id)
     try {
-      await deleteTask(id)
+      await offlineQueue.capture({ url: `/api/tasks/${id}`, method: 'DELETE' }, () => deleteTask(id), {
+        ok: true as const
+      })
       broadcastSync('tasks')
     } catch (error) {
       tasks.value = previous
@@ -136,7 +146,14 @@ export const useTasksStore = defineStore('tasks', () => {
     const previous = index === -1 ? null : { ...inboxTasks.value[index]! }
     if (index !== -1) inboxTasks.value[index] = { ...inboxTasks.value[index]!, ...patch }
     try {
-      const task = await updateTask(id, patch)
+      const fallback = inboxTasks.value.find((item) => item.id === id)
+      const task = fallback
+        ? await offlineQueue.capture(
+            { url: `/api/tasks/${id}`, method: 'PATCH', body: patch },
+            () => updateTask(id, patch),
+            fallback
+          )
+        : await updateTask(id, patch)
       const currentIndex = inboxTasks.value.findIndex((t) => t.id === id)
       if (currentIndex !== -1) {
         if (isInboxTask(task)) inboxTasks.value[currentIndex] = task
@@ -155,7 +172,9 @@ export const useTasksStore = defineStore('tasks', () => {
     const previous = inboxTasks.value
     inboxTasks.value = inboxTasks.value.filter((t) => t.id !== id)
     try {
-      await deleteTask(id)
+      await offlineQueue.capture({ url: `/api/tasks/${id}`, method: 'DELETE' }, () => deleteTask(id), {
+        ok: true as const
+      })
       broadcastSync('tasks')
     } catch (error) {
       inboxTasks.value = previous
@@ -221,7 +240,14 @@ export const useTasksStore = defineStore('tasks', () => {
     const previous = index === -1 ? null : { ...listTasks.value[index]! }
     if (index !== -1) listTasks.value[index] = { ...listTasks.value[index]!, ...patch }
     try {
-      const task = await updateTask(id, patch)
+      const fallback = listTasks.value.find((item) => item.id === id)
+      const task = fallback
+        ? await offlineQueue.capture(
+            { url: `/api/tasks/${id}`, method: 'PATCH', body: patch },
+            () => updateTask(id, patch),
+            fallback
+          )
+        : await updateTask(id, patch)
       const currentIndex = listTasks.value.findIndex((t) => t.id === id)
       if (currentIndex !== -1) listTasks.value[currentIndex] = task
       broadcastSync('tasks')
@@ -237,7 +263,9 @@ export const useTasksStore = defineStore('tasks', () => {
     const previous = listTasks.value
     listTasks.value = listTasks.value.filter((t) => t.id !== id)
     try {
-      await deleteTask(id)
+      await offlineQueue.capture({ url: `/api/tasks/${id}`, method: 'DELETE' }, () => deleteTask(id), {
+        ok: true as const
+      })
       broadcastSync('tasks')
     } catch (error) {
       listTasks.value = previous
@@ -271,6 +299,16 @@ export const useTasksStore = defineStore('tasks', () => {
     else listTasks.value.unshift(task)
   }
 
+  function reset() {
+    tasks.value = []
+    inboxTasks.value = []
+    listTasks.value = []
+    filterProjectId.value = null
+    loading.value = false
+    inboxLoading.value = false
+    listLoading.value = false
+  }
+
   return {
     tasks,
     loading,
@@ -302,6 +340,7 @@ export const useTasksStore = defineStore('tasks', () => {
     patchListTask,
     removeListTask,
     recreateListTask,
-    syncListTask
+    syncListTask,
+    reset
   }
 })

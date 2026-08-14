@@ -1,7 +1,8 @@
 import { and, count, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import { useDb } from '../../db'
-import { comments, focusSessions, projectMembers, subtasks, tasks } from '../../db/schema'
-import { isAdmin, requireAppUser } from '../../utils/auth'
+import { comments, focusSessions, subtasks, tasks } from '../../db/schema'
+import { requireAppUser } from '../../utils/auth'
+import { taskIsolationCondition } from '../../utils/taskIsolation'
 import { dateSchema } from '../../utils/validators'
 
 export default defineEventHandler(async (event) => {
@@ -19,16 +20,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid local day range' })
   }
   const db = useDb(event)
-  const memberships = await db
-    .select({ projectId: projectMembers.projectId })
-    .from(projectMembers)
-    .where(eq(projectMembers.userId, user.id))
-  const sharedProjectIds = memberships.map((item) => item.projectId)
-  const access = isAdmin(user)
-    ? undefined
-    : sharedProjectIds.length
-      ? or(eq(tasks.ownerId, user.id), eq(tasks.assigneeId, user.id), inArray(tasks.projectId, sharedProjectIds))
-      : or(eq(tasks.ownerId, user.id), eq(tasks.assigneeId, user.id))
+  const access = taskIsolationCondition(user)
   const rows = await db
     .select()
     .from(tasks)

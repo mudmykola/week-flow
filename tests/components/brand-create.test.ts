@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 describe('Brand and Global Create 2.0 contracts', () => {
   it('uses one reusable brand component across primary product surfaces', () => {
     expect(read('app/presentation/components/brand/BrandLogo.vue')).toContain('brand-logo__mark')
-    expect(read('app/presentation/components/shell/AppShell.vue')).toContain('<BrandLogo')
+    expect(read('app/presentation/components/shell/ShellSidebar.vue')).toContain('<BrandLogo')
     expect(read('app/presentation/pages/login/index.vue')).toContain('<BrandLogo')
     expect(read('app/presentation/components/common/AppPreloader.vue')).toContain('<BrandLogo')
   })
@@ -42,9 +42,10 @@ describe('Brand and Global Create 2.0 contracts', () => {
 
   it('keeps Today and Inbox counters visible when the desktop sidebar is collapsed', () => {
     const shell = read('app/presentation/components/shell/AppShell.vue')
+    const sidebar = read('app/presentation/components/shell/ShellSidebar.vue')
     expect(shell).toContain('todayNavigationCount(tasksStore.listTasks, today.value)')
     expect(shell).toContain('tasksStore.syncListTask(task)')
-    expect(shell).toContain("'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]'")
-    expect(shell).not.toContain("item.to === '/today' && overdueCount")
+    expect(sidebar).toContain("'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]'")
+    expect(sidebar).not.toContain("item.to === '/today' && overdueCount")
   })
 })

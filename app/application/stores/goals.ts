@@ -35,5 +35,10 @@ export const useGoalsStore = defineStore('goals', () => {
     }
   }
 
-  return { goals, loading, activeGoals, completedGoals, loadGoals, patchGoal }
+  function reset() {
+    goals.value = []
+    loading.value = false
+  }
+
+  return { goals, loading, activeGoals, completedGoals, loadGoals, patchGoal, reset }
 })

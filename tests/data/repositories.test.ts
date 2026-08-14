@@ -7,6 +7,7 @@ import {
   deleteTask,
   duplicateTask,
   fetchAllTasks,
+  fetchTaskPage,
   fetchArchivedTasks,
   fetchDueTasks,
   fetchInboxTasks,
@@ -55,8 +56,15 @@ describe('API repositories', () => {
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { week: '2026-W31', project: undefined } })
     await fetchTasks('2026-W31', 'p1')
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { week: '2026-W31', project: 'p1' } })
+    fetchMock.mockResolvedValueOnce({ items: [], nextCursor: null })
     await fetchAllTasks()
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', {
+      query: { paginated: '1', cursor: undefined, limit: 100 }
+    })
+    await fetchTaskPage('123_task', 25)
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', {
+      query: { paginated: '1', cursor: '123_task', limit: 25 }
+    })
     await createTask({ title: 'Task', week: '2026-W31' })
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', {
       method: 'POST',
@@ -70,6 +78,19 @@ describe('API repositories', () => {
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks/move-week', {
       method: 'POST',
       body: { fromWeek: '2026-W31', toWeek: '2026-W32' }
+    })
+  })
+
+  it('loads every cursor page instead of using an unbounded task request', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ items: [{ id: 't1' }], nextCursor: '100_t1' })
+      .mockResolvedValueOnce({ items: [{ id: 't2' }], nextCursor: null })
+    await expect(fetchAllTasks()).resolves.toEqual([{ id: 't1' }, { id: 't2' }])
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/tasks', {
+      query: { paginated: '1', cursor: undefined, limit: 100 }
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/tasks', {
+      query: { paginated: '1', cursor: '100_t1', limit: 100 }
     })
   })
 

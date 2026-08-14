@@ -16,6 +16,9 @@ const saving = ref(false)
 const toast = useToast()
 const { report } = useApiFeedback()
 const { t, setLocale } = useI18n()
+const { user, clear } = useUserSession()
+const confirmEmail = ref('')
+const deletingAccount = ref(false)
 
 const templates = useLocalStorage<Template[]>('weekflow-task-templates', [
   {
@@ -59,11 +62,31 @@ async function save() {
     await $fetch('/api/settings', { method: 'PATCH', body: settings.value })
     colorMode.preference = settings.value.theme
     await setLocale(settings.value.locale === 'en' ? 'en' : 'uk')
+    if (settings.value.notifications && 'Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
     toast.add({ title: t('settings.saved'), color: 'success' })
   } catch (error) {
     report(error)
   } finally {
     saving.value = false
+  }
+}
+
+async function deleteAccount() {
+  if (!user.value?.email || confirmEmail.value.trim().toLowerCase() !== user.value.email.toLowerCase()) return
+  deletingAccount.value = true
+  try {
+    await $fetch('/api/account', {
+      method: 'DELETE',
+      body: { email: confirmEmail.value.trim(), acknowledgeDataLoss: true }
+    })
+    await clear()
+    await navigateTo('/login')
+  } catch (error) {
+    report(error)
+  } finally {
+    deletingAccount.value = false
   }
 }
 </script>
@@ -126,6 +149,30 @@ async function save() {
             >{{ $t('settings.exportCsv') }}</UButton
           >
         </div>
+      </div>
+      <div class="space-y-3 p-4">
+        <div>
+          <h2 class="font-display text-base text-red-500">{{ $t('settings.dangerZone') }}</h2>
+          <p class="text-secondary mt-0.5 text-xs">{{ $t('settings.deleteHint') }}</p>
+        </div>
+        <FormField :label="$t('settings.confirmEmail')">
+          <FormInput
+            v-model="confirmEmail"
+            type="email"
+            :placeholder="user?.email || ''"
+            autocomplete="off"
+          />
+        </FormField>
+        <UButton
+          color="error"
+          variant="soft"
+          icon="i-lucide-trash-2"
+          :loading="deletingAccount"
+          :disabled="!user?.email || confirmEmail.trim().toLowerCase() !== user.email.toLowerCase()"
+          @click="deleteAccount"
+        >
+          {{ $t('settings.deleteAccount') }}
+        </UButton>
       </div>
       <div class="p-4">
         <h2 class="font-display text-base">{{ $t('nav.templates') }}</h2>

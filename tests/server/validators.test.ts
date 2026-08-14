@@ -13,6 +13,7 @@ import {
   createTaskSchema,
   moveWeekSchema,
   saveDailyReviewSchema,
+  taskListQuerySchema,
   updateSettingsSchema,
   updateFocusSessionSchema,
   updateStickyNoteSchema,
@@ -21,6 +22,11 @@ import {
 } from '../../server/utils/validators'
 
 describe('server validators', () => {
+  it('bounds paginated task list queries', () => {
+    expect(taskListQuerySchema.parse({ limit: '25', status: 'todo' })).toMatchObject({ limit: 25, status: 'todo' })
+    expect(taskListQuerySchema.safeParse({ limit: 101 }).success).toBe(false)
+    expect(taskListQuerySchema.safeParse({ priority: 'critical' }).success).toBe(false)
+  })
   it('validates bounded focus session payloads', () => {
     expect(createFocusSessionSchema.parse({ kind: 'focus', plannedSeconds: 1500 })).toMatchObject({ kind: 'focus' })
     expect(() => createFocusSessionSchema.parse({ kind: 'focus', plannedSeconds: 10 })).toThrow()
