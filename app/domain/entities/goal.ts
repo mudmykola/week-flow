@@ -1,4 +1,5 @@
 export type GoalStatus = 'active' | 'done'
+export type GoalPriority = 'low' | 'medium' | 'high'
 
 export interface Goal {
   id: string
@@ -6,6 +7,8 @@ export interface Goal {
   assigneeId: string | null
   title: string
   description: string | null
+  priority: GoalPriority
+  labels: string[]
   progress: number
   status: GoalStatus
   dueDate: string | null
@@ -20,6 +23,8 @@ export interface Goal {
 export interface CreateGoalInput {
   title: string
   description?: string | null
+  priority?: GoalPriority
+  labels?: string[]
   assigneeId?: string | null
   dueDate?: string | null
   teamId?: string

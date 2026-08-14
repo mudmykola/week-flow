@@ -8,6 +8,8 @@ function makeGoal(overrides: Partial<import('~/domain/entities/goal').Goal> = {}
     assigneeId: 'user-1',
     title: 'Ship v2',
     description: null,
+    priority: 'medium' as const,
+    labels: [],
     progress: 20,
     status: 'active' as const,
     dueDate: null,
@@ -84,5 +86,25 @@ describe('goals store', () => {
     store.reset()
     expect(store.goals).toEqual([])
     expect(store.loading).toBe(false)
+  })
+
+  it('adds a self-assigned goal immediately and exposes the active navigation count', async () => {
+    const store = useGoalsStore()
+    const goal = makeGoal({ assigneeId: 'user-1', title: 'Complete the Anthropic course' })
+    goalApi.createTeamGoal.mockResolvedValue(goal)
+
+    await store.addGoal({ title: goal.title, assigneeId: 'user-1' }, 'user-1')
+
+    expect(store.goals).toEqual([goal])
+    expect(store.activeCount).toBe(1)
+  })
+
+  it('does not mix another member goal into the personal goal list', async () => {
+    const store = useGoalsStore()
+    goalApi.createTeamGoal.mockResolvedValue(makeGoal({ assigneeId: 'user-2' }))
+
+    await store.addGoal({ title: 'Team goal', assigneeId: 'user-2' }, 'user-1')
+
+    expect(store.goals).toEqual([])
   })
 })

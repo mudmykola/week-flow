@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { createTeamGoal, updateGoal } from '~/data/repositories/goalsRepository'
+import { updateGoal } from '~/data/repositories/goalsRepository'
+import type { GoalPriority } from '~/domain/entities/goal'
 
 const { user } = useUserSession()
 const { t } = useI18n()
@@ -9,6 +10,7 @@ if (user.value?.role !== 'pm' && user.value?.role !== 'admin')
 const toast = useToast()
 const { report } = useApiFeedback()
 const projectsStore = useProjectsStore()
+const goalsStore = useGoalsStore()
 const selectedTeamId = ref<string | null>(null)
 const { data, status, refresh } = await useFetch('/api/team', {
   query: computed(() => ({ team: selectedTeamId.value || undefined }))
@@ -18,8 +20,29 @@ useLiveRefresh('tasks', refresh)
 
 const teamName = ref(t('pages.team.defaultName'))
 const memberEmail = ref('')
-const goal = reactive({ title: '', description: '', assigneeId: null as string | null, dueDate: '' })
+const goal = reactive({
+  title: '',
+  description: '',
+  assigneeId: null as string | null,
+  dueDate: '',
+  priority: 'medium' as GoalPriority,
+  labelsInput: ''
+})
 const saving = ref(false)
+const goalAssignees = computed(() => {
+  const members = data.value?.members ?? []
+  if (!user.value || members.some((member) => member.id === user.value?.id)) return members
+  return [
+    { id: user.value.id, name: user.value.name, email: user.value.email, avatarUrl: user.value.avatarUrl },
+    ...members
+  ]
+})
+
+function goalAssigneeName(assigneeId: string | null) {
+  if (!assigneeId) return t('pages.team.teamGoal')
+  if (assigneeId === user.value?.id) return t('pages.team.me')
+  return data.value?.members.find((member) => member.id === assigneeId)?.name ?? t('pages.team.teamGoal')
+}
 
 onMounted(() => {
   if (!projectsStore.projects.length) void projectsStore.loadProjects()
@@ -59,10 +82,33 @@ async function createGoal() {
   if (!goal.title.trim()) return
   saving.value = true
   try {
-    await createTeamGoal({ ...goal, dueDate: goal.dueDate || null, teamId: data.value?.team?.id })
-    Object.assign(goal, { title: '', description: '', assigneeId: null, dueDate: '' })
+    await goalsStore.addGoal(
+      {
+        title: goal.title,
+        description: goal.description,
+        assigneeId: goal.assigneeId,
+        dueDate: goal.dueDate || null,
+        priority: goal.priority,
+        labels: goal.labelsInput
+          .split(',')
+          .map((label) => label.trim())
+          .filter(Boolean),
+        teamId: data.value?.team?.id
+      },
+      user.value?.id
+    )
+    Object.assign(goal, {
+      title: '',
+      description: '',
+      assigneeId: null,
+      dueDate: '',
+      priority: 'medium',
+      labelsInput: ''
+    })
     await refresh()
     toast.add({ title: t('pages.team.goalCreated'), color: 'success' })
+  } catch (error) {
+    report(error, t('pages.team.goalCreateFailed'))
   } finally {
     saving.value = false
   }
@@ -233,12 +279,30 @@ async function linkProject(id: string, projectId: string | null) {
               >
                 <div class="flex items-start justify-between gap-3">
                   <div>
-                    <p class="text-sm font-semibold">{{ item.title }}</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="text-sm font-semibold">{{ item.title }}</p>
+                      <SemanticBadge
+                        :tone="item.priority === 'high' ? 'danger' : item.priority === 'low' ? 'info' : 'warning'"
+                        size="sm"
+                        >{{ $t(`task.priorityValue.${item.priority}`) }}</SemanticBadge
+                      >
+                    </div>
                     <p class="text-secondary mt-0.5 text-xs">
-                      {{
-                        data.members.find((member) => member.id === item.assigneeId)?.name || $t('pages.team.teamGoal')
+                      {{ goalAssigneeName(item.assigneeId)
                       }}<span v-if="item.dueDate"> · {{ $t('pages.team.due', { date: item.dueDate }) }}</span>
                     </p>
+                    <div
+                      v-if="item.labels?.length"
+                      class="mt-2 flex flex-wrap gap-1"
+                    >
+                      <SemanticBadge
+                        v-for="label in item.labels"
+                        :key="label"
+                        tone="violet"
+                        size="sm"
+                        >{{ label }}</SemanticBadge
+                      >
+                    </div>
                   </div>
                   <strong class="text-sm text-[var(--color-accent)]">{{ item.progress }}%</strong>
                 </div>
@@ -298,17 +362,37 @@ async function linkProject(id: string, projectId: string | null) {
             >
               <option :value="null">{{ $t('pages.team.teamGoal') }}</option>
               <option
-                v-for="member in data.members"
+                v-for="member in goalAssignees"
                 :key="member.id"
                 :value="member.id"
               >
-                {{ member.name }}
-              </option></select
-            ><input
-              v-model="goal.dueDate"
-              type="date"
+                {{ member.id === user?.id ? $t('pages.team.assignToMe', { name: member.name }) : member.name }}
+              </option>
+            </select>
+            <div class="grid grid-cols-2 gap-2">
+              <select
+                v-model="goal.priority"
+                class="h-10 w-full rounded-lg border border-[var(--color-panel-border)] bg-transparent px-3"
+                :aria-label="$t('pages.team.priority')"
+              >
+                <option value="low">{{ $t('task.priorityValue.low') }}</option>
+                <option value="medium">{{ $t('task.priorityValue.medium') }}</option>
+                <option value="high">{{ $t('task.priorityValue.high') }}</option>
+              </select>
+              <input
+                v-model="goal.dueDate"
+                type="date"
+                class="h-10 w-full rounded-lg border border-[var(--color-panel-border)] bg-transparent px-3"
+                :aria-label="$t('pages.team.deadline')"
+              />
+            </div>
+            <input
+              v-model="goal.labelsInput"
               class="h-10 w-full rounded-lg border border-[var(--color-panel-border)] bg-transparent px-3"
-            /><UButton
+              :placeholder="$t('pages.team.labelsPlaceholder')"
+            />
+            <p class="text-secondary text-xs">{{ $t('pages.team.labelsHint') }}</p>
+            <UButton
               block
               :loading="saving"
               icon="i-lucide-target"

@@ -56,6 +56,8 @@ export function makeGoal(overrides: Partial<Goal> = {}): Goal {
     assigneeId: 'user-1',
     title: 'Ship v2',
     description: null,
+    priority: 'medium',
+    labels: [],
     progress: 20,
     status: 'active',
     dueDate: null,

@@ -40,6 +40,7 @@ const taskCreatedBus = useEventBus<Task>('weekflow:task-created')
 const stickyCreatedBus = useEventBus<StickyNote>('weekflow:sticky-created')
 const globalCreateBus = useEventBus<GlobalCreateAction>('weekflow:open-create')
 const tasksStore = useTasksStore()
+const goalsStore = useGoalsStore()
 const inboxItems = useState<InboxItem[]>('inbox-items', () => [])
 const accountIsolation = useAccountIsolation()
 
@@ -60,9 +61,11 @@ onMounted(() => {
     .then((items) => (inboxItems.value = items))
     .catch(() => {})
   tasksStore.loadListTasks(() => fetchTodayTasks(today.value)).catch(() => {})
+  goalsStore.loadGoals().catch(() => {})
 })
 
 useLiveRefresh('tasks', () => tasksStore.loadListTasks(() => fetchTodayTasks(today.value)).catch(() => {}))
+useLiveRefresh('goals', () => goalsStore.loadGoals().catch(() => {}))
 watch(today, () => tasksStore.loadListTasks(() => fetchTodayTasks(today.value)).catch(() => {}))
 
 const reusableTags = computed(() =>
@@ -83,6 +86,7 @@ const groupedNavigation = computed(() =>
 )
 
 const todayCount = computed(() => todayNavigationCount(tasksStore.listTasks, today.value))
+const goalsCount = computed(() => goalsStore.activeCount)
 
 const results = computed(() => {
   const term = query.value.trim().toLowerCase()
@@ -243,6 +247,7 @@ useEventListener('keydown', (event) => {
       :user="user"
       :inbox-count="inboxItems.length"
       :today-count="todayCount"
+      :goals-count="goalsCount"
       @search="openCommand"
       @logout="logout"
     />

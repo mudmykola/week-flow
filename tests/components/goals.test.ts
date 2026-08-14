@@ -10,6 +10,8 @@ function makeGoal(overrides: Partial<import('~/domain/entities/goal').Goal> = {}
     assigneeId: 'user-1',
     title: 'Ship v2',
     description: null,
+    priority: 'medium' as const,
+    labels: [],
     progress: 20,
     status: 'active' as const,
     dueDate: null,
@@ -79,5 +81,14 @@ describe('goals page', () => {
     await flushPromises()
 
     expect(goalApi.updateGoal).toHaveBeenCalledWith('goal-1', { progress: 50 })
+  })
+
+  it('renders priority and reusable labels for a personal goal', async () => {
+    goalApi.fetchMyGoals.mockResolvedValue([makeGoal({ priority: 'high', labels: ['ai', 'course'] })])
+    const wrapper = await mountSuspended(GoalsPage, { global: { stubs: stubs() } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('ai')
+    expect(wrapper.text()).toContain('course')
   })
 })

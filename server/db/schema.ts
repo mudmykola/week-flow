@@ -431,6 +431,10 @@ export const goals = sqliteTable(
     assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     description: text('description'),
+    priority: text('priority', { enum: ['low', 'medium', 'high'] })
+      .notNull()
+      .default('medium'),
+    labels: text('labels', { mode: 'json' }).$type<string[]>().notNull().default([]),
     progress: integer('progress').notNull().default(0),
     status: text('status', { enum: ['active', 'done'] })
       .notNull()

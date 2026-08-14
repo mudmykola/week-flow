@@ -1,5 +1,5 @@
-import { fetchMyGoals, updateGoal } from '~/data/repositories/goalsRepository'
-import type { Goal, UpdateGoalInput } from '~/domain/entities/goal'
+import { createTeamGoal, fetchMyGoals, updateGoal } from '~/data/repositories/goalsRepository'
+import type { CreateGoalInput, Goal, UpdateGoalInput } from '~/domain/entities/goal'
 import { sortGoalsForDisplay } from '~/domain/services/goals'
 
 export const useGoalsStore = defineStore('goals', () => {
@@ -8,6 +8,7 @@ export const useGoalsStore = defineStore('goals', () => {
 
   const activeGoals = computed(() => sortGoalsForDisplay(goals.value.filter((goal) => goal.status !== 'done')))
   const completedGoals = computed(() => goals.value.filter((goal) => goal.status === 'done'))
+  const activeCount = computed(() => activeGoals.value.length)
 
   async function loadGoals() {
     loading.value = true
@@ -35,10 +36,19 @@ export const useGoalsStore = defineStore('goals', () => {
     }
   }
 
+  async function addGoal(input: CreateGoalInput, currentUserId?: string) {
+    const goal = await createTeamGoal(input)
+    if (goal.assigneeId && goal.assigneeId === currentUserId && !goals.value.some((item) => item.id === goal.id)) {
+      goals.value.unshift(goal)
+    }
+    broadcastSync('goals')
+    return goal
+  }
+
   function reset() {
     goals.value = []
     loading.value = false
   }
 
-  return { goals, loading, activeGoals, completedGoals, loadGoals, patchGoal, reset }
+  return { goals, loading, activeGoals, completedGoals, activeCount, loadGoals, patchGoal, addGoal, reset }
 })

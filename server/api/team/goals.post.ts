@@ -8,6 +8,8 @@ import { logActivity } from '../../utils/activity'
 const schema = z.object({
   title: z.string().trim().min(2).max(200),
   description: z.string().trim().max(1000).nullable().optional(),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  labels: z.array(z.string().trim().min(1).max(40)).max(8).default([]),
   assigneeId: z.string().nullable().optional(),
   dueDate: z
     .string()
@@ -21,7 +23,7 @@ export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, schema.parse)
   const { manager, team } = await requireManagedTeam(event, body.teamId)
   const db = useDb(event)
-  if (body.assigneeId) {
+  if (body.assigneeId && body.assigneeId !== manager.id) {
     const [member] = await db
       .select()
       .from(teamMembers)
@@ -35,6 +37,8 @@ export default defineEventHandler(async (event) => {
     assigneeId: body.assigneeId ?? null,
     title: body.title,
     description: body.description ?? null,
+    priority: body.priority,
+    labels: [...new Set(body.labels.map((label) => label.toLocaleLowerCase()))],
     progress: 0,
     status: 'active' as const,
     dueDate: body.dueDate ?? null,

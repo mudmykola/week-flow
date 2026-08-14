@@ -6,6 +6,7 @@ defineProps<{
   user?: { name: string; email: string; avatarUrl: string | null } | null
   inboxCount: number
   todayCount: number
+  goalsCount: number
 }>()
 const emit = defineEmits<{ search: []; logout: [] }>()
 const mobileOpen = defineModel<boolean>('mobileOpen', { required: true })
@@ -97,6 +98,12 @@ const route = useRoute()
               class="rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)]"
               :class="collapsed ? 'lg:hidden' : ''"
               >{{ todayCount }}</span
+            >
+            <span
+              v-else-if="item.to === '/goals' && goalsCount"
+              class="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-xs font-semibold text-emerald-500"
+              :class="collapsed ? 'lg:absolute lg:top-1 lg:right-1 lg:min-w-4 lg:px-1 lg:text-[9px]' : ''"
+              >{{ goalsCount }}</span
             >
           </NuxtLink>
         </div>

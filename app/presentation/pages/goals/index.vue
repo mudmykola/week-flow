@@ -64,13 +64,32 @@ function urgencyClass(goal: Goal) {
         >
           <div class="flex items-start justify-between gap-3">
             <div>
-              <h3 class="font-display">{{ goal.title }}</h3>
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="font-display">{{ goal.title }}</h3>
+                <SemanticBadge
+                  :tone="goal.priority === 'high' ? 'danger' : goal.priority === 'low' ? 'info' : 'warning'"
+                  size="sm"
+                  >{{ $t(`task.priorityValue.${goal.priority}`) }}</SemanticBadge
+                >
+              </div>
               <p
                 v-if="goal.description"
                 class="text-secondary mt-1 text-sm"
               >
                 {{ goal.description }}
               </p>
+              <div
+                v-if="goal.labels.length"
+                class="mt-2 flex flex-wrap gap-1"
+              >
+                <SemanticBadge
+                  v-for="label in goal.labels"
+                  :key="label"
+                  tone="violet"
+                  size="sm"
+                  >{{ label }}</SemanticBadge
+                >
+              </div>
               <p
                 v-if="goal.projectName"
                 class="text-secondary mt-2 text-xs"
