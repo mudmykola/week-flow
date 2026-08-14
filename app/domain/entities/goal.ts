@@ -31,6 +31,12 @@ export interface CreateGoalInput {
 }
 
 export interface UpdateGoalInput {
+  title?: string
+  description?: string | null
+  assigneeId?: string | null
+  dueDate?: string | null
+  priority?: GoalPriority
+  labels?: string[]
   progress?: number
   status?: GoalStatus
   projectId?: string | null

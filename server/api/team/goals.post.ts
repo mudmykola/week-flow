@@ -1,9 +1,9 @@
-import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { useDb } from '../../db'
-import { goals, teamMembers } from '../../db/schema'
+import { goals } from '../../db/schema'
 import { requireManagedTeam } from '../../utils/teamAccess'
 import { logActivity } from '../../utils/activity'
+import { requireGoalAssignee } from '../../utils/goalAccess'
 
 const schema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -23,13 +23,7 @@ export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, schema.parse)
   const { manager, team } = await requireManagedTeam(event, body.teamId)
   const db = useDb(event)
-  if (body.assigneeId && body.assigneeId !== manager.id) {
-    const [member] = await db
-      .select()
-      .from(teamMembers)
-      .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, body.assigneeId)))
-    if (!member) throw createError({ statusCode: 400, statusMessage: 'Assignee is not a team member' })
-  }
+  await requireGoalAssignee(event, team.id, body.assigneeId)
   const now = Date.now()
   const goal = {
     id: crypto.randomUUID(),

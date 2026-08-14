@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { updateGoal } from '~/data/repositories/goalsRepository'
-import type { GoalPriority } from '~/domain/entities/goal'
+import { bulkUpdateGoals, deleteGoal, duplicateGoal, updateGoal } from '~/data/repositories/goalsRepository'
+import type { Goal, GoalPriority, UpdateGoalInput } from '~/domain/entities/goal'
 
 const { user } = useUserSession()
 const { t } = useI18n()
@@ -29,6 +29,11 @@ const goal = reactive({
   labelsInput: ''
 })
 const saving = ref(false)
+const editingGoal = ref<Goal | null>(null)
+const selectedGoalIds = ref<string[]>([])
+const bulkSaving = ref(false)
+const bulkDeadline = ref('')
+const confirmDeleteIds = ref<string[]>([])
 const goalAssignees = computed(() => {
   const members = data.value?.members ?? []
   if (!user.value || members.some((member) => member.id === user.value?.id)) return members
@@ -122,6 +127,77 @@ async function setProgress(id: string, progress: number) {
 async function linkProject(id: string, projectId: string | null) {
   await updateGoal(id, { projectId })
   await refresh()
+}
+
+async function syncGoals() {
+  await Promise.all([refresh(), goalsStore.loadGoals()])
+  broadcastSync('goals')
+}
+
+async function saveEditedGoal(patch: UpdateGoalInput) {
+  if (!editingGoal.value) return
+  saving.value = true
+  try {
+    await updateGoal(editingGoal.value.id, patch)
+    editingGoal.value = null
+    await syncGoals()
+    toast.add({ title: t('pages.team.goalUpdated'), color: 'success' })
+  } catch (error) {
+    report(error, t('pages.team.goalUpdateFailed'))
+  } finally {
+    saving.value = false
+  }
+}
+
+async function duplicateEditedGoal() {
+  if (!editingGoal.value) return
+  await duplicateGoal(editingGoal.value.id)
+  editingGoal.value = null
+  await syncGoals()
+  toast.add({ title: t('pages.team.goalDuplicated'), color: 'success' })
+}
+
+function requestDelete(ids: string[]) {
+  confirmDeleteIds.value = [...ids]
+}
+
+async function confirmDelete() {
+  const ids = [...confirmDeleteIds.value]
+  if (!ids.length) return
+  bulkSaving.value = true
+  try {
+    for (const id of ids) await deleteGoal(id)
+    confirmDeleteIds.value = []
+    selectedGoalIds.value = selectedGoalIds.value.filter((id) => !ids.includes(id))
+    if (editingGoal.value && ids.includes(editingGoal.value.id)) editingGoal.value = null
+    await syncGoals()
+    toast.add({ title: t('pages.team.goalsDeleted', { count: ids.length }), color: 'success' })
+  } catch (error) {
+    report(error, t('pages.team.goalDeleteFailed'))
+  } finally {
+    bulkSaving.value = false
+  }
+}
+
+async function applyBulk(patch: UpdateGoalInput) {
+  if (!selectedGoalIds.value.length) return
+  bulkSaving.value = true
+  try {
+    await bulkUpdateGoals(selectedGoalIds.value, patch)
+    await syncGoals()
+    toast.add({ title: t('pages.team.bulkUpdated'), color: 'success' })
+  } catch (error) {
+    report(error, t('pages.team.bulkFailed'))
+  } finally {
+    bulkSaving.value = false
+  }
+}
+
+function toggleAllGoals() {
+  selectedGoalIds.value =
+    selectedGoalIds.value.length === (data.value?.goals.length ?? 0)
+      ? []
+      : (data.value?.goals.map((item) => item.id) ?? [])
 }
 </script>
 
@@ -261,7 +337,106 @@ async function linkProject(id: string, projectId: string | null) {
             </div>
           </article>
           <article class="section-card">
-            <h2 class="font-display mb-3">{{ $t('pages.team.goals') }}</h2>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input
+                  v-if="data.goals.length"
+                  type="checkbox"
+                  :checked="selectedGoalIds.length === data.goals.length"
+                  :aria-label="$t('pages.team.selectAllGoals')"
+                  @change="toggleAllGoals"
+                />
+                <h2 class="font-display">{{ $t('pages.team.goals') }}</h2>
+                <span class="count-badge">{{ data.goals.length }}</span>
+              </div>
+              <span
+                v-if="selectedGoalIds.length"
+                class="text-secondary text-xs"
+                >{{ $t('pages.team.selectedGoals', { count: selectedGoalIds.length }) }}</span
+              >
+            </div>
+            <div
+              v-if="selectedGoalIds.length"
+              class="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-2"
+            >
+              <select
+                class="h-9 min-w-36 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-2 text-xs"
+                :aria-label="$t('pages.team.bulkAssignee')"
+                :disabled="bulkSaving"
+                @change="
+                  applyBulk({
+                    assigneeId:
+                      ($event.target as HTMLSelectElement).value === '__team__'
+                        ? null
+                        : ($event.target as HTMLSelectElement).value
+                  })
+                "
+              >
+                <option
+                  value=""
+                  disabled
+                  selected
+                >
+                  {{ $t('pages.team.bulkAssignee') }}
+                </option>
+                <option value="__team__">{{ $t('pages.team.teamGoal') }}</option>
+                <option
+                  v-for="member in goalAssignees"
+                  :key="member.id"
+                  :value="member.id"
+                >
+                  {{ member.name }}
+                </option>
+              </select>
+              <select
+                class="h-9 min-w-32 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-2 text-xs"
+                :aria-label="$t('pages.team.priority')"
+                :disabled="bulkSaving"
+                @change="applyBulk({ priority: ($event.target as HTMLSelectElement).value as GoalPriority })"
+              >
+                <option
+                  value=""
+                  disabled
+                  selected
+                >
+                  {{ $t('pages.team.priority') }}
+                </option>
+                <option value="low">{{ $t('task.priorityValue.low') }}</option>
+                <option value="medium">{{ $t('task.priorityValue.medium') }}</option>
+                <option value="high">{{ $t('task.priorityValue.high') }}</option>
+              </select>
+              <UButton
+                size="sm"
+                variant="soft"
+                icon="i-lucide-circle-check"
+                :loading="bulkSaving"
+                @click="applyBulk({ status: 'done' })"
+                >{{ $t('common.done') }}</UButton
+              >
+              <div class="flex items-center gap-1">
+                <input
+                  v-model="bulkDeadline"
+                  type="date"
+                  class="h-9 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-2 text-xs"
+                  :aria-label="$t('pages.team.deadline')"
+                />
+                <IconButton
+                  icon="i-lucide-calendar-check"
+                  :label="$t('pages.team.applyDeadline')"
+                  size="sm"
+                  :disabled="!bulkDeadline || bulkSaving"
+                  @click="applyBulk({ dueDate: bulkDeadline })"
+                />
+              </div>
+              <IconButton
+                class="ml-auto"
+                icon="i-lucide-trash-2"
+                :label="$t('pages.team.deleteSelected')"
+                variant="ghost"
+                size="sm"
+                @click="requestDelete(selectedGoalIds)"
+              />
+            </div>
             <EmptyState
               v-if="!data.goals.length"
               :title="$t('pages.team.goalsEmpty')"
@@ -275,10 +450,16 @@ async function linkProject(id: string, projectId: string | null) {
               <div
                 v-for="item in data.goals"
                 :key="item.id"
-                class="rounded-lg border border-[var(--color-panel-border)] p-3"
+                class="group rounded-lg border border-[var(--color-panel-border)] p-3 transition hover:border-[var(--color-accent)]/40"
               >
                 <div class="flex items-start justify-between gap-3">
-                  <div>
+                  <input
+                    v-model="selectedGoalIds"
+                    type="checkbox"
+                    :value="item.id"
+                    :aria-label="$t('pages.team.selectGoal', { title: item.title })"
+                  />
+                  <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                       <p class="text-sm font-semibold">{{ item.title }}</p>
                       <SemanticBadge
@@ -304,7 +485,23 @@ async function linkProject(id: string, projectId: string | null) {
                       >
                     </div>
                   </div>
-                  <strong class="text-sm text-[var(--color-accent)]">{{ item.progress }}%</strong>
+                  <div class="flex items-center gap-1">
+                    <strong class="text-sm text-[var(--color-accent)]">{{ item.progress }}%</strong>
+                    <IconButton
+                      icon="i-lucide-pencil"
+                      :label="$t('common.edit')"
+                      variant="ghost"
+                      size="sm"
+                      @click="editingGoal = item"
+                    />
+                    <IconButton
+                      icon="i-lucide-copy"
+                      :label="$t('common.duplicate')"
+                      variant="ghost"
+                      size="sm"
+                      @click="duplicateGoal(item.id).then(syncGoals)"
+                    />
+                  </div>
                 </div>
                 <div
                   v-if="item.projectId"
@@ -403,5 +600,40 @@ async function linkProject(id: string, projectId: string | null) {
         </aside>
       </section>
     </template>
+    <GoalEditor
+      :open="Boolean(editingGoal)"
+      :goal="editingGoal"
+      :members="goalAssignees"
+      :projects="projectsStore.projects"
+      :saving="saving"
+      @close="editingGoal = null"
+      @save="saveEditedGoal"
+      @duplicate="duplicateEditedGoal"
+      @delete="editingGoal && requestDelete([editingGoal.id])"
+    />
+    <Modal
+      :open="Boolean(confirmDeleteIds.length)"
+      :title="$t('pages.team.deleteGoalsTitle')"
+      size="sm"
+      @close="confirmDeleteIds = []"
+    >
+      <p class="text-secondary text-sm">
+        {{ $t('pages.team.deleteGoalsConfirm', { count: confirmDeleteIds.length }) }}
+      </p>
+      <template #footer>
+        <UButton
+          variant="ghost"
+          @click="confirmDeleteIds = []"
+          >{{ $t('common.cancel') }}</UButton
+        >
+        <UButton
+          color="error"
+          :loading="bulkSaving"
+          icon="i-lucide-trash-2"
+          @click="confirmDelete"
+          >{{ $t('common.delete') }}</UButton
+        >
+      </template>
+    </Modal>
   </div>
 </template>
