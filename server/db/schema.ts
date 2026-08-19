@@ -228,6 +228,33 @@ export const dailyReviews = sqliteTable(
   ]
 )
 
+export const reviewProgressEntries = sqliteTable(
+  'review_progress_entries',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    subtaskId: text('subtask_id').references(() => subtasks.id, { onDelete: 'set null' }),
+    workDate: text('work_date').notNull(),
+    kind: text('kind', { enum: ['progress', 'result', 'decision', 'blocker'] })
+      .notNull()
+      .default('progress'),
+    note: text('note').notNull(),
+    minutes: integer('minutes'),
+    nextStep: text('next_step'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull()
+  },
+  (table) => [
+    index('review_progress_owner_date_idx').on(table.ownerId, table.workDate),
+    index('review_progress_task_date_idx').on(table.taskId, table.workDate)
+  ]
+)
+
 export const comments = sqliteTable(
   'comments',
   {
@@ -461,3 +488,4 @@ export type Goal = typeof goals.$inferSelect
 export type StickyNote = typeof stickyNotes.$inferSelect
 export type InboxItem = typeof inboxItems.$inferSelect
 export type DailyReview = typeof dailyReviews.$inferSelect
+export type ReviewProgressEntry = typeof reviewProgressEntries.$inferSelect

@@ -13,6 +13,7 @@ export function accountDeletionStatements(userId: string) {
     single('DELETE FROM reminder_deliveries WHERE owner_id = ?'),
     single('DELETE FROM comments WHERE author_id = ?'),
     { sql: 'DELETE FROM daily_reviews WHERE owner_id = ? OR user_id = ?', values: [userId, userId] },
+    single('DELETE FROM review_progress_entries WHERE owner_id = ?'),
     single('DELETE FROM focus_sessions WHERE owner_id = ?'),
     single('DELETE FROM saved_views WHERE owner_id = ?'),
     single('DELETE FROM inbox_items WHERE owner_id = ?'),

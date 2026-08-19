@@ -13,6 +13,7 @@ import {
   projectMembers,
   projects,
   reminderDeliveries,
+  reviewProgressEntries,
   savedViews,
   stickyNotes,
   subtasks,
@@ -55,7 +56,8 @@ export default defineEventHandler(async (event) => {
     managedTeams,
     teamMemberships,
     createdGoals,
-    activity
+    activity,
+    reviewProgress
   ] = await Promise.all([
     db.select().from(automationExecutions).where(eq(automationExecutions.ownerId, user.id)),
     db.select().from(dailyReviews).where(eq(dailyReviews.ownerId, user.id)),
@@ -68,7 +70,8 @@ export default defineEventHandler(async (event) => {
     db.select().from(teams).where(eq(teams.managerId, user.id)),
     db.select().from(teamMembers).where(eq(teamMembers.userId, user.id)),
     db.select().from(goals).where(eq(goals.createdBy, user.id)),
-    db.select().from(activityLogs).where(eq(activityLogs.ownerId, user.id))
+    db.select().from(activityLogs).where(eq(activityLogs.ownerId, user.id)),
+    db.select().from(reviewProgressEntries).where(eq(reviewProgressEntries.ownerId, user.id))
   ])
 
   if (format === 'json') {
@@ -95,7 +98,8 @@ export default defineEventHandler(async (event) => {
       teams: managedTeams,
       teamMemberships,
       goals: createdGoals,
-      activityLogs: activity
+      activityLogs: activity,
+      reviewProgressEntries: reviewProgress
     }
   }
 

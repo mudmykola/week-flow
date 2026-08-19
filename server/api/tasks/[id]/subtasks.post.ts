@@ -27,11 +27,12 @@ export default defineEventHandler(async (event) => {
   }
   await db.insert(subtasks).values(subtask)
   await logActivity(event, {
-    ownerId: task.ownerId!,
+    ownerId: task.assigneeId ?? task.ownerId!,
     actorId: user.id,
     action: 'subtask.created',
     entityType: 'task',
-    entityId: taskId
+    entityId: taskId,
+    metadata: { subtaskId: subtask.id, subtaskTitle: subtask.title, status: subtask.status }
   })
   return subtask
 })

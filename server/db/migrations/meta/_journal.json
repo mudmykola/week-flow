@@ -141,6 +141,13 @@
       "when": 1786693203135,
       "tag": "0019_ordinary_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1787147716897,
+      "tag": "0020_married_surge",
+      "breakpoints": true
     }
   ]
 }

@@ -182,4 +182,89 @@ describe('daily review service', () => {
     expect(review.metrics.estimatedMinutes).toBe(90)
     expect(review.completedSubtasks).toHaveLength(1)
   })
+
+  it('keeps a per-task journal for multi-day work, subtasks, focus and next steps', () => {
+    const task = makeTask({ id: 'course', title: 'Complete Anthropic course', status: 'in_progress' })
+    const review = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      tasks: [task],
+      taskSubtasks: [{ id: 'module-2', taskId: task.id, title: 'Module 2', status: 'in_progress' }],
+      progressEntries: [
+        {
+          id: 'entry-1',
+          ownerId: 'user',
+          taskId: task.id,
+          subtaskId: 'module-2',
+          subtaskTitle: 'Module 2',
+          workDate: '2026-08-11',
+          kind: 'progress',
+          note: 'Watched the tool-use lesson and wrote notes',
+          minutes: 50,
+          nextStep: 'Complete the module exercise',
+          createdAt: dayStart + 2000,
+          updatedAt: dayStart + 2000
+        }
+      ],
+      progressHistory: [
+        {
+          id: 'entry-previous',
+          ownerId: 'user',
+          taskId: task.id,
+          subtaskId: null,
+          workDate: '2026-08-10',
+          kind: 'decision',
+          note: 'Selected the course track',
+          minutes: 10,
+          nextStep: 'Start module 2',
+          createdAt: dayStart - 86_400_000,
+          updatedAt: dayStart - 86_400_000
+        },
+        {
+          id: 'entry-1',
+          ownerId: 'user',
+          taskId: task.id,
+          subtaskId: 'module-2',
+          subtaskTitle: 'Module 2',
+          workDate: '2026-08-11',
+          kind: 'progress',
+          note: 'Watched the tool-use lesson and wrote notes',
+          minutes: 50,
+          nextStep: 'Complete the module exercise',
+          createdAt: dayStart + 2000,
+          updatedAt: dayStart + 2000
+        }
+      ],
+      activityEvents: [
+        {
+          id: 'activity-1',
+          taskId: task.id,
+          action: 'subtask.updated',
+          metadata: { subtaskTitle: 'Module 2' },
+          createdAt: dayStart + 1000
+        }
+      ],
+      focusByTask: [{ taskId: task.id, minutes: 50 }]
+    })
+
+    expect(review.journals).toHaveLength(1)
+    expect(review.journals[0]).toMatchObject({ task: { id: 'course' }, focusMinutes: 50, activeDays: 2 })
+    expect(review.journals[0]?.entries[0]?.subtaskTitle).toBe('Module 2')
+    expect(review.journals[0]?.historyEntries.map((entry) => entry.workDate)).toEqual(['2026-08-11', '2026-08-10'])
+    expect(review.availableTasks).toEqual([task])
+    expect(review.taskSubtasks).toHaveLength(1)
+
+    const standup = generateStandup(review, {
+      yesterday: 'Yesterday',
+      today: 'Today',
+      blockers: 'Blockers',
+      emptyYesterday: 'none',
+      emptyToday: 'none',
+      emptyBlockers: 'none'
+    })
+    expect(standup).toContain('Watched the tool-use lesson')
+    expect(standup).toContain('Complete the module exercise')
+  })
 })

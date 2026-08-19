@@ -2,22 +2,30 @@
 import { addDays, format, parseISO, subDays } from 'date-fns'
 import { enUS, uk } from 'date-fns/locale'
 import { fetchAllTasks, moveWeekTasks } from '~/data/repositories/tasksRepository'
-import { fetchDailyReview, fetchReviewHistory, saveDailyReview } from '~/data/repositories/reviewsRepository'
+import {
+  createReviewProgress,
+  deleteReviewProgress,
+  fetchDailyReview,
+  fetchReviewHistory,
+  saveDailyReview,
+  updateReviewProgress
+} from '~/data/repositories/reviewsRepository'
 import type { DailyReviewData, ReviewTask, SavedDailyReview } from '~/domain/entities/review'
 import type { Task } from '~/domain/entities/task'
 import { generateDailyReflection, generateStandup } from '~/domain/services/dailyReview'
 import { localDateKey, localDayRange } from '~/domain/services/today'
 import { getCurrentWeek, getNextWeek } from '~/domain/services/week'
 
-type Tab = 'daily' | 'weekly' | 'history' | 'team'
+type Tab = 'daily' | 'weekly' | 'history'
 type TeamMember = { id: string; name: string; avatarUrl: string | null; taskActive: number; taskOverdue: number }
 
 const route = useRoute()
 const { locale, t } = useI18n()
+const { report } = useApiFeedback()
 const today = localDateKey()
 const selectedDate = ref(typeof route.query.date === 'string' ? route.query.date : today)
 const tab = ref<Tab>(
-  ['daily', 'weekly', 'history', 'team'].includes(String(route.query.tab)) ? (route.query.tab as Tab) : 'daily'
+  ['daily', 'weekly', 'history'].includes(String(route.query.tab)) ? (route.query.tab as Tab) : 'daily'
 )
 const daily = ref<DailyReviewData | null>(null)
 const previous = ref<DailyReviewData | null>(null)
@@ -32,6 +40,7 @@ const loadError = ref(false)
 const saving = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const copied = ref(false)
 const moved = ref(false)
+const progressSaving = ref(false)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 
 const dateLocale = computed(() => (locale.value === 'en' ? enUS : uk))
@@ -69,6 +78,8 @@ const reportData = computed<DailyReviewData | null>(() => {
     workedOn: previous.value?.workedOn || [],
     carriedOver: previous.value?.carriedOver || [],
     completedSubtasks: previous.value?.completedSubtasks || [],
+    progressEntries: previous.value?.progressEntries || [],
+    journals: previous.value?.journals || [],
     blockers: [
       ...new Map([...(previous.value?.blockers || []), ...daily.value.blockers].map((item) => [item.id, item])).values()
     ]
@@ -85,6 +96,19 @@ const weeklyScore = computed(() =>
 )
 const canEdit = computed(() => !selectedUser.value)
 const weeklyReflections = computed(() => history.value.slice(0, 7).filter((item) => item.content.trim()))
+const dailyTimelineTasks = computed(() => {
+  if (!daily.value) return []
+  return [
+    ...new Map(
+      [
+        ...daily.value.journals.map((item) => item.task),
+        ...daily.value.completed,
+        ...daily.value.workedOn,
+        ...daily.value.planned
+      ].map((task) => [task.id, task])
+    ).values()
+  ]
+})
 
 onMounted(async () => {
   await Promise.all([load(), loadWeekly(), loadTeam()])
@@ -157,7 +181,9 @@ function generatedText(selected: DailyReviewData, prior: DailyReviewData) {
       completed: prior.completed,
       workedOn: prior.workedOn,
       carriedOver: prior.carriedOver,
-      completedSubtasks: prior.completedSubtasks
+      completedSubtasks: prior.completedSubtasks,
+      progressEntries: prior.progressEntries,
+      journals: prior.journals
     },
     reflectionLabels.value
   )
@@ -229,13 +255,46 @@ async function carryOver() {
   await loadWeekly()
   useToast().add({ title: t('pages.review.moved', { count: result.moved }), color: 'success' })
 }
+async function addProgress(input: Omit<Parameters<typeof createReviewProgress>[0], 'workDate'>) {
+  progressSaving.value = true
+  try {
+    await createReviewProgress({ ...input, workDate: selectedDate.value })
+    await load()
+    useToast().add({ title: t('pages.review.progress.created'), color: 'success' })
+  } catch (error) {
+    report(error, t('pages.review.progress.saveFailed'))
+  } finally {
+    progressSaving.value = false
+  }
+}
+async function editProgress(id: string, patch: Parameters<typeof updateReviewProgress>[1]) {
+  progressSaving.value = true
+  try {
+    await updateReviewProgress(id, patch)
+    await load()
+  } catch (error) {
+    report(error, t('pages.review.progress.saveFailed'))
+  } finally {
+    progressSaving.value = false
+  }
+}
+async function removeProgress(id: string) {
+  progressSaving.value = true
+  try {
+    await deleteReviewProgress(id)
+    await load()
+  } catch (error) {
+    report(error, t('pages.review.progress.deleteFailed'))
+  } finally {
+    progressSaving.value = false
+  }
+}
 function showHistory(item: SavedDailyReview) {
   selectedDate.value = item.reviewDate
   tab.value = 'daily'
 }
 function selectMember(id: string | null) {
   selectedUser.value = id
-  tab.value = id ? 'team' : 'daily'
   syncRoute()
 }
 </script>
@@ -270,16 +329,9 @@ function selectMember(id: string | null) {
           :name="item === 'daily' ? 'i-lucide-sun' : item === 'weekly' ? 'i-lucide-calendar-range' : 'i-lucide-history'"
         /><span>{{ $t(`pages.review.v2.tabs.${item}`) }}</span>
       </button>
-      <button
-        v-if="teamMembers.length"
-        :class="{ 'is-active': tab === 'team' }"
-        @click="tab = 'team'"
-      >
-        <UIcon name="i-lucide-users" /><span>{{ $t('pages.review.v2.tabs.team') }}</span>
-      </button>
     </nav>
 
-    <template v-if="tab === 'daily' || tab === 'team'">
+    <template v-if="tab === 'daily'">
       <section class="review-datebar surface-card">
         <IconButton
           icon="i-lucide-chevron-left"
@@ -308,21 +360,21 @@ function selectMember(id: string | null) {
           :disabled="selectedDate >= today"
           @click="changeDate(1)"
         />
-      </section>
-      <FormSelect
-        v-if="tab === 'team'"
-        :model-value="selectedUser"
-        class="review-member"
-        :placeholder="$t('pages.review.v2.myStandup')"
-        @update:model-value="selectMember($event ?? null)"
-        ><option
-          v-for="member in teamMembers"
-          :key="member.id"
-          :value="member.id"
+        <FormSelect
+          v-if="teamMembers.length"
+          :model-value="selectedUser"
+          class="review-member"
+          @update:model-value="selectMember($event ?? null)"
+          ><option :value="null">{{ $t('pages.review.v2.myStandup') }}</option>
+          <option
+            v-for="member in teamMembers"
+            :key="member.id"
+            :value="member.id"
+          >
+            {{ member.name }} · {{ member.taskActive }} / {{ member.taskOverdue }}
+          </option></FormSelect
         >
-          {{ member.name }} · {{ member.taskActive }} / {{ member.taskOverdue }}
-        </option></FormSelect
-      >
+      </section>
       <USkeleton
         v-if="loading"
         class="h-[38rem] rounded-2xl"
@@ -334,110 +386,42 @@ function selectMember(id: string | null) {
         icon="i-lucide-triangle-alert"
         ><AppButton @click="load">{{ $t('common.tryAgain') }}</AppButton></EmptyState
       >
-      <template v-else-if="reportData">
-        <section class="review-metrics">
-          <MetricCard
-            :label="$t('pages.review.v2.completedYesterday')"
-            :value="reportData.completed.length"
-            icon="i-lucide-circle-check-big"
-            tone="success"
-          />
-          <MetricCard
-            :label="$t('pages.review.v2.plannedToday')"
-            :value="reportData.planned.length"
-            icon="i-lucide-list-todo"
-            tone="accent"
-          />
-          <MetricCard
-            :label="$t('pages.review.v2.blockers')"
-            :value="reportData.blockers.length"
-            icon="i-lucide-ban"
-            :tone="reportData.blockers.length ? 'warning' : 'success'"
-          />
-          <MetricCard
-            :label="$t('pages.review.v2.focus')"
-            :value="`${reportData.focusMinutes}m`"
-            icon="i-lucide-timer"
-            tone="accent"
-          />
-        </section>
-        <section class="review-board">
-          <ReviewTaskSection
-            :title="$t('pages.review.v2.yesterday')"
-            icon="i-lucide-check-check"
-            tone="success"
-            :tasks="reportData.completed"
-            :empty="$t('pages.review.v2.emptyResults')"
+      <template v-else-if="daily && reportData">
+        <ReviewSummaryStrip
+          :tasks="dailyTimelineTasks.length"
+          :results="
+            daily.completed.length +
+            daily.completedSubtasks.length +
+            daily.progressEntries.filter((item) => item.kind === 'result').length
+          "
+          :blockers="daily.blockers.length + daily.progressEntries.filter((item) => item.kind === 'blocker').length"
+          :focus-minutes="daily.focusMinutes"
+        />
+        <section class="review-daily-layout">
+          <ReviewTaskTimeline
+            :journals="daily.journals"
+            :tasks="dailyTimelineTasks"
+            :available-tasks="daily.availableTasks"
+            :subtasks="daily.taskSubtasks"
+            :can-edit="canEdit"
+            :saving="progressSaving"
+            @create="addProgress"
+            @update="editProgress"
+            @delete="removeProgress"
             @open="openTask"
           />
-          <ReviewTaskSection
-            :title="$t('pages.review.v2.today')"
-            icon="i-lucide-sun"
-            tone="accent"
-            :tasks="reportData.planned"
-            :empty="$t('pages.review.v2.emptyNextFocus')"
-            @open="openTask"
-          />
-          <ReviewTaskSection
-            :title="$t('pages.review.v2.blockers')"
-            icon="i-lucide-triangle-alert"
-            tone="warning"
-            :tasks="reportData.blockers"
-            :empty="$t('pages.review.v2.emptyBlockers')"
-            @open="openTask"
+          <ReviewStandupPanel
+            :standup="standup"
+            :content="content"
+            :saving="saving"
+            :copied="copied"
+            :can-edit="canEdit"
+            @copy="copy(standup)"
+            @regenerate="resetReflection"
+            @finish="persist('submitted')"
+            @update:content="content = $event"
           />
         </section>
-        <section class="review-detail-grid">
-          <AppSurface
-            ><h2><UIcon name="i-lucide-git-compare-arrows" />{{ $t('pages.review.v2.dayDiff') }}</h2>
-            <ul>
-              <li>{{ $t('pages.review.v2.doneCount', { count: reportData.completed.length }) }}</li>
-              <li>{{ $t('pages.review.v2.carriedCount', { count: reportData.carriedOver.length }) }}</li>
-              <li>{{ $t('pages.review.v2.subtaskCount', { count: reportData.completedSubtasks.length }) }}</li>
-              <li>{{ $t('pages.review.v2.planPercent', { percent: reportData.metrics.completionPercent }) }}</li>
-            </ul></AppSurface
-          >
-          <AppSurface
-            ><div class="review-standup__head">
-              <h2><UIcon name="i-lucide-message-square-text" />{{ $t('pages.review.v2.readyStandup') }}</h2>
-              <IconButton
-                icon="i-lucide-copy"
-                :label="$t('pages.review.v2.copyStandup')"
-                @click="copy(standup)"
-              />
-            </div>
-            <pre>{{ standup }}</pre>
-          </AppSurface>
-        </section>
-        <AppSurface
-          v-if="canEdit"
-          class="review-reflection"
-        >
-          <div class="review-reflection__head">
-            <div>
-              <h2><UIcon name="i-lucide-sparkles" />{{ $t('pages.review.v2.reflection') }}</h2>
-              <small :class="`is-${saving}`">{{ $t(`pages.review.v2.save.${saving}`) }}</small>
-            </div>
-            <div>
-              <AppButton
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-refresh-cw"
-                @click="resetReflection"
-                >{{ $t('pages.review.v2.regenerate') }}</AppButton
-              ><AppButton
-                size="sm"
-                icon="i-lucide-check"
-                @click="persist('submitted')"
-                >{{ $t('pages.review.v2.finish') }}</AppButton
-              >
-            </div>
-          </div>
-          <FormTextarea
-            v-model="content"
-            rows="15"
-          />
-        </AppSurface>
       </template>
     </template>
 
@@ -600,8 +584,15 @@ function selectMember(id: string | null) {
   font-size: 0.7rem;
 }
 .review-member {
-  max-width: 22rem;
-  margin: 0 0 0.65rem auto;
+  width: 13rem;
+  margin-left: 0.25rem;
+}
+.review-daily-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 23rem);
+  gap: 0.65rem;
+  align-items: start;
+  margin-bottom: 1rem;
 }
 .review-metrics {
   display: grid;
@@ -766,6 +757,12 @@ function selectMember(id: string | null) {
   background: rgb(16 185 129/0.1);
 }
 @media (max-width: 1000px) {
+  .review-daily-layout {
+    grid-template-columns: 1fr;
+  }
+  .review-daily-layout :deep(.review-standup-panel) {
+    position: static;
+  }
   .review-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -784,8 +781,9 @@ function selectMember(id: string | null) {
     flex: 1;
     justify-content: center;
   }
-  .review-tabs button span {
-    display: none;
+  .review-tabs button {
+    padding-inline: 0.35rem;
+    font-size: 0.66rem;
   }
   .review-datebar {
     flex-wrap: wrap;
@@ -797,6 +795,10 @@ function selectMember(id: string | null) {
   }
   .review-datebar input {
     flex: 1;
+  }
+  .review-member {
+    width: 100%;
+    margin-left: 0;
   }
   .review-metrics {
     gap: 0.35rem;

@@ -1,7 +1,7 @@
 import { and, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
 import { buildDailyReview } from '../../../app/domain/services/dailyReview'
 import { useDb } from '../../db'
-import { activityLogs, focusSessions, projects, subtasks, tasks } from '../../db/schema'
+import { activityLogs, focusSessions, projects, reviewProgressEntries, subtasks, tasks } from '../../db/schema'
 import { dateSchema } from '../../utils/validators'
 import { resolveReviewUser } from '../../utils/reviewAccess'
 
@@ -66,10 +66,19 @@ export default defineEventHandler(async (event) => {
     .where(and(isNull(tasks.archivedAt), or(eq(tasks.ownerId, target.id), eq(tasks.assigneeId, target.id))))
 
   const taskIds = rows.map((item) => item.id)
-  const [activity, completedSubtasks, focus] = await Promise.all([
+  const historyStart = new Date(`${date}T12:00:00`)
+  historyStart.setDate(historyStart.getDate() - 30)
+  const historyStartDate = historyStart.toISOString().slice(0, 10)
+  const [activity, progressHistory, completedSubtasks, focus, progressEntries, taskSubtasks] = await Promise.all([
     taskIds.length
       ? db
-          .select({ entityId: activityLogs.entityId })
+          .select({
+            id: activityLogs.id,
+            entityId: activityLogs.entityId,
+            action: activityLogs.action,
+            metadata: activityLogs.metadata,
+            createdAt: activityLogs.createdAt
+          })
           .from(activityLogs)
           .where(
             and(
@@ -83,12 +92,39 @@ export default defineEventHandler(async (event) => {
       : [],
     taskIds.length
       ? db
+          .select({
+            id: reviewProgressEntries.id,
+            ownerId: reviewProgressEntries.ownerId,
+            taskId: reviewProgressEntries.taskId,
+            subtaskId: reviewProgressEntries.subtaskId,
+            subtaskTitle: subtasks.title,
+            workDate: reviewProgressEntries.workDate,
+            kind: reviewProgressEntries.kind,
+            note: reviewProgressEntries.note,
+            minutes: reviewProgressEntries.minutes,
+            nextStep: reviewProgressEntries.nextStep,
+            createdAt: reviewProgressEntries.createdAt,
+            updatedAt: reviewProgressEntries.updatedAt
+          })
+          .from(reviewProgressEntries)
+          .leftJoin(subtasks, eq(subtasks.id, reviewProgressEntries.subtaskId))
+          .where(
+            and(
+              eq(reviewProgressEntries.ownerId, target.id),
+              gte(reviewProgressEntries.workDate, historyStartDate),
+              lte(reviewProgressEntries.workDate, date),
+              inArray(reviewProgressEntries.taskId, taskIds)
+            )
+          )
+      : [],
+    taskIds.length
+      ? db
           .select({ id: subtasks.id, taskId: subtasks.taskId, title: subtasks.title, doneAt: subtasks.doneAt })
           .from(subtasks)
           .where(and(inArray(subtasks.taskId, taskIds), gte(subtasks.doneAt, dayStart), lte(subtasks.doneAt, dayEnd)))
       : [],
     db
-      .select({ elapsedSeconds: focusSessions.elapsedSeconds })
+      .select({ taskId: focusSessions.taskId, elapsedSeconds: focusSessions.elapsedSeconds })
       .from(focusSessions)
       .where(
         and(
@@ -98,17 +134,69 @@ export default defineEventHandler(async (event) => {
           gte(focusSessions.startedAt, dayStart),
           lte(focusSessions.startedAt, dayEnd)
         )
-      )
+      ),
+    taskIds.length
+      ? db
+          .select({
+            id: reviewProgressEntries.id,
+            ownerId: reviewProgressEntries.ownerId,
+            taskId: reviewProgressEntries.taskId,
+            subtaskId: reviewProgressEntries.subtaskId,
+            subtaskTitle: subtasks.title,
+            workDate: reviewProgressEntries.workDate,
+            kind: reviewProgressEntries.kind,
+            note: reviewProgressEntries.note,
+            minutes: reviewProgressEntries.minutes,
+            nextStep: reviewProgressEntries.nextStep,
+            createdAt: reviewProgressEntries.createdAt,
+            updatedAt: reviewProgressEntries.updatedAt
+          })
+          .from(reviewProgressEntries)
+          .leftJoin(subtasks, eq(subtasks.id, reviewProgressEntries.subtaskId))
+          .where(
+            and(
+              eq(reviewProgressEntries.ownerId, target.id),
+              eq(reviewProgressEntries.workDate, date),
+              inArray(reviewProgressEntries.taskId, taskIds)
+            )
+          )
+      : [],
+    taskIds.length
+      ? db
+          .select({ id: subtasks.id, taskId: subtasks.taskId, title: subtasks.title, status: subtasks.status })
+          .from(subtasks)
+          .where(inArray(subtasks.taskId, taskIds))
+      : []
   ])
   return buildDailyReview({
     date,
     user: target,
     tasks: rows,
-    workedTaskIds: [...new Set(activity.map((item) => item.entityId))],
+    workedTaskIds: [
+      ...new Set([
+        ...activity.map((item) => item.entityId),
+        ...progressEntries.map((item) => item.taskId),
+        ...completedSubtasks.map((item) => item.taskId),
+        ...focus.map((item) => item.taskId).filter((item): item is string => Boolean(item))
+      ])
+    ],
+    activityEvents: activity.map((item) => ({
+      id: item.id,
+      taskId: item.entityId,
+      action: item.action,
+      metadata: item.metadata,
+      createdAt: item.createdAt
+    })),
     completedSubtasks: completedSubtasks
       .filter((item) => item.doneAt !== null)
       .map((item) => ({ ...item, doneAt: item.doneAt! })),
     focusMinutes: Math.round(focus.reduce((sum, item) => sum + item.elapsedSeconds, 0) / 60),
+    focusByTask: focus
+      .filter((item): item is typeof item & { taskId: string } => Boolean(item.taskId))
+      .map((item) => ({ taskId: item.taskId, minutes: Math.round(item.elapsedSeconds / 60) })),
+    progressEntries,
+    progressHistory,
+    taskSubtasks,
     dayStart,
     dayEnd
   })

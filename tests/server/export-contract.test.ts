@@ -12,6 +12,7 @@ describe('account export contract', () => {
     'subtasks',
     'comments',
     'dailyReviews',
+    'reviewProgressEntries',
     'reminderDeliveries',
     'focusSessions',
     'savedViews',

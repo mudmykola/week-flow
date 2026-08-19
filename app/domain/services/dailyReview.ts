@@ -7,6 +7,17 @@ export type DailyReviewSource = {
   tasks: ReviewTask[]
   workedTaskIds?: string[]
   completedSubtasks?: DailyReviewData['completedSubtasks']
+  taskSubtasks?: DailyReviewData['taskSubtasks']
+  progressEntries?: DailyReviewData['progressEntries']
+  progressHistory?: DailyReviewData['progressHistory']
+  activityEvents?: Array<{
+    id: string
+    taskId: string
+    action: string
+    metadata: Record<string, unknown>
+    createdAt: number
+  }>
+  focusByTask?: Array<{ taskId: string; minutes: number }>
   focusMinutes?: number
   dayStart?: number
   dayEnd?: number
@@ -33,6 +44,46 @@ export function buildDailyReview(source: DailyReviewSource): DailyReviewData {
       task.status !== 'done' && (Boolean(task.blockedByTaskId) || Boolean(task.dueDate && task.dueDate < source.date))
   )
   const plannedTotal = planned.length + completed.filter((task) => task.plannedDate === source.date).length
+  const progressEntries = source.progressEntries || []
+  const progressHistory = source.progressHistory || progressEntries
+  const journalTaskIds = new Set([
+    ...progressEntries.map((entry) => entry.taskId),
+    ...(source.completedSubtasks || []).map((entry) => entry.taskId),
+    ...(source.activityEvents || []).map((entry) => entry.taskId),
+    ...(source.focusByTask || []).map((entry) => entry.taskId)
+  ])
+  const journals = source.tasks
+    .filter((task) => journalTaskIds.has(task.id))
+    .map((task) => ({
+      task,
+      entries: progressEntries.filter((entry) => entry.taskId === task.id).sort((a, b) => b.createdAt - a.createdAt),
+      historyEntries: progressHistory
+        .filter((entry) => entry.taskId === task.id)
+        .sort((a, b) => b.workDate.localeCompare(a.workDate) || b.createdAt - a.createdAt),
+      activeDays: new Set(progressHistory.filter((entry) => entry.taskId === task.id).map((entry) => entry.workDate))
+        .size,
+      completedSubtasks: (source.completedSubtasks || []).filter((entry) => entry.taskId === task.id),
+      activity: (source.activityEvents || [])
+        .filter((entry) => entry.taskId === task.id)
+        .map(({ taskId: _taskId, ...entry }) => entry)
+        .sort((a, b) => b.createdAt - a.createdAt),
+      focusMinutes: (source.focusByTask || [])
+        .filter((entry) => entry.taskId === task.id)
+        .reduce((sum, entry) => sum + entry.minutes, 0)
+    }))
+    .sort((a, b) => {
+      const left = Math.max(
+        a.entries[0]?.createdAt || 0,
+        a.completedSubtasks[0]?.doneAt || 0,
+        a.activity[0]?.createdAt || 0
+      )
+      const right = Math.max(
+        b.entries[0]?.createdAt || 0,
+        b.completedSubtasks[0]?.doneAt || 0,
+        b.activity[0]?.createdAt || 0
+      )
+      return right - left
+    })
   return {
     date: source.date,
     user: source.user,
@@ -41,7 +92,12 @@ export function buildDailyReview(source: DailyReviewSource): DailyReviewData {
     carriedOver,
     planned,
     blockers,
+    availableTasks: source.tasks,
     completedSubtasks: source.completedSubtasks || [],
+    taskSubtasks: source.taskSubtasks || [],
+    progressEntries,
+    progressHistory,
+    journals,
     focusMinutes: source.focusMinutes || 0,
     metrics: {
       planned: plannedTotal,
@@ -60,13 +116,25 @@ export function generateDailyReflection(data: DailyReviewData, labels: Reflectio
       labels.results,
       [
         ...data.completed.map((task) => task.title),
-        ...data.completedSubtasks.map((item) => `${item.title} (${labels.subtask})`)
+        ...data.completedSubtasks.map((item) => `${item.title} (${labels.subtask})`),
+        ...data.progressEntries
+          .filter((entry) => entry.kind === 'result' || entry.kind === 'progress')
+          .map((entry) => entry.note)
       ],
       labels.emptyResults
     ),
     section(
       labels.workedOn,
-      data.workedOn.map((task) => task.title),
+      [
+        ...data.journals.map((journal) =>
+          journal.entries.length
+            ? `${journal.task.title}: ${journal.entries.map((entry) => entry.note).join('; ')}`
+            : journal.task.title
+        ),
+        ...data.workedOn
+          .filter((task) => !data.journals.some((journal) => journal.task.id === task.id))
+          .map((task) => task.title)
+      ],
       labels.emptyWorkedOn
     ),
     section(
@@ -95,17 +163,32 @@ export function generateStandup(data: DailyReviewData, labels: StandupLabels) {
   return [
     section(
       labels.yesterday,
-      data.completed.map((task) => task.title),
+      [
+        ...data.journals.map((journal) =>
+          journal.entries.length
+            ? `${journal.task.title}: ${journal.entries.map((entry) => entry.note).join('; ')}`
+            : journal.task.title
+        ),
+        ...data.completed
+          .filter((task) => !data.journals.some((journal) => journal.task.id === task.id))
+          .map((task) => task.title)
+      ],
       labels.emptyYesterday
     ),
     section(
       labels.today,
-      data.planned.map((task) => task.title),
+      [
+        ...data.progressEntries.map((entry) => entry.nextStep).filter((item): item is string => Boolean(item)),
+        ...data.planned.map((task) => task.title)
+      ],
       labels.emptyToday
     ),
     section(
       labels.blockers,
-      data.blockers.map((task) => task.title),
+      [
+        ...data.progressEntries.filter((entry) => entry.kind === 'blocker').map((entry) => entry.note),
+        ...data.blockers.map((task) => task.title)
+      ],
       labels.emptyBlockers
     )
   ].join('\n\n')
