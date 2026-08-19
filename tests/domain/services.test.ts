@@ -60,4 +60,12 @@ describe('domain services', () => {
 
     expect(grouped.map((item) => item.id)).toEqual(['3', '2', '1'])
   })
+
+  it('never merges matching updates from different tasks', () => {
+    const grouped = groupTaskActivity([
+      { id: '2', entityId: 'task-2', action: 'task.updated', actorName: 'Mykola', metadata: {}, createdAt: 101_000 },
+      { id: '1', entityId: 'task-1', action: 'task.updated', actorName: 'Mykola', metadata: {}, createdAt: 100_000 }
+    ])
+    expect(grouped).toHaveLength(2)
+  })
 })

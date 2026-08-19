@@ -1,4 +1,4 @@
-import type { ActivityFeedItem } from '~/domain/services/activityFeed'
+import type { ActivityFeedItem, ActivityScope } from '~/domain/services/activityFeed'
 
 export interface ActivityFiltersState {
   search: string
@@ -7,6 +7,7 @@ export interface ActivityFiltersState {
   actor: string
   project: string
   period: string
+  scope: ActivityScope
 }
 
 export function useActivityFeed() {
@@ -15,13 +16,15 @@ export function useActivityFeed() {
   const pending = ref(false)
   const loadingMore = ref(false)
   const error = ref<string | null>(null)
+  const incoming = ref<ActivityFeedItem[]>([])
   const filters = reactive<ActivityFiltersState>({
     search: '',
     action: '',
     entity: '',
     actor: '',
     project: '',
-    period: '30'
+    period: '30',
+    scope: 'mine'
   })
 
   async function request(cursor?: string | null) {
@@ -33,6 +36,7 @@ export function useActivityFeed() {
         actor: filters.actor || undefined,
         project: filters.project || undefined,
         period: filters.period || undefined,
+        scope: filters.scope,
         cursor: cursor || undefined
       }
     })
@@ -44,12 +48,30 @@ export function useActivityFeed() {
     try {
       const response = await request()
       items.value = response.items
+      incoming.value = []
       nextCursor.value = response.nextCursor
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Activity load failed'
     } finally {
       pending.value = false
     }
+  }
+
+  async function checkForNew() {
+    if (pending.value || loadingMore.value) return
+    try {
+      const response = await request()
+      const existing = new Set(items.value.map((item) => item.id))
+      incoming.value = response.items.filter((item) => !existing.has(item.id))
+    } catch {
+      // Background refresh must never replace a usable feed with an error state.
+    }
+  }
+
+  function applyIncoming() {
+    const known = new Set(items.value.map((item) => item.id))
+    items.value = [...incoming.value.filter((item) => !known.has(item.id)), ...items.value]
+    incoming.value = []
   }
 
   async function loadMore() {
@@ -68,5 +90,17 @@ export function useActivityFeed() {
 
   const refresh = useDebounceFn(load, 250)
   watch(filters, refresh, { deep: true })
-  return { items, nextCursor, pending, loadingMore, error, filters, load, loadMore }
+  return {
+    items,
+    incoming,
+    nextCursor,
+    pending,
+    loadingMore,
+    error,
+    filters,
+    load,
+    loadMore,
+    checkForNew,
+    applyIncoming
+  }
 }

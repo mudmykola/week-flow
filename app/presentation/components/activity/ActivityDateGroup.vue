@@ -2,7 +2,7 @@
 import type { ActivityDateGroup, ActivityFeedItem } from '~/domain/services/activityFeed'
 import { activityDateKey } from '~/domain/services/activityFeed'
 
-const props = defineProps<{ group: ActivityDateGroup }>()
+const props = defineProps<{ group: ActivityDateGroup; lastSeen?: number }>()
 const emit = defineEmits<{ open: [item: ActivityFeedItem] }>()
 const { t, locale } = useI18n()
 const label = computed(() => {
@@ -28,6 +28,7 @@ const label = computed(() => {
         v-for="item in group.items"
         :key="item.id"
         :item="item"
+        :unread="Boolean(lastSeen && item.createdAt > lastSeen)"
         @open="emit('open', $event)"
       />
     </div>

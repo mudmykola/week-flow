@@ -23,7 +23,7 @@
   },
   "activityActions": {
     "task": { "created": "created the task", "updated": "updated the task", "deleted": "deleted the task" },
-    "subtask": { "created": "added a subtask" },
+    "subtask": { "created": "added a subtask", "updated": "updated a subtask", "completed": "completed a subtask" },
     "comment": { "created": "added a comment" },
     "goal": {
       "created": "created a goal",
@@ -45,7 +45,12 @@
     "stageId": "Stage",
     "week": "Week",
     "sort": "Order",
-    "archivedAt": "Archive"
+    "archivedAt": "Archive",
+    "progress": "Progress",
+    "plannedDate": "Planned date",
+    "previousPlannedDate": "Previous date",
+    "subtaskTitle": "Subtask",
+    "changedFields": "Changed fields"
   },
   "errors": {
     "requestFailed": "Could not save the changes",
@@ -481,8 +486,31 @@
       }
     },
     "activity": {
-      "title": "Activity",
-      "description": "A clear timeline of work across tasks and projects.",
+      "title": "Activity center",
+      "description": "Important changes, team progress and events that need your response.",
+      "scopeLabel": "Activity scope",
+      "summaryLabel": "Activity summary",
+      "scopes": { "mine": "My changes", "team": "Team", "all": "All" },
+      "scopeHints": {
+        "mine": "Your recent actions and progress.",
+        "team": "Changes made by other participants.",
+        "all": "The complete work timeline without technical audit noise."
+      },
+      "summary": {
+        "attention": "Needs response",
+        "completed": "Completed",
+        "moved": "Rescheduled",
+        "conversations": "Conversations"
+      },
+      "attentionTitle": "Needs response",
+      "attentionHint": "Blockers, assignments and important changes.",
+      "filters": "Filters",
+      "newEvents": "New events: {count}",
+      "unread": "Unread event",
+      "showDetails": "Details",
+      "hideDetails": "Collapse",
+      "rescheduledItem": "rescheduled the planned date",
+      "completedItem": "completed the task",
       "refresh": "Refresh",
       "search": "Search by author, task or project…",
       "allActions": "All actions",

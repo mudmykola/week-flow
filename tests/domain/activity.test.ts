@@ -2,8 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   activityDateKey,
   activityIcon,
+  activityImportance,
+  activityNeedsAttention,
   activityTone,
   groupActivityByDate,
+  isActivityMove,
+  summarizeActivity,
   type ActivityFeedItem
 } from '~/domain/services/activityFeed'
 
@@ -67,5 +71,22 @@ describe('activity feed presentation', () => {
     expect(activityIcon('task.updated')).toBe('i-lucide-pencil-line')
     expect(activityTone('subtask.created')).toBe('success')
     expect(activityTone('goal.created')).toBe('success')
+  })
+
+  it('classifies operational signals and builds the compact summary', () => {
+    const moved = activity({ id: 'moved', metadata: { previousPlannedDate: '2026-08-18', plannedDate: '2026-08-19' } })
+    const blocked = activity({ id: 'blocked', metadata: { blocked: true } })
+    const completed = activity({ id: 'done', action: 'subtask.completed' })
+    const comment = activity({ id: 'comment', action: 'comment.created' })
+
+    expect(isActivityMove(moved)).toBe(true)
+    expect(activityImportance(moved)).toBe('warning')
+    expect(activityNeedsAttention(blocked)).toBe(true)
+    expect(summarizeActivity([moved, blocked, completed, comment])).toEqual({
+      attention: 1,
+      completed: 1,
+      moved: 1,
+      conversations: 1
+    })
   })
 })

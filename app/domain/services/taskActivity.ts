@@ -20,6 +20,7 @@ export function groupTaskActivity<T extends ActivitySourceItem>(items: T[], wind
       previous &&
       previous.action === item.action &&
       previous.actorName === item.actorName &&
+      (!('entityId' in previous) || !('entityId' in item) || previous.entityId === item.entityId) &&
       previous.createdAt - item.createdAt <= windowMs
     const fields = Object.keys(item.metadata ?? {}).filter((key) => !['id', 'updatedAt'].includes(key))
     if (sameBurst) {
