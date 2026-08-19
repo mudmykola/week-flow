@@ -189,13 +189,20 @@ export const subtasks = sqliteTable(
     priority: text('priority', { enum: ['low', 'medium', 'high', 'urgent'] })
       .notNull()
       .default('medium'),
+    plannedDate: text('planned_date'),
+    originalPlannedDate: text('original_planned_date'),
+    rescheduleCount: integer('reschedule_count').notNull().default(0),
     dueDate: text('due_date'),
     assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
     sort: integer('sort').notNull().default(0),
     createdAt: integer('created_at').notNull(),
     doneAt: integer('done_at')
   },
-  (table) => [index('subtasks_task_id_idx').on(table.taskId), index('subtasks_assignee_id_idx').on(table.assigneeId)]
+  (table) => [
+    index('subtasks_task_id_idx').on(table.taskId),
+    index('subtasks_assignee_id_idx').on(table.assigneeId),
+    index('subtasks_planned_date_idx').on(table.plannedDate, table.status)
+  ]
 )
 
 export const dailyReviews = sqliteTable(

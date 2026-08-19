@@ -40,6 +40,10 @@ const reviewer = computed(() => props.assignees.find((item) => item.id === props
         >
       </div>
     </section>
+    <TaskWorkLogComposer
+      :task-id="task.id"
+      :subtasks="subtasks"
+    />
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <section class="rounded-2xl border border-[var(--color-panel-border)] p-4">
         <p class="text-secondary text-xs">{{ $t('task.nextAction') }}</p>

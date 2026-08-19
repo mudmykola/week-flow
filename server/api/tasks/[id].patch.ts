@@ -115,8 +115,13 @@ export default defineEventHandler(async (event) => {
     action: 'task.updated',
     entityType: 'task',
     entityId: task.id,
-    metadata: changedMetadata,
-    coalesceMs: 120_000
+    metadata: {
+      ...changedMetadata,
+      ...(body.plannedDate !== undefined && body.plannedDate !== existing.plannedDate
+        ? { previousPlannedDate: existing.plannedDate, plannedDate: body.plannedDate }
+        : {})
+    },
+    coalesceMs: body.plannedDate !== undefined && body.plannedDate !== existing.plannedDate ? undefined : 120_000
   })
   return body.status && body.status !== existing.status ? runTaskAutomations(event, task, 'status_changed') : task
 })

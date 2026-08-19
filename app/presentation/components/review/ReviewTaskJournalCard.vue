@@ -3,10 +3,17 @@ import type { ReviewProgressEntry, ReviewProgressKind, ReviewTaskJournal } from 
 
 const props = defineProps<{
   journal: ReviewTaskJournal
-  subtasks: Array<{ id: string; title: string; status: string }>
+  subtasks: Array<{
+    id: string
+    title: string
+    status: string
+    plannedDate: string | null
+    rescheduleCount: number
+  }>
   canEdit: boolean
   saving?: boolean
 }>()
+const { t } = useI18n()
 const emit = defineEmits<{
   create: [
     input: {
@@ -59,10 +66,17 @@ function time(value: number) {
 function day(value: string) {
   return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(new Date(`${value}T12:00:00`))
 }
-function eventLabel(action: string) {
-  if (action === 'subtask.completed') return 'pages.review.progress.event.subtaskCompleted'
-  if (action === 'subtask.updated') return 'pages.review.progress.event.subtaskUpdated'
-  return 'pages.review.progress.event.taskUpdated'
+function eventText(event: ReviewTaskJournal['activity'][number]) {
+  const title = String(event.metadata.subtaskTitle || '')
+  const previous = String(event.metadata.previousPlannedDate || t('pages.review.progress.noDate'))
+  const next = String(event.metadata.plannedDate || t('pages.review.progress.noDate'))
+  if (event.action === 'task.updated' && 'plannedDate' in event.metadata)
+    return t('pages.review.progress.event.taskRescheduled', { previous, next })
+  if (event.action === 'subtask.updated' && 'plannedDate' in event.metadata)
+    return t('pages.review.progress.event.subtaskRescheduled', { title, previous, next })
+  if (event.action === 'subtask.completed') return t('pages.review.progress.event.subtaskCompleted', { title })
+  if (event.action === 'subtask.updated') return t('pages.review.progress.event.subtaskUpdated', { title })
+  return t('pages.review.progress.event.taskUpdated')
 }
 </script>
 
@@ -211,13 +225,14 @@ function eventLabel(action: string) {
           ><time>{{ time(subtask.doneAt) }}</time>
         </div>
         <div
-          v-for="event in journal.activity.filter((item) => item.action.startsWith('subtask.'))"
+          v-for="event in journal.activity.filter(
+            (item) =>
+              item.action.startsWith('subtask.') || (item.action === 'task.updated' && 'plannedDate' in item.metadata)
+          )"
           :key="event.id"
           class="review-task-journal-card__system"
         >
-          <UIcon name="i-lucide-git-commit-horizontal" /><span>{{
-            $t(eventLabel(event.action), { title: event.metadata.subtaskTitle || '' })
-          }}</span
+          <UIcon name="i-lucide-git-commit-horizontal" /><span>{{ eventText(event) }}</span
           ><time>{{ time(event.createdAt) }}</time>
         </div>
       </div>

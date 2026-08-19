@@ -111,6 +111,7 @@ export const createSubtaskSchema = z.object({
   note: z.string().max(2000).nullable().optional(),
   status: taskStatusSchema.optional().default('todo'),
   priority: taskPrioritySchema.optional().default('medium'),
+  plannedDate: dateSchema.nullable().optional(),
   dueDate: dateSchema.nullable().optional(),
   assigneeId: z.string().uuid().nullable().optional(),
   sort: z.number().int().min(0).optional()
@@ -121,6 +122,7 @@ export const updateSubtaskSchema = z.object({
   done: z.boolean().optional(),
   status: taskStatusSchema.optional(),
   priority: taskPrioritySchema.optional(),
+  plannedDate: dateSchema.nullable().optional(),
   dueDate: dateSchema.nullable().optional(),
   assigneeId: z.string().uuid().nullable().optional(),
   sort: z.number().int().min(0).optional()

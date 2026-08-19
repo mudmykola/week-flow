@@ -5,7 +5,14 @@ const props = defineProps<{
   journals: ReviewTaskJournal[]
   tasks: ReviewTask[]
   availableTasks: ReviewTask[]
-  subtasks: Array<{ id: string; taskId: string; title: string; status: string }>
+  subtasks: Array<{
+    id: string
+    taskId: string
+    title: string
+    status: string
+    plannedDate: string | null
+    rescheduleCount: number
+  }>
   canEdit: boolean
   saving?: boolean
 }>()

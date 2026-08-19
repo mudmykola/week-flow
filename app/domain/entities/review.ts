@@ -42,7 +42,14 @@ export type DailyReviewData = {
   blockers: ReviewTask[]
   availableTasks: ReviewTask[]
   completedSubtasks: Array<{ id: string; taskId: string; title: string; doneAt: number }>
-  taskSubtasks: Array<{ id: string; taskId: string; title: string; status: 'todo' | 'in_progress' | 'done' }>
+  taskSubtasks: Array<{
+    id: string
+    taskId: string
+    title: string
+    status: 'todo' | 'in_progress' | 'done'
+    plannedDate: string | null
+    rescheduleCount: number
+  }>
   progressEntries: ReviewProgressEntry[]
   progressHistory?: ReviewProgressEntry[]
   journals: ReviewTaskJournal[]

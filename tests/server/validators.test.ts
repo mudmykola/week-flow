@@ -107,11 +107,14 @@ describe('server validators', () => {
         note: 'Context',
         status: 'in_progress',
         priority: 'high',
+        plannedDate: '2026-08-06',
         dueDate: '2026-08-07',
         assigneeId: '00000000-0000-4000-8000-000000000001'
       }).success
     ).toBe(true)
     expect(updateSubtaskSchema.safeParse({ done: true }).success).toBe(true)
+    expect(updateSubtaskSchema.safeParse({ plannedDate: '2026-08-08' }).success).toBe(true)
+    expect(updateSubtaskSchema.safeParse({ plannedDate: '08.08.2026' }).success).toBe(false)
     expect(updateSubtaskSchema.safeParse({ status: 'blocked' }).success).toBe(false)
     expect(
       bulkSubtaskSchema.safeParse({

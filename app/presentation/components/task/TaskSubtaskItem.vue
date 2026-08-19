@@ -137,6 +137,12 @@ function deleteAndClose() {
           <option value="urgent">{{ $t('task.priorityValue.urgent') }}</option>
         </FormSelect>
         <FormInput
+          :model-value="item.plannedDate ?? ''"
+          type="date"
+          :aria-label="$t('task.plannedDate')"
+          @update:model-value="emit('patch', item.id, { plannedDate: $event ? String($event) : null })"
+        />
+        <FormInput
           :model-value="item.dueDate ?? ''"
           type="date"
           @update:model-value="emit('patch', item.id, { dueDate: $event ? String($event) : null })"

@@ -163,7 +163,14 @@ export default defineEventHandler(async (event) => {
       : [],
     taskIds.length
       ? db
-          .select({ id: subtasks.id, taskId: subtasks.taskId, title: subtasks.title, status: subtasks.status })
+          .select({
+            id: subtasks.id,
+            taskId: subtasks.taskId,
+            title: subtasks.title,
+            status: subtasks.status,
+            plannedDate: subtasks.plannedDate,
+            rescheduleCount: subtasks.rescheduleCount
+          })
           .from(subtasks)
           .where(inArray(subtasks.taskId, taskIds))
       : []

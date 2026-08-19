@@ -12,10 +12,14 @@ const item = {
   done: false,
   status: 'todo' as const,
   priority: 'medium' as const,
+  plannedDate: null,
+  originalPlannedDate: null,
+  rescheduleCount: 0,
   dueDate: null,
   assigneeId: null,
   sort: 0,
-  createdAt: 1
+  createdAt: 1,
+  doneAt: null
 }
 
 describe('task subtask editor', () => {
@@ -46,5 +50,16 @@ describe('task subtask editor', () => {
     })
     await wrapper.get('input[type="checkbox"]').setValue(true)
     expect(wrapper.emitted('patch')?.[0]).toEqual(['subtask-1', { done: true, status: 'done' }])
+  })
+
+  it('allows an unfinished subtask to be planned for another day', async () => {
+    const wrapper = await mountSuspended(TaskSubtaskItem, {
+      props: { item, assignees: [] },
+      global: { stubs: { UIcon: { template: '<span />' }, DropdownMenu: true } }
+    })
+    await wrapper.findAll('button')[1]!.trigger('click')
+    const plannedDate = wrapper.findAll('input[type="date"]')[0]!
+    await plannedDate.setValue('2026-08-20')
+    expect(wrapper.emitted('patch')?.at(-1)).toEqual(['subtask-1', { plannedDate: '2026-08-20' }])
   })
 })

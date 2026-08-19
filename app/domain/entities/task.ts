@@ -129,8 +129,12 @@ export interface Subtask {
   done: boolean
   status: TaskStatus
   priority: TaskPriority
+  plannedDate: string | null
+  originalPlannedDate: string | null
+  rescheduleCount: number
   dueDate: string | null
   assigneeId: string | null
   sort: number
   createdAt: number
+  doneAt: number | null
 }
