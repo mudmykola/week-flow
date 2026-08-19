@@ -253,6 +253,7 @@ describe('daily review service', () => {
     expect(review.journals[0]).toMatchObject({ task: { id: 'course' }, focusMinutes: 50, activeDays: 2 })
     expect(review.journals[0]?.entries[0]?.subtaskTitle).toBe('Module 2')
     expect(review.journals[0]?.historyEntries.map((entry) => entry.workDate)).toEqual(['2026-08-11', '2026-08-10'])
+    expect(review.timeline.map((entry) => entry.kind)).toEqual(expect.arrayContaining(['progress', 'focus']))
     expect(review.availableTasks).toEqual([task])
     expect(review.taskSubtasks).toHaveLength(1)
 
@@ -266,5 +267,35 @@ describe('daily review service', () => {
     })
     expect(standup).toContain('Watched the tool-use lesson')
     expect(standup).toContain('Complete the module exercise')
+  })
+
+  it('surfaces only actionable review gaps and normalizes meaningful timeline events', () => {
+    const review = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      tasks: [
+        makeTask({ id: 'quiet', title: 'Planned without work', plannedDate: '2026-08-11' }),
+        makeTask({ id: 'moved', title: 'Moved often', rescheduleCount: 4 })
+      ],
+      activityEvents: [
+        {
+          id: 'move',
+          taskId: 'moved',
+          action: 'task.updated',
+          metadata: { previousPlannedDate: '2026-08-10', plannedDate: '2026-08-11' },
+          createdAt: dayStart + 1000
+        }
+      ]
+    })
+    expect(review.attention.map((item) => item.kind)).toEqual(
+      expect.arrayContaining(['no_activity', 'frequent_reschedule'])
+    )
+    expect(review.timeline[0]).toMatchObject({
+      kind: 'rescheduled',
+      previousDate: '2026-08-10',
+      nextDate: '2026-08-11'
+    })
   })
 })

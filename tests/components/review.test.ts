@@ -18,9 +18,10 @@ const entryComposer = readFileSync(
 )
 
 describe('Review 2.0 workspace contract', () => {
-  it('keeps daily, weekly and history modes while treating team as a user context', () => {
+  it('keeps day and week modes while using date navigation for history and team as context', () => {
     expect(page).toContain('<ReviewWorkspace')
-    for (const tab of ['daily', 'weekly', 'history']) expect(workspace).toContain(`'${tab}'`)
+    for (const tab of ['daily', 'weekly']) expect(workspace).toContain(`'${tab}'`)
+    expect(workspace).not.toContain("type Tab = 'daily' | 'weekly' | 'history'")
     expect(workspace).toContain('selectMember')
   })
 
@@ -35,6 +36,8 @@ describe('Review 2.0 workspace contract', () => {
 
   it('supports task and subtask progress journaling with edit and delete actions', () => {
     expect(workspace).toContain('<ReviewTaskTimeline')
+    expect(workspace).toContain('<ReviewTimeline')
+    expect(workspace).toContain('<ReviewAttentionQueue')
     expect(workspace).toContain('<ReviewStandupPanel')
     expect(workspace).toContain('createReviewProgress')
     expect(entryComposer).toContain('subtaskId')

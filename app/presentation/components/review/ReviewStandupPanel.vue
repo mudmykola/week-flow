@@ -1,13 +1,18 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   standup: string
   content: string
   saving: 'idle' | 'saving' | 'saved' | 'error'
   copied: boolean
   canEdit: boolean
+  completed: boolean
 }>()
-const emit = defineEmits<{ copy: []; regenerate: []; finish: []; 'update:content': [value: string] }>()
+const emit = defineEmits<{ copy: []; regenerate: []; finish: []; reopen: []; 'update:content': [value: string] }>()
 const editing = ref(false)
+function toggleCompletion() {
+  if (props.completed) emit('reopen')
+  else emit('finish')
+}
 </script>
 
 <template>
@@ -50,9 +55,10 @@ const editing = ref(false)
       <AppButton
         v-if="canEdit"
         size="sm"
-        icon="i-lucide-check"
-        @click="emit('finish')"
-        >{{ $t('pages.review.v2.finish') }}</AppButton
+        :variant="completed ? 'ghost' : 'primary'"
+        :icon="completed ? 'i-lucide-rotate-ccw' : 'i-lucide-check'"
+        @click="toggleCompletion"
+        >{{ completed ? $t('pages.review.final.reopen') : $t('pages.review.final.closeDay') }}</AppButton
       >
       <SemanticBadge
         v-if="copied"

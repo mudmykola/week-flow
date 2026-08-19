@@ -844,11 +844,51 @@
         "empty": "No entries for this day yet",
         "emptyHint": "Add the first outcome — it stays in history even when the task is carried over."
       },
+      "final": {
+        "attention": "Needs attention",
+        "attentionHint": "Only tasks where the system needs a decision or missing context.",
+        "attentionKind": {
+          "no_activity": "Planned, but no activity was recorded",
+          "frequent_reschedule": "Rescheduled {count} times",
+          "missing_next_step": "Has progress but no next step",
+          "blocker": "Has an open blocker or is overdue"
+        },
+        "dayJournal": "Day journal",
+        "dayJournalHint": "Automatically collected from tasks, subtasks, focus and rescheduling.",
+        "viewLabel": "Journal view",
+        "timeline": "Timeline",
+        "byTasks": "By task",
+        "filter": {
+          "all": "All",
+          "result": "Outcomes",
+          "progress": "Progress",
+          "subtask": "Subtasks",
+          "focus": "Focus",
+          "rescheduled": "Moves",
+          "blocker": "Blockers",
+          "decision": "Decisions"
+        },
+        "event": {
+          "subtask": "Completed a subtask",
+          "decision": "Recorded a decision",
+          "result": "Recorded an outcome",
+          "progress": "Recorded progress",
+          "blocker": "Recorded a blocker",
+          "focus": "Focus session completed",
+          "rescheduled": "Task rescheduled"
+        },
+        "focusFor": "Focus session · {minutes} min",
+        "movedFromTo": "Rescheduled: {previous} → {next}",
+        "emptyTimeline": "No meaningful events for this day",
+        "emptyTimelineHint": "Work with tasks as usual — outcomes, subtasks, focus and moves will appear automatically.",
+        "closeDay": "Close day",
+        "reopen": "Reopen"
+      },
       "v2": {
-        "title": "Standup and reflection",
-        "description": "Yesterday's outcomes, today's plan and blockers — ready for your standup.",
+        "title": "Day review",
+        "description": "Actual work, next steps and a ready standup without duplicate data entry.",
         "tabsLabel": "Review mode",
-        "tabs": { "daily": "Standup", "weekly": "Week", "history": "History", "team": "Team" },
+        "tabs": { "daily": "Day", "weekly": "Week", "history": "History", "team": "Team" },
         "myStandup": "My standup",
         "selectDate": "Standup date",
         "previous": "Previous day",

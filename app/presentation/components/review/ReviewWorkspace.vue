@@ -16,7 +16,8 @@ import { generateDailyReflection, generateStandup } from '~/domain/services/dail
 import { localDateKey, localDayRange } from '~/domain/services/today'
 import { getCurrentWeek, getNextWeek } from '~/domain/services/week'
 
-type Tab = 'daily' | 'weekly' | 'history'
+type Tab = 'daily' | 'weekly'
+type DailyView = 'timeline' | 'tasks'
 type TeamMember = { id: string; name: string; avatarUrl: string | null; taskActive: number; taskOverdue: number }
 
 const route = useRoute()
@@ -24,9 +25,8 @@ const { locale, t } = useI18n()
 const { report } = useApiFeedback()
 const today = localDateKey()
 const selectedDate = ref(typeof route.query.date === 'string' ? route.query.date : today)
-const tab = ref<Tab>(
-  ['daily', 'weekly', 'history'].includes(String(route.query.tab)) ? (route.query.tab as Tab) : 'daily'
-)
+const tab = ref<Tab>(['daily', 'weekly'].includes(String(route.query.tab)) ? (route.query.tab as Tab) : 'daily')
+const dailyView = ref<DailyView>(route.query.view === 'tasks' ? 'tasks' : 'timeline')
 const daily = ref<DailyReviewData | null>(null)
 const previous = ref<DailyReviewData | null>(null)
 const saved = ref<SavedDailyReview | null>(null)
@@ -119,6 +119,7 @@ watch([selectedDate, selectedUser], () => {
   void load()
 })
 watch(tab, syncRoute)
+watch(dailyView, syncRoute)
 watch(content, () => {
   if (!canEdit.value || loading.value) return
   clearTimeout(saveTimer)
@@ -206,6 +207,7 @@ function syncRoute() {
       query: {
         ...route.query,
         tab: tab.value === 'daily' ? undefined : tab.value,
+        view: tab.value === 'daily' && dailyView.value === 'tasks' ? 'tasks' : undefined,
         date: selectedDate.value === today ? undefined : selectedDate.value,
         user: selectedUser.value || undefined
       }
@@ -305,29 +307,21 @@ function selectMember(id: string | null) {
       :title="$t('pages.review.v2.title')"
       :description="$t('pages.review.v2.description')"
       icon="i-lucide-notebook-tabs"
-    >
-      <template #actions
-        ><AppButton
-          icon="i-lucide-copy"
-          @click="copy(standup)"
-          >{{ copied ? $t('pages.review.v2.copied') : $t('pages.review.v2.copyStandup') }}</AppButton
-        ></template
-      >
-    </PageHeader>
+    />
 
     <nav
       class="review-tabs surface-card"
       :aria-label="$t('pages.review.v2.tabsLabel')"
     >
       <button
-        v-for="item in ['daily', 'weekly', 'history'] as Tab[]"
+        v-for="item in ['daily', 'weekly'] as Tab[]"
         :key="item"
         :class="{ 'is-active': tab === item }"
         @click="tab = item"
       >
-        <UIcon
-          :name="item === 'daily' ? 'i-lucide-sun' : item === 'weekly' ? 'i-lucide-calendar-range' : 'i-lucide-history'"
-        /><span>{{ $t(`pages.review.v2.tabs.${item}`) }}</span>
+        <UIcon :name="item === 'daily' ? 'i-lucide-sun' : 'i-lucide-calendar-range'" /><span>{{
+          $t(`pages.review.v2.tabs.${item}`)
+        }}</span>
       </button>
     </nav>
 
@@ -387,38 +381,66 @@ function selectMember(id: string | null) {
         ><AppButton @click="load">{{ $t('common.tryAgain') }}</AppButton></EmptyState
       >
       <template v-else-if="daily && reportData">
-        <ReviewSummaryStrip
-          :tasks="dailyTimelineTasks.length"
-          :results="
-            daily.completed.length +
-            daily.completedSubtasks.length +
-            daily.progressEntries.filter((item) => item.kind === 'result').length
-          "
-          :blockers="daily.blockers.length + daily.progressEntries.filter((item) => item.kind === 'blocker').length"
-          :focus-minutes="daily.focusMinutes"
+        <ReviewAttentionQueue
+          :items="daily.attention"
+          @open="openTask"
         />
         <section class="review-daily-layout">
-          <ReviewTaskTimeline
-            :journals="daily.journals"
-            :tasks="dailyTimelineTasks"
-            :available-tasks="daily.availableTasks"
-            :subtasks="daily.taskSubtasks"
-            :can-edit="canEdit"
-            :saving="progressSaving"
-            @create="addProgress"
-            @update="editProgress"
-            @delete="removeProgress"
-            @open="openTask"
-          />
+          <div class="review-day-work">
+            <header class="review-day-work__header">
+              <div>
+                <h2>{{ $t('pages.review.final.dayJournal') }}</h2>
+                <p>{{ $t('pages.review.final.dayJournalHint') }}</p>
+              </div>
+              <div
+                role="tablist"
+                :aria-label="$t('pages.review.final.viewLabel')"
+              >
+                <button
+                  :class="{ 'is-active': dailyView === 'timeline' }"
+                  @click="dailyView = 'timeline'"
+                >
+                  <UIcon name="i-lucide-list-tree" />{{ $t('pages.review.final.timeline') }}
+                </button>
+                <button
+                  :class="{ 'is-active': dailyView === 'tasks' }"
+                  @click="dailyView = 'tasks'"
+                >
+                  <UIcon name="i-lucide-rows-3" />{{ $t('pages.review.final.byTasks') }}
+                </button>
+              </div>
+            </header>
+            <ReviewTimeline
+              v-if="dailyView === 'timeline'"
+              :events="daily.timeline"
+              :tasks="daily.availableTasks"
+              @open="openTask"
+            />
+            <ReviewTaskTimeline
+              v-else
+              :journals="daily.journals"
+              :tasks="dailyTimelineTasks"
+              :available-tasks="daily.availableTasks"
+              :subtasks="daily.taskSubtasks"
+              :can-edit="canEdit"
+              :saving="progressSaving"
+              @create="addProgress"
+              @update="editProgress"
+              @delete="removeProgress"
+              @open="openTask"
+            />
+          </div>
           <ReviewStandupPanel
             :standup="standup"
             :content="content"
             :saving="saving"
             :copied="copied"
             :can-edit="canEdit"
+            :completed="saved?.status === 'submitted'"
             @copy="copy(standup)"
             @regenerate="resetReflection"
             @finish="persist('submitted')"
+            @reopen="persist('draft')"
             @update:content="content = $event"
           />
         </section>
@@ -490,36 +512,6 @@ function selectMember(id: string | null) {
         </div>
       </AppSurface>
     </template>
-
-    <section
-      v-else
-      class="review-history surface-card"
-    >
-      <header>
-        <div>
-          <h2>{{ $t('pages.review.v2.historyTitle') }}</h2>
-          <p>{{ $t('pages.review.v2.historyHint') }}</p>
-        </div>
-        <span>{{ history.length }}</span>
-      </header>
-      <button
-        v-for="item in history"
-        :key="item.id"
-        @click="showHistory(item)"
-      >
-        <span
-          ><strong>{{ format(parseISO(item.reviewDate), 'd MMMM yyyy', { locale: dateLocale }) }}</strong
-          ><small>{{ item.content.slice(0, 120) }}</small></span
-        ><em :class="`is-${item.status}`">{{ $t(`pages.review.v2.status.${item.status}`) }}</em
-        ><UIcon name="i-lucide-chevron-right" />
-      </button>
-      <EmptyState
-        v-if="!history.length"
-        :title="$t('pages.review.v2.emptyHistory')"
-        :description="$t('pages.review.v2.emptyHistoryHint')"
-        icon="i-lucide-notebook"
-      />
-    </section>
   </div>
 </template>
 
@@ -531,10 +523,7 @@ function selectMember(id: string | null) {
 }
 .review-tabs,
 .review-datebar,
-.review-reflection__head,
-.review-standup__head,
-.review-weekly,
-.review-history header {
+.review-weekly {
   display: flex;
   align-items: center;
 }
@@ -594,6 +583,45 @@ function selectMember(id: string | null) {
   align-items: start;
   margin-bottom: 1rem;
 }
+.review-day-work {
+  min-width: 0;
+}
+.review-day-work__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.55rem;
+}
+.review-day-work__header h2 {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.review-day-work__header p {
+  color: var(--color-text-secondary);
+  font-size: 0.66rem;
+}
+.review-day-work__header > div:last-child {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.65rem;
+}
+.review-day-work__header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
+  color: var(--color-text-secondary);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+.review-day-work__header button.is-active {
+  color: var(--color-text-primary);
+  background: var(--color-bg-alt);
+}
 .review-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -609,74 +637,20 @@ function selectMember(id: string | null) {
 .review-board--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.review-detail-grid {
-  display: grid;
-  grid-template-columns: 0.8fr 1.2fr;
-  gap: 0.65rem;
-  margin-bottom: 0.65rem;
-}
-.review-detail-grid h2,
-.review-reflection h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.9rem;
-  font-weight: 800;
-}
-.review-detail-grid ul {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-}
-.review-detail-grid pre {
-  margin-top: 0.6rem;
-  white-space: pre-wrap;
-  color: var(--color-text-secondary);
-  font: inherit;
-  font-size: 0.75rem;
-  line-height: 1.6;
-}
-.review-standup__head,
-.review-reflection__head,
-.review-weekly,
-.review-history header {
+.review-weekly {
   justify-content: space-between;
   gap: 0.75rem;
-}
-.review-reflection {
-  margin-bottom: 1rem;
-}
-.review-reflection__head {
-  margin-bottom: 0.65rem;
-}
-.review-reflection__head > div:last-child {
-  display: flex;
-  gap: 0.35rem;
-}
-.review-reflection small {
-  color: var(--color-text-secondary);
-  font-size: 0.65rem;
-}
-.review-reflection small.is-error {
-  color: var(--color-danger);
 }
 .review-weekly {
   padding: 0.75rem;
   margin-bottom: 0.65rem;
 }
-.review-weekly h2,
-.review-history h2 {
+.review-weekly h2 {
   font-weight: 800;
 }
-.review-weekly p,
-.review-history p {
+.review-weekly p {
   color: var(--color-text-secondary);
   font-size: 0.75rem;
-}
-.review-history {
-  padding: 0.75rem;
 }
 .review-week-reflections {
   margin-bottom: 0.65rem;
@@ -713,49 +687,6 @@ function selectMember(id: string | null) {
   color: var(--color-text-secondary);
   font-size: 0.65rem;
 }
-.review-history header {
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--color-panel-border);
-}
-.review-history header > span {
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  background: var(--color-bg-alt);
-  font-size: 0.7rem;
-}
-.review-history > button {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.7rem;
-  border-bottom: 1px solid var(--color-panel-border);
-  text-align: left;
-}
-.review-history > button:hover {
-  background: var(--color-bg-alt);
-}
-.review-history strong,
-.review-history small {
-  display: block;
-}
-.review-history small {
-  margin-top: 0.15rem;
-  color: var(--color-text-secondary);
-  font-size: 0.68rem;
-}
-.review-history em {
-  padding: 0.2rem 0.45rem;
-  border-radius: 999px;
-  background: var(--color-bg-alt);
-  font-size: 0.62rem;
-  font-style: normal;
-}
-.review-history em.is-submitted {
-  color: #059669;
-  background: rgb(16 185 129/0.1);
-}
 @media (max-width: 1000px) {
   .review-daily-layout {
     grid-template-columns: 1fr;
@@ -767,9 +698,6 @@ function selectMember(id: string | null) {
     grid-template-columns: repeat(2, 1fr);
   }
   .review-board {
-    grid-template-columns: 1fr;
-  }
-  .review-detail-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -800,18 +728,19 @@ function selectMember(id: string | null) {
     width: 100%;
     margin-left: 0;
   }
-  .review-metrics {
-    gap: 0.35rem;
-  }
-  .review-reflection__head {
-    align-items: flex-start;
+  .review-day-work__header {
+    align-items: stretch;
     flex-direction: column;
   }
-  .review-reflection__head > div:last-child {
-    width: 100%;
-  }
-  .review-reflection__head .app-button {
+  .review-day-work__header > div:last-child,
+  .review-day-work__header button {
     flex: 1;
+  }
+  .review-day-work__header button {
+    justify-content: center;
+  }
+  .review-metrics {
+    gap: 0.35rem;
   }
 }
 </style>

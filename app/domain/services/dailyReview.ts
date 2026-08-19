@@ -17,7 +17,7 @@ export type DailyReviewSource = {
     metadata: Record<string, unknown>
     createdAt: number
   }>
-  focusByTask?: Array<{ taskId: string; minutes: number }>
+  focusByTask?: Array<{ taskId: string; minutes: number; createdAt?: number }>
   focusMinutes?: number
   dayStart?: number
   dayEnd?: number
@@ -84,6 +84,88 @@ export function buildDailyReview(source: DailyReviewSource): DailyReviewData {
       )
       return right - left
     })
+  const taskById = new Map(source.tasks.map((task) => [task.id, task]))
+  const timeline = [
+    ...progressEntries.map((entry) => ({
+      id: entry.id,
+      taskId: entry.taskId,
+      taskTitle: taskById.get(entry.taskId)?.title || '',
+      subtaskTitle: entry.subtaskTitle || null,
+      kind: entry.kind,
+      detail: entry.note,
+      minutes: entry.minutes,
+      previousDate: null,
+      nextDate: null,
+      createdAt: entry.createdAt
+    })),
+    ...(source.completedSubtasks || []).map((entry) => ({
+      id: `subtask-${entry.id}`,
+      taskId: entry.taskId,
+      taskTitle: taskById.get(entry.taskId)?.title || '',
+      subtaskTitle: entry.title,
+      kind: 'subtask' as const,
+      detail: null,
+      minutes: null,
+      previousDate: null,
+      nextDate: null,
+      createdAt: entry.doneAt
+    })),
+    ...(source.activityEvents || [])
+      .filter(
+        (entry) =>
+          entry.action === 'task.updated' && Object.prototype.hasOwnProperty.call(entry.metadata, 'plannedDate')
+      )
+      .map((entry) => ({
+        id: `move-${entry.id}`,
+        taskId: entry.taskId,
+        taskTitle: taskById.get(entry.taskId)?.title || '',
+        subtaskTitle: null,
+        kind: 'rescheduled' as const,
+        detail: null,
+        minutes: null,
+        previousDate:
+          typeof entry.metadata.previousPlannedDate === 'string' ? entry.metadata.previousPlannedDate : null,
+        nextDate: typeof entry.metadata.plannedDate === 'string' ? entry.metadata.plannedDate : null,
+        createdAt: entry.createdAt
+      })),
+    ...(source.focusByTask || []).map((entry, index) => ({
+      id: `focus-${entry.taskId}-${index}`,
+      taskId: entry.taskId,
+      taskTitle: taskById.get(entry.taskId)?.title || '',
+      subtaskTitle: null,
+      kind: 'focus' as const,
+      detail: null,
+      minutes: entry.minutes,
+      previousDate: null,
+      nextDate: null,
+      createdAt: entry.createdAt || dayStart
+    }))
+  ].sort((a, b) => b.createdAt - a.createdAt)
+  const attention = [
+    ...planned
+      .filter((task) => !journalTaskIds.has(task.id))
+      .map((task) => ({ id: `no-activity-${task.id}`, task, kind: 'no_activity' as const })),
+    ...source.tasks
+      .filter((task) => task.status !== 'done' && task.rescheduleCount >= 3)
+      .map((task) => ({
+        id: `reschedule-${task.id}`,
+        task,
+        kind: 'frequent_reschedule' as const,
+        count: task.rescheduleCount
+      })),
+    ...journals
+      .filter(
+        (journal) =>
+          journal.entries.some((entry) => entry.kind === 'progress' || entry.kind === 'result') &&
+          !journal.entries.some((entry) => entry.nextStep)
+      )
+      .map((journal) => ({
+        id: `next-step-${journal.task.id}`,
+        task: journal.task,
+        kind: 'missing_next_step' as const
+      })),
+    ...blockers.map((task) => ({ id: `blocker-${task.id}`, task, kind: 'blocker' as const }))
+  ].filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
   return {
     date: source.date,
     user: source.user,
@@ -98,6 +180,8 @@ export function buildDailyReview(source: DailyReviewSource): DailyReviewData {
     progressEntries,
     progressHistory,
     journals,
+    timeline,
+    attention,
     focusMinutes: source.focusMinutes || 0,
     metrics: {
       planned: plannedTotal,

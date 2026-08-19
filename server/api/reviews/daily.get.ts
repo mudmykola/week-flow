@@ -124,7 +124,11 @@ export default defineEventHandler(async (event) => {
           .where(and(inArray(subtasks.taskId, taskIds), gte(subtasks.doneAt, dayStart), lte(subtasks.doneAt, dayEnd)))
       : [],
     db
-      .select({ taskId: focusSessions.taskId, elapsedSeconds: focusSessions.elapsedSeconds })
+      .select({
+        taskId: focusSessions.taskId,
+        elapsedSeconds: focusSessions.elapsedSeconds,
+        startedAt: focusSessions.startedAt
+      })
       .from(focusSessions)
       .where(
         and(
@@ -200,7 +204,11 @@ export default defineEventHandler(async (event) => {
     focusMinutes: Math.round(focus.reduce((sum, item) => sum + item.elapsedSeconds, 0) / 60),
     focusByTask: focus
       .filter((item): item is typeof item & { taskId: string } => Boolean(item.taskId))
-      .map((item) => ({ taskId: item.taskId, minutes: Math.round(item.elapsedSeconds / 60) })),
+      .map((item) => ({
+        taskId: item.taskId,
+        minutes: Math.round(item.elapsedSeconds / 60),
+        createdAt: item.startedAt
+      })),
     progressEntries,
     progressHistory,
     taskSubtasks,

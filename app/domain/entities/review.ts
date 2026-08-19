@@ -32,6 +32,26 @@ export type ReviewTaskJournal = {
   focusMinutes: number
 }
 
+export type ReviewTimelineEvent = {
+  id: string
+  taskId: string
+  taskTitle: string
+  subtaskTitle: string | null
+  kind: 'progress' | 'result' | 'decision' | 'blocker' | 'subtask' | 'focus' | 'rescheduled'
+  detail: string | null
+  minutes: number | null
+  previousDate: string | null
+  nextDate: string | null
+  createdAt: number
+}
+
+export type ReviewAttentionItem = {
+  id: string
+  task: ReviewTask
+  kind: 'no_activity' | 'frequent_reschedule' | 'missing_next_step' | 'blocker'
+  count?: number
+}
+
 export type DailyReviewData = {
   date: string
   user: { id: string; name: string; avatarUrl: string | null }
@@ -53,6 +73,8 @@ export type DailyReviewData = {
   progressEntries: ReviewProgressEntry[]
   progressHistory?: ReviewProgressEntry[]
   journals: ReviewTaskJournal[]
+  timeline: ReviewTimelineEvent[]
+  attention: ReviewAttentionItem[]
   focusMinutes: number
   metrics: {
     planned: number
