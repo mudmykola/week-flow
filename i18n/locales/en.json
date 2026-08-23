@@ -912,6 +912,40 @@
         "closeDay": "Close day",
         "reopen": "Reopen"
       },
+      "close": {
+        "yesterday": "Completed yesterday",
+        "todayPlan": "Planned today",
+        "carryover": "Carried over",
+        "completedHint": "Tasks and subtasks",
+        "plannedHint": "Active day plan",
+        "carryoverHint": "Needs a new decision",
+        "blockersHint": "Overdue work and dependencies",
+        "decisions": "Resolve open decisions",
+        "decisionsHint": "Choose the next action for work without a result or sufficient context.",
+        "tomorrow": "Tomorrow",
+        "unscheduled": "Remove from plan",
+        "complete": "Complete",
+        "decisionSaved": "Decision applied",
+        "decisionFailed": "Could not apply the decision",
+        "reflection": "Day reflection",
+        "reflectionHint": "Short structured notes automatically extend the standup.",
+        "fields": {
+          "result": "Main result",
+          "progress": "What moved forward",
+          "blockers": "What got in the way",
+          "decisions": "Decisions made",
+          "nextFocus": "Next main focus"
+        },
+        "placeholders": {
+          "result": "What was the main result of the day?",
+          "progress": "What moved forward meaningfully?",
+          "blockers": "What slowed down or blocked the work?",
+          "decisions": "Which decisions should be retained?",
+          "nextFocus": "Where should the next workday begin?"
+        },
+        "history": "Day-closing history",
+        "historyHint": "Emerald means submitted; yellow means draft."
+      },
       "v2": {
         "title": "Day review",
         "description": "Actual work, next steps and a ready standup without duplicate data entry.",

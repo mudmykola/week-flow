@@ -161,7 +161,22 @@ export const updateSettingsSchema = z.object({
 export const saveDailyReviewSchema = z.object({
   reviewDate: dateSchema,
   content: z.string().max(20_000),
-  structuredContent: z.record(z.string(), z.unknown()).optional().default({}),
+  structuredContent: z
+    .object({
+      standup: z.string().max(20_000).optional(),
+      reflection: z
+        .object({
+          result: z.string().max(4000).default(''),
+          progress: z.string().max(4000).default(''),
+          blockers: z.string().max(4000).default(''),
+          decisions: z.string().max(4000).default(''),
+          nextFocus: z.string().max(4000).default('')
+        })
+        .optional()
+    })
+    .passthrough()
+    .optional()
+    .default({}),
   excludedTaskIds: z.array(z.string().uuid()).max(500).optional().default([]),
   status: z.enum(['draft', 'submitted']).optional().default('draft')
 })

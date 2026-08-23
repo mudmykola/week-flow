@@ -1,0 +1,81 @@
+<script setup lang="ts">
+import type { SavedDailyReview } from '~/domain/entities/review'
+import { addDays, format, parseISO, startOfWeek } from 'date-fns'
+const props = defineProps<{ selectedDate: string; history: SavedDailyReview[]; maxDate: string }>()
+const emit = defineEmits<{ select: [date: string] }>()
+const days = computed(() => {
+  const start = addDays(startOfWeek(parseISO(props.selectedDate), { weekStartsOn: 1 }), -28)
+  return Array.from({ length: 35 }, (_, i) => {
+    const date = format(addDays(start, i), 'yyyy-MM-dd')
+    return { date, review: props.history.find((item) => item.reviewDate === date) }
+  })
+})
+</script>
+
+<template>
+  <section class="review-history-calendar surface-card">
+    <header>
+      <UIcon name="i-lucide-calendar-check-2" /><strong>{{ $t('pages.review.close.history') }}</strong
+      ><span>{{ $t('pages.review.close.historyHint') }}</span>
+    </header>
+    <div>
+      <button
+        v-for="day in days"
+        :key="day.date"
+        :class="{ 'is-selected': day.date === selectedDate }"
+        :data-status="day.review?.status || 'empty'"
+        :title="day.date"
+        :disabled="day.date > maxDate"
+        @click="emit('select', day.date)"
+      >
+        {{ format(parseISO(day.date), 'd') }}
+      </button>
+    </div>
+  </section>
+</template>
+
+<style scoped>
+.review-history-calendar {
+  padding: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+.review-history-calendar header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+}
+.review-history-calendar header span {
+  color: var(--color-text-secondary);
+  font-size: 0.6rem;
+}
+.review-history-calendar > div {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.22rem;
+  margin-top: 0.5rem;
+}
+.review-history-calendar button {
+  min-height: 1.8rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.4rem;
+  color: var(--color-text-secondary);
+  font-size: 0.62rem;
+}
+.review-history-calendar button[data-status='draft'] {
+  border-color: color-mix(in srgb, var(--color-warning) 55%, var(--color-panel-border));
+  background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+}
+.review-history-calendar button[data-status='submitted'] {
+  border-color: color-mix(in srgb, var(--color-success) 55%, var(--color-panel-border));
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+}
+.review-history-calendar button.is-selected {
+  outline: 2px solid var(--color-accent);
+  color: var(--color-text-primary);
+}
+.review-history-calendar button:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+</style>

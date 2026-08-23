@@ -52,6 +52,14 @@ export type ReviewAttentionItem = {
   count?: number
 }
 
+export type ReviewReflection = {
+  result: string
+  progress: string
+  blockers: string
+  decisions: string
+  nextFocus: string
+}
+
 export type DailyReviewData = {
   date: string
   user: { id: string; name: string; avatarUrl: string | null }

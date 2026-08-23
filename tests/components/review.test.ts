@@ -37,7 +37,10 @@ describe('Review 2.0 workspace contract', () => {
   it('supports task and subtask progress journaling with edit and delete actions', () => {
     expect(workspace).toContain('<ReviewTaskTimeline')
     expect(workspace).toContain('<ReviewTimeline')
-    expect(workspace).toContain('<ReviewAttentionQueue')
+    expect(workspace).toContain('<ReviewDecisionQueue')
+    expect(workspace).toContain('<ReviewDayDigest')
+    expect(workspace).toContain('<ReviewReflectionEditor')
+    expect(workspace).toContain('<ReviewHistoryCalendar')
     expect(workspace).toContain('<ReviewStandupPanel')
     expect(workspace).toContain('createReviewProgress')
     expect(entryComposer).toContain('subtaskId')
@@ -46,5 +49,20 @@ describe('Review 2.0 workspace contract', () => {
     expect(taskCard).toContain('journal.focusMinutes')
     expect(taskCard).toContain('journal.historyEntries')
     expect(taskTimeline).toContain('addableTasks')
+  })
+
+  it('protects active drafts and keeps weekly review tied to the selected date', () => {
+    expect(workspace).toContain('dirty.value')
+    expect(workspace).toContain('saveRevision')
+    expect(workspace).toContain('load(true)')
+    expect(workspace).toContain('selectedWeek')
+    expect(workspace).toContain('dateToWeek(parseISO(selectedDate.value))')
+    expect(workspace).not.toContain('getCurrentWeek()')
+  })
+
+  it('persists structured reflection and applies task decisions through the existing task API', () => {
+    expect(workspace).toContain('structuredContent: { standup: finalStandup.value, reflection: reflection.value }')
+    expect(workspace).toContain('resolveDecision')
+    expect(workspace).toContain('updateTask(task.id')
   })
 })

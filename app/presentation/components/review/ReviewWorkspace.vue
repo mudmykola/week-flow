@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { addDays, format, parseISO, subDays } from 'date-fns'
 import { enUS, uk } from 'date-fns/locale'
-import { fetchAllTasks, moveWeekTasks } from '~/data/repositories/tasksRepository'
+import { fetchAllTasks, moveWeekTasks, updateTask } from '~/data/repositories/tasksRepository'
 import {
   createReviewProgress,
   deleteReviewProgress,
@@ -10,11 +10,11 @@ import {
   saveDailyReview,
   updateReviewProgress
 } from '~/data/repositories/reviewsRepository'
-import type { DailyReviewData, ReviewTask, SavedDailyReview } from '~/domain/entities/review'
+import type { DailyReviewData, ReviewReflection, ReviewTask, SavedDailyReview } from '~/domain/entities/review'
 import type { Task } from '~/domain/entities/task'
 import { generateDailyReflection, generateStandup } from '~/domain/services/dailyReview'
 import { localDateKey, localDayRange } from '~/domain/services/today'
-import { getCurrentWeek, getNextWeek } from '~/domain/services/week'
+import { dateToWeek, getNextWeek } from '~/domain/services/week'
 
 type Tab = 'daily' | 'weekly'
 type DailyView = 'timeline' | 'tasks'
@@ -41,6 +41,11 @@ const saving = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const copied = ref(false)
 const moved = ref(false)
 const progressSaving = ref(false)
+const resolvingTask = ref<string | null>(null)
+const dirty = ref(false)
+const hydrating = ref(false)
+const saveRevision = ref(0)
+const reflection = ref<ReviewReflection>(emptyReflection())
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 
 const dateLocale = computed(() => (locale.value === 'en' ? enUS : uk))
@@ -89,6 +94,8 @@ const generatedReflection = computed(() =>
   reportData.value ? generateDailyReflection(reportData.value, reflectionLabels.value) : ''
 )
 const standup = computed(() => (reportData.value ? generateStandup(reportData.value, standupLabels.value) : ''))
+const finalStandup = computed(() => structuredStandup(standup.value, reflection.value))
+const selectedWeek = computed(() => dateToWeek(parseISO(selectedDate.value)))
 const weeklyDone = computed(() => weeklyTasks.value.filter((task) => task.status === 'done'))
 const weeklyRemaining = computed(() => weeklyTasks.value.filter((task) => task.status !== 'done'))
 const weeklyScore = computed(() =>
@@ -113,20 +120,29 @@ const dailyTimelineTasks = computed(() => {
 onMounted(async () => {
   await Promise.all([load(), loadWeekly(), loadTeam()])
 })
-useLiveRefresh('tasks', load)
+useLiveRefresh('tasks', () => load(true))
 watch([selectedDate, selectedUser], () => {
   syncRoute()
   void load()
+  void loadWeekly()
 })
 watch(tab, syncRoute)
 watch(dailyView, syncRoute)
-watch(content, () => {
-  if (!canEdit.value || loading.value) return
-  clearTimeout(saveTimer)
-  saving.value = 'saving'
-  localStorage.setItem(`weekflow-review-draft-${selectedDate.value}`, content.value)
-  saveTimer = setTimeout(() => void persist('draft'), 700)
-})
+watch(
+  [content, reflection],
+  () => {
+    if (!canEdit.value || loading.value || hydrating.value) return
+    clearTimeout(saveTimer)
+    dirty.value = true
+    saving.value = 'saving'
+    localStorage.setItem(
+      `weekflow-review-draft-${selectedDate.value}`,
+      JSON.stringify({ content: content.value, reflection: reflection.value })
+    )
+    saveTimer = setTimeout(() => void persist('draft'), 700)
+  },
+  { deep: true }
+)
 onKeyStroke('ArrowLeft', (event) => keyboardDate(event, -1))
 onKeyStroke('ArrowRight', (event) => keyboardDate(event, 1))
 onKeyStroke('t', (event) => {
@@ -137,8 +153,8 @@ onKeyStroke('e', (event) => {
 })
 onBeforeUnmount(() => clearTimeout(saveTimer))
 
-async function load() {
-  loading.value = true
+async function load(preserveDraft = false) {
+  if (!preserveDraft) loading.value = true
   loadError.value = false
   try {
     const previousDate = previousWorkday(selectedDate.value)
@@ -153,19 +169,24 @@ async function load() {
     previous.value = prior
     saved.value = stored.review
     history.value = stored.history
-    content.value =
-      stored.review?.content ||
-      localStorage.getItem(`weekflow-review-draft-${selectedDate.value}`) ||
-      generatedText(selected, prior)
+    if (!preserveDraft || !dirty.value) {
+      hydrating.value = true
+      const draft = readDraft(selectedDate.value)
+      content.value = stored.review?.content || draft?.content || generatedText(selected, prior)
+      reflection.value = savedReflection(stored.review) || draft?.reflection || emptyReflection()
+      dirty.value = false
+      await nextTick()
+      hydrating.value = false
+    }
     saving.value = stored.review ? 'saved' : 'idle'
   } catch {
     loadError.value = true
   } finally {
-    loading.value = false
+    if (!preserveDraft) loading.value = false
   }
 }
 async function loadWeekly() {
-  weeklyTasks.value = (await fetchAllTasks()).filter((task) => task.week === getCurrentWeek() && !task.archivedAt)
+  weeklyTasks.value = (await fetchAllTasks()).filter((task) => task.week === selectedWeek.value && !task.archivedAt)
 }
 async function loadTeam() {
   try {
@@ -226,13 +247,17 @@ function isTyping(event: KeyboardEvent) {
 async function persist(status: 'draft' | 'submitted') {
   if (!canEdit.value) return
   try {
+    const revision = ++saveRevision.value
     saving.value = 'saving'
-    saved.value = await saveDailyReview({
+    const result = await saveDailyReview({
       reviewDate: selectedDate.value,
       content: content.value,
-      structuredContent: { standup: standup.value },
+      structuredContent: { standup: finalStandup.value, reflection: reflection.value },
       status
     })
+    if (revision !== saveRevision.value) return
+    saved.value = result
+    dirty.value = false
     saving.value = 'saved'
     localStorage.removeItem(`weekflow-review-draft-${selectedDate.value}`)
     history.value = (await fetchReviewHistory()).history
@@ -252,10 +277,66 @@ function openTask(task: ReviewTask) {
   void navigateTo({ path: '/calendar', query: { task: task.id } })
 }
 async function carryOver() {
-  const result = await moveWeekTasks(getCurrentWeek(), getNextWeek(getCurrentWeek()))
+  const result = await moveWeekTasks(selectedWeek.value, getNextWeek(selectedWeek.value))
   moved.value = true
   await loadWeekly()
   useToast().add({ title: t('pages.review.moved', { count: result.moved }), color: 'success' })
+}
+async function resolveDecision(
+  task: ReviewTask,
+  action: 'tomorrow' | 'date' | 'unscheduled' | 'complete',
+  date?: string
+) {
+  resolvingTask.value = task.id
+  try {
+    if (action === 'complete') await updateTask(task.id, { status: 'done' })
+    else if (action === 'unscheduled') await updateTask(task.id, { plannedDate: null, plannedTime: null })
+    else {
+      const plannedDate = action === 'tomorrow' ? format(addDays(parseISO(selectedDate.value), 1), 'yyyy-MM-dd') : date
+      if (!plannedDate) return
+      await updateTask(task.id, { plannedDate, week: dateToWeek(parseISO(plannedDate)) })
+    }
+    await Promise.all([load(true), loadWeekly()])
+    useToast().add({ title: t('pages.review.close.decisionSaved'), color: 'success' })
+  } catch (error) {
+    report(error, t('pages.review.close.decisionFailed'))
+  } finally {
+    resolvingTask.value = null
+  }
+}
+function emptyReflection(): ReviewReflection {
+  return { result: '', progress: '', blockers: '', decisions: '', nextFocus: '' }
+}
+function savedReflection(review: SavedDailyReview | null): ReviewReflection | null {
+  const value = review?.structuredContent?.reflection
+  if (!value || typeof value !== 'object') return null
+  const source = value as Record<string, unknown>
+  return Object.fromEntries(
+    Object.keys(emptyReflection()).map((key) => [key, typeof source[key] === 'string' ? source[key] : ''])
+  ) as ReviewReflection
+}
+function readDraft(date: string): { content: string; reflection: ReviewReflection } | null {
+  try {
+    const raw = localStorage.getItem(`weekflow-review-draft-${date}`)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { content?: unknown; reflection?: ReviewReflection }
+    return {
+      content: typeof parsed.content === 'string' ? parsed.content : '',
+      reflection: parsed.reflection || emptyReflection()
+    }
+  } catch {
+    return null
+  }
+}
+function structuredStandup(base: string, value: ReviewReflection) {
+  const details = [
+    [t('pages.review.close.fields.result'), value.result],
+    [t('pages.review.close.fields.progress'), value.progress],
+    [t('pages.review.close.fields.decisions'), value.decisions],
+    [t('pages.review.close.fields.nextFocus'), value.nextFocus],
+    [t('pages.review.close.fields.blockers'), value.blockers]
+  ].filter((entry) => entry[1]?.trim())
+  return details.length ? `${base}\n\n${details.map(([label, text]) => `${label}: ${text}`).join('\n')}` : base
 }
 async function addProgress(input: Omit<Parameters<typeof createReviewProgress>[0], 'workDate'>) {
   progressSaving.value = true
@@ -369,6 +450,13 @@ function selectMember(id: string | null) {
           </option></FormSelect
         >
       </section>
+      <ReviewHistoryCalendar
+        v-if="!selectedUser"
+        :selected-date="selectedDate"
+        :history="history"
+        :max-date="today"
+        @select="selectedDate = $event"
+      />
       <USkeleton
         v-if="loading"
         class="h-[38rem] rounded-2xl"
@@ -381,8 +469,17 @@ function selectMember(id: string | null) {
         ><AppButton @click="load">{{ $t('common.tryAgain') }}</AppButton></EmptyState
       >
       <template v-else-if="daily && reportData">
-        <ReviewAttentionQueue
+        <ReviewDayDigest
+          v-if="previous"
+          :previous="previous"
+          :current="daily"
+          :previous-label="format(parseISO(previous.date), 'd MMM', { locale: dateLocale })"
+          :current-label="format(parseISO(daily.date), 'd MMM', { locale: dateLocale })"
+        />
+        <ReviewDecisionQueue
           :items="daily.attention"
+          :resolving="resolvingTask"
+          @resolve="resolveDecision"
           @open="openTask"
         />
         <section class="review-daily-layout">
@@ -429,9 +526,13 @@ function selectMember(id: string | null) {
               @delete="removeProgress"
               @open="openTask"
             />
+            <ReviewReflectionEditor
+              v-model="reflection"
+              :disabled="!canEdit || saved?.status === 'submitted'"
+            />
           </div>
           <ReviewStandupPanel
-            :standup="standup"
+            :standup="finalStandup"
             :content="content"
             :saving="saving"
             :copied="copied"

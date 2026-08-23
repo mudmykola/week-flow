@@ -180,5 +180,21 @@ describe('server validators', () => {
     expect(saveDailyReviewSchema.safeParse({ reviewDate: '2026-08-12', content: 'x'.repeat(20_001) }).success).toBe(
       false
     )
+    expect(
+      saveDailyReviewSchema.safeParse({
+        reviewDate: '2026-08-12',
+        content: 'Daily report',
+        structuredContent: {
+          reflection: { result: 'Shipped', progress: '', blockers: '', decisions: '', nextFocus: 'Review' }
+        }
+      }).success
+    ).toBe(true)
+    expect(
+      saveDailyReviewSchema.safeParse({
+        reviewDate: '2026-08-12',
+        content: 'Daily report',
+        structuredContent: { reflection: { result: 'x'.repeat(4001) } }
+      }).success
+    ).toBe(false)
   })
 })
