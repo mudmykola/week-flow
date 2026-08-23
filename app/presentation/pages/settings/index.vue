@@ -92,7 +92,7 @@ async function deleteAccount() {
 </script>
 
 <template>
-  <div class="settings-page app-container max-w-3xl">
+  <div class="settings-page app-container">
     <PageHeader
       :title="$t('settings.title')"
       :description="$t('settings.description')"

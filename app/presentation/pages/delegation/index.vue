@@ -40,7 +40,7 @@ function updateTask(value: Task) {
 </script>
 
 <template>
-  <div class="delegation-page app-container max-w-7xl">
+  <div class="delegation-page app-container">
     <PageHeader
       :title="$t('nav.delegation')"
       :description="$t('pages.delegation.description')"

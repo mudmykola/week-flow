@@ -395,7 +395,6 @@ useEventListener('keydown', (event) => {
 
 <style scoped>
 .inbox-workspace {
-  max-width: 72rem;
   padding-bottom: 5rem;
 }
 .inbox-workspace__capture {

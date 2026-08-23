@@ -397,7 +397,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div class="workflows-page app-container max-w-7xl">
+  <div class="workflows-page app-container">
     <PageHeader
       :title="$t('nav.workflows')"
       :description="$t('pages.workflows.description')"

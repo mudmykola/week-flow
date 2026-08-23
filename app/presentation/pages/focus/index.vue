@@ -137,7 +137,7 @@ onKeyStroke('Escape', () => (immersive.value = false))
 
 <template>
   <div
-    class="focus-page app-container max-w-7xl"
+    class="focus-page app-container"
     :class="{
       'focus-page--immersive fixed inset-0 z-50 max-w-none overflow-y-auto bg-[var(--color-bg)] p-4 sm:p-8': immersive
     }"

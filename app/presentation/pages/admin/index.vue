@@ -186,7 +186,7 @@ function auditLabel(action: string) {
 </script>
 
 <template>
-  <div class="admin-page app-container max-w-7xl">
+  <div class="admin-page app-container">
     <PageHeader
       :title="$t('pages.admin.title')"
       :description="$t('pages.admin.description')"

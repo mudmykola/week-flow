@@ -16,14 +16,13 @@ import { getCurrentWeek } from '~/domain/services/week'
 import { autoPlanDay } from '~/domain/services/daySchedule'
 import { defaultDaySchedule, type DaySchedule } from '#shared/types/daySchedule'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { user } = useUserSession()
 const route = useRoute()
 const date = ref(localDateKey())
 const tasks = ref<Task[]>([])
 const projects = ref<Project[]>([])
 const assignees = ref<AssignableUser[]>([])
-const focusMinutes = ref(0)
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
@@ -32,7 +31,8 @@ const editingTask = ref<Task | null>(null)
 const selected = ref<string[]>([])
 const doneOpen = ref(false)
 const quickOpen = ref(true)
-const view = useLocalStorage<'list' | 'timeline'>('weekflow-today-view-v2', 'timeline')
+const view = useLocalStorage<'list' | 'timeline'>('weekflow-today-view-v3', 'list')
+const filtersOpen = ref(false)
 const schedule = ref<DaySchedule>({ ...defaultDaySchedule })
 const filters = useLocalStorage<TodayFilters>('weekflow-today-filters-v1', {
   search: '',
@@ -51,6 +51,35 @@ const offlineQueue = useOfflineMutationQueue()
 const visible = computed(() => filterTodayTasks(tasks.value, filters.value))
 const sections = computed(() => todaySections(visible.value, date.value))
 const progress = computed(() => todayProgress(tasks.value, date.value))
+const planTasks = computed(() => {
+  const todayOverdue = sections.value.overdue.filter((task) => task.plannedDate === date.value)
+  const ordered = [...todayOverdue, ...sections.value.top, ...sections.value.inProgress, ...sections.value.planned]
+  return ordered.filter((task, index) => ordered.findIndex((item) => item.id === task.id) === index)
+})
+const currentTask = computed(() => {
+  const focusedId = focusTimer.state.value.taskId
+  return (
+    planTasks.value.find((task) => task.id === focusedId) ||
+    planTasks.value.find((task) => task.status === 'in_progress') ||
+    planTasks.value.find((task) => task.dayRank === 1) ||
+    planTasks.value[0] ||
+    null
+  )
+})
+const hasFilters = computed(() =>
+  Boolean(
+    filters.value.search ||
+    filters.value.projectId ||
+    filters.value.priority ||
+    filters.value.assigneeId ||
+    filters.value.topOnly
+  )
+)
+const formattedDate = computed(() =>
+  new Intl.DateTimeFormat(locale.value, { weekday: 'long', day: 'numeric', month: 'long' }).format(
+    new Date(`${date.value}T12:00:00`)
+  )
+)
 const estimate = computed(() =>
   tasks.value
     .filter((task) => task.plannedDate === date.value && task.status !== 'done')
@@ -59,6 +88,17 @@ const estimate = computed(() =>
 const selectedTasks = computed(() => tasks.value.filter((task) => selected.value.includes(task.id)))
 const projectName = (id: string | null) => projects.value.find((project) => project.id === id)?.name
 const assigneeName = (id: string | null) => assignees.value.find((person) => person.id === id)?.name
+
+function resetFilters() {
+  Object.assign(filters.value, {
+    search: '',
+    projectId: null,
+    priority: null,
+    status: null,
+    assigneeId: null,
+    topOnly: false
+  })
+}
 
 async function load() {
   loading.value = true
@@ -73,7 +113,6 @@ async function load() {
       $fetch<{ daySchedule: DaySchedule }>('/api/settings')
     ])
     tasks.value = plan.tasks
-    focusMinutes.value = plan.focusMinutes
     projects.value = projectItems
     assignees.value = people
     schedule.value = preferences.daySchedule
@@ -231,9 +270,8 @@ function relativeDate(offset: number) {
   <main class="today-workspace app-container">
     <header class="today-workspace__hero">
       <div>
-        <p class="today-workspace__eyebrow">{{ $t('pages.today.workspace') }}</p>
         <h1>{{ $t('nav.today') }}</h1>
-        <p class="text-secondary">{{ date }}</p>
+        <p class="text-secondary today-workspace__date">{{ formattedDate }}</p>
       </div>
       <div class="today-workspace__date-nav">
         <IconButton
@@ -259,41 +297,75 @@ function relativeDate(offset: number) {
       :aria-label="$t('pages.today.summary')"
     >
       <div class="today-workspace__progress">
-        <strong>{{ progress.percent }}%</strong
-        ><span>{{ $t('taskActions.progress', { done: progress.done, total: progress.total }) }}</span
-        ><i><b :style="{ width: `${progress.percent}%` }" /></i>
+        <span>{{ $t('taskActions.progress', { done: progress.done, total: progress.total }) }}</span>
+        <strong>{{ progress.percent }}%</strong>
+        <i><b :style="{ width: `${progress.percent}%` }" /></i>
       </div>
-      <div>
-        <UIcon name="i-lucide-triangle-alert" /><strong>{{ sections.overdue.length }}</strong
-        ><span>{{ $t('nav.overdue') }}</span>
-      </div>
-      <div>
-        <UIcon name="i-lucide-hourglass" /><strong>{{ estimate }}</strong
-        ><span>{{ $t('pages.today.minutesPlanned') }}</span>
-      </div>
-      <div>
-        <UIcon name="i-lucide-timer" /><strong>{{ focusMinutes }}</strong
-        ><span>{{ $t('pages.today.minutesFocused') }}</span>
-      </div>
+      <span
+        ><UIcon name="i-lucide-list-todo" />{{ $t('pages.today.tasksRemaining', { count: planTasks.length }) }}</span
+      >
+      <span><UIcon name="i-lucide-hourglass" />{{ estimate }} {{ $t('pages.today.minutesPlanned') }}</span>
+      <NuxtLink
+        v-if="sections.overdue.length"
+        :to="{ path: '/today', query: { mode: 'overdue' } }"
+        class="today-workspace__overdue"
+        ><UIcon name="i-lucide-triangle-alert" />{{
+          $t('pages.today.overdueSummary', { count: sections.overdue.length })
+        }}</NuxtLink
+      >
     </section>
 
-    <TodayCommandCenter />
+    <TodayNowCard
+      :task="currentTask"
+      :project-name="currentTask ? projectName(currentTask.projectId) : undefined"
+      :focus-active="focusTimer.active.value"
+      :focus-running="focusTimer.state.value.running"
+      :focus-display="focusTimer.display.value"
+      @focus="currentTask && startFocus(currentTask)"
+      @toggle="currentTask && patchTask(currentTask, { status: 'done' })"
+      @edit="currentTask && edit(currentTask)"
+      @pause="focusTimer.pause()"
+      @resume="focusTimer.resume()"
+    />
 
-    <aside
-      v-if="focusTimer.active.value"
-      class="today-workspace__focus-banner"
-    >
-      <UIcon name="i-lucide-timer" /><span>{{ focusTimer.state.value.taskTitle }}</span
-      ><strong>{{ focusTimer.display.value }}</strong
-      ><AppButton
-        size="sm"
-        variant="secondary"
-        @click="focusTimer.state.value.running ? focusTimer.pause() : focusTimer.resume()"
-        >{{ focusTimer.state.value.running ? $t('pages.focus.pause') : $t('pages.focus.resume') }}</AppButton
+    <div class="today-workspace__actions">
+      <div
+        class="today-workspace__view-switch"
+        role="group"
+        :aria-label="$t('pages.today.viewSwitch')"
       >
-    </aside>
+        <button
+          type="button"
+          :class="{ 'today-workspace__view-button--active': view === 'list' }"
+          @click="view = 'list'"
+        >
+          <UIcon name="i-lucide-list" />{{ $t('pages.today.listView') }}
+        </button>
+        <button
+          type="button"
+          :class="{ 'today-workspace__view-button--active': view === 'timeline' }"
+          @click="view = 'timeline'"
+        >
+          <UIcon name="i-lucide-calendar-clock" />{{ $t('pages.today.scheduleView') }}
+        </button>
+      </div>
+      <AppButton
+        v-if="view === 'list'"
+        variant="ghost"
+        size="sm"
+        icon="i-lucide-list-filter"
+        @click="filtersOpen = !filtersOpen"
+        >{{ $t('pages.today.filters')
+        }}<span
+          v-if="hasFilters"
+          class="today-workspace__filter-dot"
+      /></AppButton>
+    </div>
 
-    <div class="today-workspace__toolbar">
+    <div
+      v-if="view === 'list' && filtersOpen"
+      class="today-workspace__toolbar surface-card"
+    >
       <FormInput
         v-model="filters.search"
         class="today-workspace__search"
@@ -338,11 +410,13 @@ function relativeDate(offset: number) {
       >
         <UIcon name="i-lucide-star" />Top 3
       </button>
-      <IconButton
-        :icon="view === 'list' ? 'i-lucide-list' : 'i-lucide-calendar-clock'"
-        :label="$t('pages.today.toggleView')"
-        @click="view = view === 'list' ? 'timeline' : 'list'"
-      />
+      <AppButton
+        v-if="hasFilters"
+        variant="ghost"
+        size="sm"
+        @click="resetFilters"
+        >{{ $t('pages.today.clearFilters') }}</AppButton
+      >
     </div>
 
     <TaskQuickCreate
@@ -427,29 +501,21 @@ function relativeDate(offset: number) {
       />
       <template v-else>
         <section
-          v-for="section in [
-            ['overdue', sections.overdue, 'i-lucide-triangle-alert'],
-            ['top', sections.top, 'i-lucide-star'],
-            ['inProgress', sections.inProgress, 'i-lucide-loader-circle'],
-            ['planned', sections.planned, 'i-lucide-calendar-check']
-          ] as const"
-          :key="section[0]"
-          v-show="section[1].length"
+          v-if="planTasks.length"
           class="today-workspace__section"
         >
           <h2>
-            <UIcon :name="section[2]" />{{ $t(`pages.today.sections.${section[0]}`)
-            }}<span>{{ section[1].length }}</span>
+            <UIcon name="i-lucide-list-todo" />{{ $t('pages.today.planTitle') }}<span>{{ planTasks.length }}</span>
           </h2>
           <BoundedTaskList
-            :count="section[1].length"
-            :preview="6"
+            :count="planTasks.length"
+            :preview="8"
             :row-height="70"
-            :storage-key="`today-list-${section[0]}`"
+            storage-key="today-daily-plan"
           >
             <div class="today-workspace__task-list">
               <TodayTaskRow
-                v-for="task in section[1]"
+                v-for="task in planTasks"
                 :key="task.id"
                 :task="task"
                 :selected="selected.includes(task.id)"
@@ -498,7 +564,7 @@ function relativeDate(offset: number) {
           </BoundedTaskList>
         </section>
         <EmptyState
-          v-if="!visible.length"
+          v-if="!planTasks.length && !sections.done.length"
           icon="i-lucide-sun"
           :title="$t('pages.today.empty')"
           :description="$t('pages.today.emptyHint')"
@@ -528,7 +594,6 @@ function relativeDate(offset: number) {
 
 <style scoped>
 .today-workspace {
-  max-width: 90rem;
   padding-bottom: 5rem;
 }
 .today-workspace__hero,
@@ -716,6 +781,96 @@ function relativeDate(offset: number) {
   color: var(--color-accent);
   font-weight: 750;
 }
+.today-workspace__date {
+  margin-top: 0.1rem;
+  text-transform: capitalize;
+}
+.today-workspace__summary {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.85rem;
+  background: var(--color-panel-bg);
+}
+.today-workspace__summary > div,
+.today-workspace__summary > span,
+.today-workspace__summary > a {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+.today-workspace__progress {
+  min-width: 15rem;
+  flex: 1;
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+}
+.today-workspace__progress strong {
+  color: var(--color-text-primary);
+}
+.today-workspace__progress i {
+  grid-column: 1/-1;
+  width: 100%;
+}
+.today-workspace__overdue {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-danger) !important;
+  font-size: 0.72rem;
+}
+.today-workspace__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.9rem 0 0.65rem;
+}
+.today-workspace__view-switch {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.7rem;
+  background: var(--color-panel-bg);
+}
+.today-workspace__view-switch button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.65rem;
+  border-radius: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+.today-workspace__view-switch .today-workspace__view-button--active {
+  background: var(--color-bg-alt);
+  color: var(--color-text-primary);
+}
+.today-workspace__filter-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: 0.25rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+.today-workspace__toolbar.surface-card {
+  flex-wrap: wrap;
+  padding: 0.65rem;
+}
+.today-workspace__sections {
+  margin-top: 0.65rem;
+}
 @media (max-width: 850px) {
   .today-workspace__summary {
     grid-template-columns: 1fr 1fr;
@@ -735,10 +890,24 @@ function relativeDate(offset: number) {
     display: none;
   }
   .today-workspace__summary {
-    grid-template-columns: 1fr 1fr;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
   }
-  .today-workspace__summary > div {
-    padding: 0.65rem;
+  .today-workspace__progress {
+    width: 100%;
+    min-width: 0;
+  }
+  .today-workspace__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .today-workspace__view-switch,
+  .today-workspace__view-switch button {
+    flex: 1;
+  }
+  .today-workspace__view-switch button {
+    justify-content: center;
   }
   .today-workspace__toolbar :deep(select) {
     min-width: 0;

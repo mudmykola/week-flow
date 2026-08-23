@@ -145,7 +145,7 @@ async function undo() {
 </script>
 
 <template>
-  <div class="task-list-view app-container max-w-5xl">
+  <div class="task-list-view app-container">
     <PageHeader
       :title="title"
       :icon="icon"

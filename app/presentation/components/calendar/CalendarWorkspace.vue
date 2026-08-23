@@ -196,7 +196,7 @@ async function setTop(task: Task) {
 </script>
 
 <template>
-  <div class="calendar-workspace">
+  <div class="calendar-workspace app-container">
     <PageHeader
       :title="$t('nav.calendar')"
       :description="$t('pages.calendar.descriptionV3')"

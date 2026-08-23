@@ -1,7 +1,5 @@
 .calendar-workspace {
-  max-width: 1800px;
-  margin-inline: auto;
-  padding: 1rem;
+  min-width: 0;
 }
 .calendar-toolbar,
 .calendar-toolbar__navigation,
@@ -501,9 +499,6 @@
   }
 }
 @media (max-width: 639px) {
-  .calendar-workspace {
-    padding: 0.65rem;
-  }
   .calendar-workspace__views {
     width: 100%;
   }

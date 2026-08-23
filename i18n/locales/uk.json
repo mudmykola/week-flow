@@ -77,26 +77,26 @@
     ]
   },
   "nav": {
-    "board": "Дошка",
+    "board": "Тиждень",
     "focus": "Фокус",
     "inbox": "Вхідні",
-    "goals": "Мої цілі",
+    "goals": "Цілі",
     "today": "Сьогодні",
     "upcoming": "Майбутні",
     "overdue": "Прострочені",
     "calendar": "Календар",
     "timeline": "Таймлайн",
     "analytics": "Аналітика",
-    "review": "Огляд тижня",
-    "delegation": "Делегування",
+    "review": "Дейлік та огляд",
+    "delegation": "Делеговані",
     "templates": "Шаблони",
     "notes": "Стікери",
-    "activity": "Активність",
+    "activity": "Журнал активності",
     "workflows": "Процеси",
     "archive": "Архів",
     "settings": "Налаштування",
     "team": "Команда",
-    "admin": "Адмін"
+    "admin": "Центр керування"
   },
   "shell": {
     "closeMenu": "Закрити меню",
@@ -132,7 +132,7 @@
     "goTo": "Перейти",
     "shortcuts": "Клавіатурні скорочення",
     "shortcutsHint": "Натисніть «?» будь-де, щоб відкрити цей список",
-    "section": { "daily": "Щодня", "insights": "Огляд", "team": "Команда" }
+    "section": { "work": "Робота", "planning": "Планування", "review": "Огляд", "team": "Команда", "system": "Система" }
   },
   "task": {
     "title": "Задача",
@@ -438,6 +438,17 @@
         "notesEmpty": "Активних пунктів немає"
       },
       "viewSwitch": "Перемикач вигляду",
+      "now": "Зараз",
+      "noCurrent": "Немає активної задачі",
+      "noCurrentHint": "Оберіть задачу з плану або швидко додайте нову.",
+      "planTitle": "План на сьогодні",
+      "tasksRemaining": "Залишилось задач: {count}",
+      "overdueSummary": "Прострочено: {count}",
+      "listView": "План",
+      "scheduleView": "Розклад",
+      "filters": "Фільтри",
+      "clearFilters": "Очистити",
+      "taskMenu": "Дії із задачею",
       "workspace": "План дня",
       "goToday": "Сьогодні",
       "previousDay": "Попередній день",

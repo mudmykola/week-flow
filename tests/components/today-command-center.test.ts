@@ -20,4 +20,12 @@ describe('Today daily command center', () => {
     expect(source).toContain('.slice(0, 5)')
     expect(source).toContain('inbox.slice(0, 3)')
   })
+
+  it('does not compete with the primary daily execution flow', () => {
+    const workspace = readFileSync(
+      new URL('../../app/presentation/components/today/TodayWorkspace.vue', import.meta.url),
+      'utf8'
+    )
+    expect(workspace).not.toContain('<TodayCommandCenter')
+  })
 })

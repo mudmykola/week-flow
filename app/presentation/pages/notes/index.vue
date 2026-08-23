@@ -170,7 +170,7 @@ function changeView(next: NotesView) {
 </script>
 
 <template>
-  <div class="notes-page app-container max-w-[1600px] space-y-4">
+  <div class="notes-page app-container space-y-4">
     <PageHeader
       :title="$t('pages.notes.title')"
       :description="$t('pages.notes.description')"

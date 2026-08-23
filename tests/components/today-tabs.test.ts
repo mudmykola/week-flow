@@ -38,10 +38,10 @@ describe('today page tabs', () => {
     mockRoute.query = {}
   })
 
-  it('defaults to the today tab when no mode query is present', async () => {
+  it('opens the focused daily workspace without a competing mode switch', async () => {
     const wrapper = await mountSuspended(TodayPage, { global: { stubs: stubs() } })
     await flushPromises()
-    expect(wrapper.get('.today-page__view-button--active').text()).toContain('Today')
+    expect(wrapper.find('.today-page__view-switch').exists()).toBe(false)
     expect(taskApi.fetchTodayPlan).toHaveBeenCalled()
   })
 
@@ -49,7 +49,7 @@ describe('today page tabs', () => {
     mockRoute.query = { mode: 'archive' }
     const wrapper = await mountSuspended(TodayPage, { global: { stubs: stubs() } })
     await flushPromises()
-    expect(wrapper.get('.today-page__view-button--active').text()).toContain('Archive')
+    expect(wrapper.find('.today-page__view-switch').exists()).toBe(false)
     expect(taskApi.fetchArchivedTasks).toHaveBeenCalled()
   })
 })

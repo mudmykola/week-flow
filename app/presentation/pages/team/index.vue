@@ -202,7 +202,7 @@ function toggleAllGoals() {
 </script>
 
 <template>
-  <div class="team-page app-container max-w-7xl">
+  <div class="team-page app-container">
     <PageHeader
       :title="$t('nav.team')"
       :description="$t('pages.team.description')"

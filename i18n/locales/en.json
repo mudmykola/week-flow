@@ -77,26 +77,26 @@
     ]
   },
   "nav": {
-    "board": "Board",
+    "board": "Week",
     "focus": "Focus",
     "inbox": "Inbox",
-    "goals": "My goals",
+    "goals": "Goals",
     "today": "Today",
     "upcoming": "Upcoming",
     "overdue": "Overdue",
     "calendar": "Calendar",
     "timeline": "Timeline",
     "analytics": "Analytics",
-    "review": "Weekly review",
-    "delegation": "Delegation",
+    "review": "Daily & review",
+    "delegation": "Delegated",
     "templates": "Templates",
     "notes": "Sticky notes",
-    "activity": "Activity",
+    "activity": "Activity log",
     "workflows": "Workflows",
     "archive": "Archive",
     "settings": "Settings",
     "team": "Team",
-    "admin": "Admin"
+    "admin": "Control center"
   },
   "shell": {
     "closeMenu": "Close menu",
@@ -132,7 +132,7 @@
     "goTo": "Go to",
     "shortcuts": "Keyboard shortcuts",
     "shortcutsHint": "Press \"?\" anywhere to open this list",
-    "section": { "daily": "Daily", "insights": "Insights", "team": "Team" }
+    "section": { "work": "Work", "planning": "Planning", "review": "Review", "team": "Team", "system": "System" }
   },
   "task": {
     "title": "Task",
@@ -438,6 +438,17 @@
         "notesEmpty": "No active checklist items"
       },
       "viewSwitch": "View switch",
+      "now": "Now",
+      "noCurrent": "No active task",
+      "noCurrentHint": "Choose a task from the plan or quickly add a new one.",
+      "planTitle": "Today's plan",
+      "tasksRemaining": "Tasks remaining: {count}",
+      "overdueSummary": "Overdue: {count}",
+      "listView": "Plan",
+      "scheduleView": "Schedule",
+      "filters": "Filters",
+      "clearFilters": "Clear",
+      "taskMenu": "Task actions",
       "workspace": "Daily plan",
       "goToday": "Today",
       "previousDay": "Previous day",

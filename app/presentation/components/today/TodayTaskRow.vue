@@ -60,34 +60,36 @@ const emit = defineEmits<{
       :aria-label="$t('task.plannedTime')"
       @change="emit('patch', { plannedTime: ($event.target as HTMLInputElement).value || null })"
     />
-    <button
-      class="today-task-row__rank"
-      type="button"
-      :title="$t('task.dayPriority')"
-      @click="emit('patch', { dayRank: task.dayRank ? null : 1 })"
-    >
-      <UIcon :name="task.dayRank ? 'i-lucide-star' : 'i-lucide-star-off'" />
-      <span v-if="task.dayRank">{{ task.dayRank }}</span>
-    </button>
-    <IconButton
-      icon="i-lucide-timer"
-      :label="$t('pages.today.startFocus')"
-      size="sm"
-      @click="emit('focus')"
-    />
-    <IconButton
-      icon="i-lucide-pencil"
-      :label="$t('common.edit')"
-      size="sm"
-      @click="emit('edit')"
-    />
+    <details class="today-task-row__menu">
+      <summary :aria-label="$t('pages.today.taskMenu')"><UIcon name="i-lucide-ellipsis" /></summary>
+      <div>
+        <button
+          type="button"
+          @click="emit('focus')"
+        >
+          <UIcon name="i-lucide-timer" />{{ $t('pages.today.startFocus') }}
+        </button>
+        <button
+          type="button"
+          @click="emit('patch', { dayRank: task.dayRank ? null : 1 })"
+        >
+          <UIcon :name="task.dayRank ? 'i-lucide-star-off' : 'i-lucide-star'" />{{ $t('pages.today.sections.top') }}
+        </button>
+        <button
+          type="button"
+          @click="emit('edit')"
+        >
+          <UIcon name="i-lucide-pencil" />{{ $t('common.edit') }}
+        </button>
+      </div>
+    </details>
   </article>
 </template>
 
 <style scoped>
 .today-task-row {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.55rem;
   min-height: 3.75rem;
@@ -105,6 +107,13 @@ const emit = defineEmits<{
 }
 .today-task-row__select {
   accent-color: var(--color-accent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.today-task-row:hover .today-task-row__select,
+.today-task-row__select:checked,
+.today-task-row__select:focus-visible {
+  opacity: 1;
 }
 .today-task-row__check {
   display: grid;
@@ -149,12 +158,50 @@ const emit = defineEmits<{
   color: inherit;
   font-size: 0.75rem;
 }
-.today-task-row__rank {
+.today-task-row__menu {
+  position: relative;
+}
+.today-task-row__menu summary {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  cursor: pointer;
+  list-style: none;
+  place-items: center;
+  border-radius: 0.5rem;
+  color: var(--color-text-secondary);
+}
+.today-task-row__menu summary:hover {
+  background: var(--color-bg-alt);
+  color: var(--color-text-primary);
+}
+.today-task-row__menu > div {
+  position: absolute;
+  top: 2.2rem;
+  right: 0;
+  z-index: 20;
+  width: 11rem;
+  padding: 0.3rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.65rem;
+  background: var(--color-panel-bg);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.22);
+}
+.today-task-row__menu:not([open]) > div {
+  display: none;
+}
+.today-task-row__menu button {
   display: flex;
+  width: 100%;
   align-items: center;
-  gap: 0.2rem;
-  color: var(--color-accent);
+  gap: 0.45rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.45rem;
   font-size: 0.75rem;
+  text-align: left;
+}
+.today-task-row__menu button:hover {
+  background: var(--color-bg-alt);
 }
 .today-task-row--done {
   opacity: 0.62;
@@ -164,14 +211,10 @@ const emit = defineEmits<{
 }
 @media (max-width: 640px) {
   .today-task-row {
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
   .today-task-row__select,
-  .today-task-row__time,
-  .today-task-row__rank {
-    display: none;
-  }
-  .today-task-row > :deep(button:last-child) {
+  .today-task-row__time {
     display: none;
   }
 }

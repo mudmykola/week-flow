@@ -145,9 +145,6 @@ a {
   margin-inline: auto;
   padding: var(--space-page-y) var(--space-page-x) 2rem;
 }
-.board-workspace {
-  max-width: 1480px;
-}
 .board-toolbar {
   display: flex;
   align-items: center;

@@ -39,7 +39,7 @@ function save() {
 </script>
 
 <template>
-  <div class="templates-page app-container max-w-6xl">
+  <div class="templates-page app-container">
     <PageHeader
       :title="$t('nav.templates')"
       :description="$t('pages.templates.description')"

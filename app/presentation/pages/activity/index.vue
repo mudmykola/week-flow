@@ -255,7 +255,6 @@ function selectSignal(kind: keyof ActivitySummary) {
 
 <style scoped>
 .activity-page {
-  max-width: 1350px;
   margin-inline: auto;
   padding: 1rem;
 }

@@ -27,7 +27,7 @@ function urgencyClass(goal: Goal) {
 </script>
 
 <template>
-  <div class="goals-page app-container max-w-5xl">
+  <div class="goals-page app-container">
     <PageHeader
       :title="$t('nav.goals')"
       :description="$t('pages.goals.description')"

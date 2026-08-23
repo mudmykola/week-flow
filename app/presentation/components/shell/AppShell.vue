@@ -254,7 +254,7 @@ useEventListener('keydown', (event) => {
 
     <div
       class="transition-[padding]"
-      :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'"
+      :class="sidebarCollapsed ? 'lg:pl-[4.25rem]' : 'lg:pl-[17rem]'"
     >
       <header
         class="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[var(--color-panel-border)] bg-[color:var(--color-bg-alt)]/90 px-3 backdrop-blur-xl md:px-5"

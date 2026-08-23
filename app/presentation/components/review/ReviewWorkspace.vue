@@ -618,7 +618,6 @@ function selectMember(id: string | null) {
 
 <style scoped>
 .review-workspace {
-  max-width: 1500px;
   margin-inline: auto;
   padding: 1rem;
 }
