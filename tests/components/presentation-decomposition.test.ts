@@ -8,7 +8,7 @@ describe('presentation orchestration boundaries', () => {
     ['app/presentation/components/shell/AppShell.vue', 'ShellSidebar'],
     ['app/presentation/components/task/TaskEditor.vue', 'TaskTagsEditor'],
     ['app/presentation/components/week/WeekBoard.vue', 'WeekBoardToolbar'],
-    ['app/presentation/pages/notes/index.vue', 'StickyNoteCard']
+    ['app/presentation/pages/notes/index.vue', 'NotesSection']
   ])('%s delegates focused UI to %s', (orchestrator, component) => {
     expect(readFileSync(orchestrator, 'utf8')).toContain(`<${component}`)
   })

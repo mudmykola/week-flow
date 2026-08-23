@@ -5,21 +5,58 @@ import {
   fetchStickyNotes,
   updateStickyNote
 } from '~/data/repositories/stickyNotesRepository'
-import type { StickyNote, UpdateStickyNoteInput } from '~/domain/entities/stickyNote'
+import { createTask } from '~/data/repositories/tasksRepository'
+import type { CreateStickyNoteInput, StickyNote, UpdateStickyNoteInput } from '~/domain/entities/stickyNote'
+import { dateToWeek } from '~/domain/services/week'
+import type { NotesView } from '~/presentation/components/notes/NotesToolbar.vue'
 
+const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
+const toast = useToast()
 const notes = ref<StickyNote[]>([])
-const draft = ref('')
 const loading = ref(true)
 const saving = ref(false)
-const draggingId = ref<string | null>(null)
 const editingId = ref<string | null>(null)
-const board = useTemplateRef<HTMLElement>('board')
+const query = ref(String(route.query.q ?? ''))
+const view = computed<NotesView>(() => {
+  const value = String(route.query.view ?? 'today')
+  return ['today', 'pinned', 'all', 'archive'].includes(value) ? (value as NotesView) : 'today'
+})
+const today = new Date().toLocaleDateString('en-CA')
 const stickyCreatedBus = useEventBus<StickyNote>('weekflow:sticky-created')
 const offlineQueue = useOfflineMutationQueue()
 
+const active = computed(() => notes.value.filter((note) => !note.archivedAt))
+const counts = computed<Record<NotesView, number>>(() => ({
+  today: active.value.filter((note) => note.noteDate === today || !note.noteDate).length,
+  pinned: active.value.filter((note) => note.pinned).length,
+  all: active.value.length,
+  archive: notes.value.filter((note) => Boolean(note.archivedAt)).length
+}))
+const visible = computed(() => {
+  const term = query.value.trim().toLocaleLowerCase()
+  const source =
+    view.value === 'archive'
+      ? notes.value.filter((note) => note.archivedAt)
+      : view.value === 'pinned'
+        ? active.value.filter((note) => note.pinned)
+        : view.value === 'today'
+          ? active.value.filter((note) => note.noteDate === today || !note.noteDate)
+          : active.value
+  return source
+    .filter(
+      (note) => !term || `${note.title} ${note.content} ${note.labels.join(' ')}`.toLocaleLowerCase().includes(term)
+    )
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.sortOrder - a.sortOrder || b.updatedAt - a.updatedAt)
+})
+const pinnedNotes = computed(() => (view.value === 'today' ? visible.value.filter((note) => note.pinned) : []))
+const regularNotes = computed(() =>
+  view.value === 'today' ? visible.value.filter((note) => !note.pinned) : visible.value
+)
+
 stickyCreatedBus.on((note) => {
-  if (!notes.value.some((item) => item.id === note.id)) notes.value.push(note)
+  if (!notes.value.some((item) => item.id === note.id)) notes.value.unshift(note)
 })
 
 onMounted(async () => {
@@ -29,54 +66,17 @@ onMounted(async () => {
     loading.value = false
   }
 })
+watch(query, (value) => router.replace({ query: { ...route.query, q: value || undefined } }))
 
-async function addNote() {
-  const content = parseItems(draft.value).join('\n')
-  if (!content || saving.value) return
+async function addNote(input: CreateStickyNoteInput) {
+  if (saving.value) return
   saving.value = true
   try {
-    const index = notes.value.length
-    const note = await createStickyNote({
-      content,
-      positionX: 24 + (index % 4) * 264,
-      positionY: 24 + Math.floor(index / 4) * 224
-    })
-    notes.value.push(note)
-    draft.value = ''
+    notes.value.unshift(await createStickyNote(input))
+    toast.add({ title: t('pages.notes.created'), color: 'success' })
   } finally {
     saving.value = false
   }
-}
-
-function parseItems(content: string) {
-  return content
-    .split('\n')
-    .map((line) => line.replace(/^\s*\d+[.)]\s*/, '').trim())
-    .filter(Boolean)
-}
-
-function startDraft() {
-  if (!draft.value.trim()) draft.value = '1. '
-}
-
-async function addDraftLine(event: KeyboardEvent) {
-  if (event.metaKey || event.ctrlKey) {
-    await addNote()
-    return
-  }
-  const textarea = event.currentTarget as HTMLTextAreaElement
-  const cursor = textarea.selectionStart
-  const before = draft.value.slice(0, cursor)
-  const after = draft.value.slice(textarea.selectionEnd)
-  const nextNumber = before.split('\n').length + 1
-  const insertion = `\n${nextNumber}. `
-  draft.value = `${before}${insertion}${after}`
-  await nextTick()
-  textarea.setSelectionRange(cursor + insertion.length, cursor + insertion.length)
-}
-
-function noteItems(note: StickyNote) {
-  return parseItems(note.content)
 }
 
 async function patchNote(note: StickyNote, patch: UpdateStickyNoteInput) {
@@ -89,139 +89,147 @@ async function patchNote(note: StickyNote, patch: UpdateStickyNoteInput) {
   if (index !== -1) notes.value[index] = updated
 }
 
-async function saveContent(note: StickyNote, content: string) {
-  const normalized = parseItems(content).join('\n')
+function noteItems(note: StickyNote) {
+  return note.content
+    .split('\n')
+    .map((line) => line.replace(/^\s*\d+[.)]\s*/, '').trim())
+    .filter(Boolean)
+}
+
+async function saveContent(note: StickyNote, value: { title: string; content: string }) {
+  const normalized = noteItems({ ...note, content: value.content }).join('\n')
+  if (!normalized) return
   editingId.value = null
-  if (!normalized || normalized === note.content) return
-  const checkedItems = (note.checkedItems ?? []).filter((index) => index < parseItems(normalized).length)
-  await patchNote(note, { content: normalized, checkedItems, done: false })
+  await patchNote(note, {
+    title: value.title.trim(),
+    content: normalized,
+    checkedItems: (note.checkedItems ?? []).filter((index) => index < normalized.split('\n').length),
+    done: false,
+    completedAt: null
+  })
 }
 
 async function toggleItem(note: StickyNote, itemIndex: number) {
   const checked = new Set(note.checkedItems ?? [])
-  if (checked.has(itemIndex)) checked.delete(itemIndex)
-  else checked.add(itemIndex)
+  checked.has(itemIndex) ? checked.delete(itemIndex) : checked.add(itemIndex)
   const checkedItems = [...checked].sort((a, b) => a - b)
-  await patchNote(note, { checkedItems, done: checkedItems.length === noteItems(note).length })
+  const done = checkedItems.length === noteItems(note).length
+  await patchNote(note, { checkedItems, done, completedAt: done ? Date.now() : null })
 }
 
 async function toggleAll(note: StickyNote) {
   const done = !note.done
   await patchNote(note, {
     done,
-    checkedItems: done ? noteItems(note).map((_, index) => index) : []
+    checkedItems: done ? noteItems(note).map((_, index) => index) : [],
+    completedAt: done ? Date.now() : null
   })
 }
 
-async function removeNote(id: string) {
-  await offlineQueue.capture({ url: `/api/sticky-notes/${id}`, method: 'DELETE' }, () => deleteStickyNote(id), {
-    ok: true
+async function duplicateNote(note: StickyNote) {
+  const copy = await createStickyNote({
+    title: note.title,
+    content: note.content,
+    color: note.color,
+    noteDate: note.noteDate,
+    labels: note.labels
   })
-  notes.value = notes.value.filter((note) => note.id !== id)
+  notes.value.unshift(copy)
+  toast.add({ title: t('pages.notes.duplicated'), color: 'success' })
 }
 
-function startDrag(note: StickyNote) {
-  draggingId.value = note.id
+async function convertToTask(note: StickyNote) {
+  if (note.linkedTaskId) return
+  const plannedDate = note.noteDate ?? today
+  const task = await createTask({
+    title: note.title || noteItems(note)[0] || t('pages.notes.untitled'),
+    note:
+      noteItems(note)
+        .slice(note.title ? 0 : 1)
+        .join('\n') || null,
+    week: dateToWeek(new Date(`${plannedDate}T12:00:00`)),
+    plannedDate,
+    status: 'todo'
+  })
+  await patchNote(note, { linkedTaskId: task.id, archivedAt: Date.now() })
+  toast.add({ title: t('pages.notes.converted'), color: 'success' })
 }
 
-async function dropNote(event: DragEvent) {
-  if (!draggingId.value || !board.value) return
-  const note = notes.value.find((item) => item.id === draggingId.value)
-  draggingId.value = null
-  if (!note) return
-  const bounds = board.value.getBoundingClientRect()
-  const positionX = Math.max(0, Math.round(event.clientX - bounds.left - 120))
-  const positionY = Math.max(0, Math.round(event.clientY - bounds.top - 28))
-  await patchNote(note, { positionX, positionY })
+async function removeNote(note: StickyNote) {
+  await offlineQueue.capture(
+    { url: `/api/sticky-notes/${note.id}`, method: 'DELETE' },
+    () => deleteStickyNote(note.id),
+    { ok: true }
+  )
+  notes.value = notes.value.filter((item) => item.id !== note.id)
+}
+
+function changeView(next: NotesView) {
+  router.replace({ query: { ...route.query, view: next === 'today' ? undefined : next } })
 }
 </script>
 
 <template>
-  <div class="notes-page app-container max-w-[1600px]">
+  <div class="notes-page app-container max-w-[1600px] space-y-4">
     <PageHeader
       :title="$t('pages.notes.title')"
       :description="$t('pages.notes.description')"
       icon="i-lucide-sticky-note"
     />
+    <NotesQuickCapture @create="addNote" />
+    <NotesToolbar
+      :view="view"
+      :query="query"
+      :counts="counts"
+      @view="changeView"
+      @query="query = $event"
+    />
 
-    <section class="notes-page__composer surface-card mb-4 p-3 sm:p-4">
-      <div class="flex items-end gap-3">
-        <FormField
-          class="min-w-0 flex-1"
-          :label="$t('pages.notes.quickCapture')"
-          icon="i-lucide-pencil-line"
-        >
-          <FormTextarea
-            v-model="draft"
-            rows="3"
-            :placeholder="$t('pages.notes.placeholder')"
-            @focus="startDraft"
-            @keydown.enter.prevent="addDraftLine"
-          />
-        </FormField>
-        <AppButton
-          class="mb-0.5 shrink-0"
-          variant="primary"
-          icon="i-lucide-plus"
-          :loading="saving"
-          @click="addNote"
-        >
-          {{ $t('pages.notes.add') }}
-        </AppButton>
-      </div>
-      <p class="text-secondary mt-2 flex items-center gap-1.5 text-xs">
-        <UIcon name="i-lucide-command" />{{ $t('pages.notes.shortcut') }}
-      </p>
-    </section>
-
-    <section
-      ref="board"
-      class="notes-page__board relative min-h-[38rem] overflow-hidden rounded-3xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-4 shadow-inner sm:min-h-[44rem]"
-      @dragover.prevent
-      @drop.prevent="dropNote"
+    <div
+      v-if="loading"
+      class="notes-page__skeleton grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
-      <div
-        class="pointer-events-none absolute inset-0 opacity-35"
-        style="
-          background-image: radial-gradient(var(--color-panel-border) 1px, transparent 1px);
-          background-size: 22px 22px;
-        "
+      <USkeleton
+        v-for="index in 4"
+        :key="index"
+        class="h-64 rounded-2xl"
       />
-
-      <div
-        v-if="loading"
-        class="relative grid gap-4 md:grid-cols-3 lg:grid-cols-4"
-      >
-        <USkeleton
-          v-for="index in 4"
-          :key="index"
-          class="h-48 rounded-sm"
-        />
-      </div>
-
-      <EmptyState
-        v-else-if="!notes.length"
-        class="notes-page__empty relative mx-auto mt-20 max-w-xl border-0 bg-transparent shadow-none"
-        icon="i-lucide-sticky-note"
-        :title="$t('pages.notes.empty')"
-        :description="$t('pages.notes.emptyHint')"
+    </div>
+    <main
+      v-else
+      class="notes-page__workspace space-y-7"
+    >
+      <NotesSection
+        v-if="view === 'today' && pinnedNotes.length"
+        :title="$t('pages.notes.sections.pinned')"
+        icon="i-lucide-pin"
+        :notes="pinnedNotes"
+        :editing-id="editingId"
+        :empty="$t('pages.notes.emptyHint')"
+        @edit="editingId = editingId === $event ? null : $event"
+        @patch="patchNote"
+        @save="saveContent"
+        @toggle-item="toggleItem"
+        @toggle-all="toggleAll"
+        @remove="removeNote"
+        @duplicate="duplicateNote"
+        @convert="convertToTask"
       />
-
-      <StickyNoteCard
-        v-for="note in notes"
-        v-else
-        :key="note.id"
-        :note="note"
-        :items="noteItems(note)"
-        :editing="editingId === note.id"
-        @drag="startDrag(note)"
-        @patch="patchNote(note, $event)"
-        @save="saveContent(note, $event)"
-        @toggle-item="toggleItem(note, $event)"
-        @toggle-all="toggleAll(note)"
-        @remove="removeNote(note.id)"
-        @edit="editingId = editingId === note.id ? null : note.id"
+      <NotesSection
+        :title="$t(`pages.notes.sections.${view === 'today' ? 'today' : view}`)"
+        :icon="view === 'archive' ? 'i-lucide-archive' : view === 'pinned' ? 'i-lucide-pin' : 'i-lucide-layout-grid'"
+        :notes="regularNotes"
+        :editing-id="editingId"
+        :empty="query ? $t('pages.notes.noResults') : $t('pages.notes.emptyHint')"
+        @edit="editingId = editingId === $event ? null : $event"
+        @patch="patchNote"
+        @save="saveContent"
+        @toggle-item="toggleItem"
+        @toggle-all="toggleAll"
+        @remove="removeNote"
+        @duplicate="duplicateNote"
+        @convert="convertToTask"
       />
-    </section>
+    </main>
   </div>
 </template>

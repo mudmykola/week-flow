@@ -16,15 +16,24 @@ vi.mock('~/data/repositories/stickyNotesRepository', () => ({
   updateStickyNote: repository.update,
   deleteStickyNote: repository.remove
 }))
+vi.mock('~/data/repositories/tasksRepository', () => ({ createTask: vi.fn() }))
 
 const note = {
   id: 'note-1',
+  title: 'Дейлік',
   content: 'Підготувати питання на дейлік\nЗаписати рішення',
   color: 'yellow' as const,
   positionX: 24,
   positionY: 24,
   checkedItems: [],
   done: false,
+  noteDate: new Date().toLocaleDateString('en-CA'),
+  pinned: false,
+  archivedAt: null,
+  sortOrder: 1,
+  labels: [],
+  linkedTaskId: null,
+  completedAt: null,
   createdAt: 1,
   updatedAt: 1
 }
@@ -53,17 +62,16 @@ describe('daily sticky-note board', () => {
 
     const composer = wrapper.find('section textarea')
     await composer.trigger('focus')
-    await composer.setValue('1. Передзвонити клієнту')
-    await composer.trigger('keydown', { key: 'Enter' })
-    expect(composer.element.value).toBe('1. Передзвонити клієнту\n2. ')
-    await composer.setValue('1. Передзвонити клієнту\n2. Надіслати підсумок')
-    await wrapper.get('.notes-page__composer button').trigger('click')
+    await composer.setValue('Передзвонити клієнту\nНадіслати підсумок')
+    await wrapper.get('.notes-quick-capture__main .app-button').trigger('click')
     await flushPromises()
 
     expect(repository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ content: 'Передзвонити клієнту\nНадіслати підсумок' })
+      expect.objectContaining({ content: 'Передзвонити клієнту\nНадіслати підсумок', noteDate: note.noteDate })
     )
-    expect(wrapper.findAll('.sticky-note__items').at(-1)!.text()).toContain('Надіслати підсумок')
+    expect(wrapper.findAll('.sticky-note__items').some((items) => items.text().includes('Надіслати підсумок'))).toBe(
+      true
+    )
   })
 
   it('marks and deletes an existing sticky note', async () => {
@@ -78,10 +86,14 @@ describe('daily sticky-note board', () => {
     })
     await flushPromises()
     await wrapper.get('.sticky-note__item').trigger('click')
-    expect(repository.update).toHaveBeenCalledWith('note-1', { done: false, checkedItems: [0] })
+    expect(repository.update).toHaveBeenCalledWith('note-1', { done: false, checkedItems: [0], completedAt: null })
 
     await wrapper.get('.sticky-note__footer button').trigger('click')
-    expect(repository.update).toHaveBeenLastCalledWith('note-1', { done: true, checkedItems: [0, 1] })
+    expect(repository.update).toHaveBeenLastCalledWith('note-1', {
+      done: true,
+      checkedItems: [0, 1],
+      completedAt: expect.any(Number)
+    })
 
     await wrapper.get('.sticky-note__footer .ui-icon-button--danger').trigger('click')
     expect(repository.remove).toHaveBeenCalledWith('note-1')

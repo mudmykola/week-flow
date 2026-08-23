@@ -400,6 +400,7 @@ export const stickyNotes = sqliteTable(
     ownerId: text('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull().default(''),
     content: text('content').notNull(),
     color: text('color', { enum: ['yellow', 'pink', 'blue', 'green'] })
       .notNull()
@@ -408,10 +409,20 @@ export const stickyNotes = sqliteTable(
     positionY: integer('position_y').notNull().default(24),
     checkedItems: text('checked_items', { mode: 'json' }).$type<number[]>().notNull().default([]),
     done: integer('done', { mode: 'boolean' }).notNull().default(false),
+    noteDate: text('note_date'),
+    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+    archivedAt: integer('archived_at'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    labels: text('labels', { mode: 'json' }).$type<string[]>().notNull().default([]),
+    linkedTaskId: text('linked_task_id'),
+    completedAt: integer('completed_at'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull()
   },
-  (table) => [index('sticky_notes_owner_idx').on(table.ownerId, table.updatedAt)]
+  (table) => [
+    index('sticky_notes_owner_idx').on(table.ownerId, table.updatedAt),
+    index('sticky_notes_owner_date_idx').on(table.ownerId, table.noteDate, table.archivedAt)
+  ]
 )
 
 export const userSettings = sqliteTable('user_settings', {

@@ -193,19 +193,31 @@ export const createProjectSchema = z.object({
 
 export const stickyNoteColorSchema = z.enum(['yellow', 'pink', 'blue', 'green'])
 export const createStickyNoteSchema = z.object({
+  title: z.string().trim().max(120).optional().default(''),
   content: z.string().trim().min(1).max(1000),
   color: stickyNoteColorSchema.optional().default('yellow'),
   positionX: z.number().int().min(0).max(4000).optional().default(24),
-  positionY: z.number().int().min(0).max(4000).optional().default(24)
+  positionY: z.number().int().min(0).max(4000).optional().default(24),
+  noteDate: z.iso.date().nullable().optional().default(null),
+  pinned: z.boolean().optional().default(false),
+  labels: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([])
 })
 export const updateStickyNoteSchema = z
   .object({
+    title: z.string().trim().max(120).optional(),
     content: z.string().trim().min(1).max(1000).optional(),
     color: stickyNoteColorSchema.optional(),
     positionX: z.number().int().min(0).max(4000).optional(),
     positionY: z.number().int().min(0).max(4000).optional(),
     checkedItems: z.array(z.number().int().min(0).max(99)).max(100).optional(),
-    done: z.boolean().optional()
+    done: z.boolean().optional(),
+    noteDate: z.iso.date().nullable().optional(),
+    pinned: z.boolean().optional(),
+    archivedAt: z.number().int().positive().nullable().optional(),
+    sortOrder: z.number().int().min(0).max(100_000).optional(),
+    labels: z.array(z.string().trim().min(1).max(30)).max(10).optional(),
+    linkedTaskId: z.string().uuid().nullable().optional(),
+    completedAt: z.number().int().positive().nullable().optional()
   })
   .refine((value) => Object.keys(value).length > 0)
 

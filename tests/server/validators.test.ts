@@ -159,7 +159,11 @@ describe('server validators', () => {
       content: 'Follow up',
       color: 'yellow',
       positionX: 24,
-      positionY: 24
+      positionY: 24,
+      title: '',
+      noteDate: null,
+      pinned: false,
+      labels: []
     })
     expect(createStickyNoteSchema.safeParse({ content: '' }).success).toBe(false)
     expect(createStickyNoteSchema.safeParse({ content: 'Note', color: 'purple' }).success).toBe(false)
@@ -167,6 +171,9 @@ describe('server validators', () => {
       updateStickyNoteSchema.safeParse({ done: true, checkedItems: [0, 2], positionX: 240, positionY: 120 }).success
     ).toBe(true)
     expect(updateStickyNoteSchema.safeParse({ checkedItems: [-1] }).success).toBe(false)
+    expect(
+      updateStickyNoteSchema.safeParse({ noteDate: '2026-08-23', pinned: true, archivedAt: Date.now() }).success
+    ).toBe(true)
     expect(updateStickyNoteSchema.safeParse({}).success).toBe(false)
   })
 
