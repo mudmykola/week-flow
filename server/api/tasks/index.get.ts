@@ -66,11 +66,13 @@ export default defineEventHandler(async (event) => {
       .where(inArray(comments.taskId, ids))
       .groupBy(comments.taskId)
   ])
+  const subtaskCountByTask = new Map(subtaskCounts.map((item) => [item.taskId, item]))
+  const commentCountByTask = new Map(commentCounts.map((item) => [item.taskId, item.total]))
   const enriched = result.map((task) => ({
     ...task,
-    subtaskCount: subtaskCounts.find((item) => item.taskId === task.id)?.total ?? 0,
-    completedSubtaskCount: subtaskCounts.find((item) => item.taskId === task.id)?.completed ?? 0,
-    commentCount: commentCounts.find((item) => item.taskId === task.id)?.total ?? 0
+    subtaskCount: subtaskCountByTask.get(task.id)?.total ?? 0,
+    completedSubtaskCount: subtaskCountByTask.get(task.id)?.completed ?? 0,
+    commentCount: commentCountByTask.get(task.id) ?? 0
   }))
   if (!paginated) return enriched
   const last = result.at(-1)

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
-import { isHealthyPayload, verifyProductionHealth } from '../../scripts/production-health.mjs'
+import { isHealthyPayload, verifyOAuthEntry, verifyProductionHealth } from '../../scripts/production-health.mjs'
 
 function response(body: unknown, contentType = 'application/json', status = 200) {
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
@@ -49,5 +49,38 @@ describe('production health verifier', () => {
         sleep: vi.fn().mockResolvedValue(undefined)
       })
     ).rejects.toThrow('HTTP 503, content-type text/html')
+  })
+
+  it('verifies the Google OAuth provider and canonical production callback', async () => {
+    const location = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+    location.searchParams.set('client_id', 'client.apps.googleusercontent.com')
+    location.searchParams.set('redirect_uri', 'https://weekflow.pp.ua/auth/google')
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 302, headers: { location: location.toString() } }))
+
+    await expect(
+      verifyOAuthEntry({
+        url: 'https://weekflow.pp.ua/auth/google',
+        expectedRedirectUri: 'https://weekflow.pp.ua/auth/google',
+        fetchImpl
+      })
+    ).resolves.toMatchObject({ durationMs: expect.any(Number) })
+  })
+
+  it('rejects an OAuth redirect with a mismatched callback', async () => {
+    const location = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+    location.searchParams.set('client_id', 'client.apps.googleusercontent.com')
+    location.searchParams.set('redirect_uri', 'http://localhost:3000/auth/google')
+
+    await expect(
+      verifyOAuthEntry({
+        url: 'https://weekflow.pp.ua/auth/google',
+        expectedRedirectUri: 'https://weekflow.pp.ua/auth/google',
+        fetchImpl: vi
+          .fn()
+          .mockResolvedValue(new Response(null, { status: 302, headers: { location: location.toString() } }))
+      })
+    ).rejects.toThrow('callback URL mismatch')
   })
 })

@@ -2,16 +2,26 @@ import type { H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
 import { useDb } from '../db'
 import { users } from '../db/schema'
+import { createAsyncTtlCache } from './asyncTtlCache'
 
 export const ADMIN_EMAIL = 'mykola.mud@gmail.com'
+const accountCache = createAsyncTtlCache<{ disabledAt: number | null; role: 'user' | 'pm' | 'admin' } | undefined>(
+  15_000
+)
 
 export async function requireAppUser(event: H3Event) {
   const session = await requireUserSession(event)
-  const [account] = await useDb(event)
-    .select({ disabledAt: users.disabledAt, role: users.role })
-    .from(users)
-    .where(eq(users.id, session.user.id))
+  const startedAt = performance.now()
+  const account = await accountCache.get(session.user.id, async () => {
+    const [row] = await useDb(event)
+      .select({ disabledAt: users.disabledAt, role: users.role })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+    return row
+  })
+  appendResponseHeader(event, 'server-timing', `auth;dur=${Math.max(0, performance.now() - startedAt).toFixed(1)}`)
   if (!account || account.disabledAt) {
+    accountCache.delete(session.user.id)
     await clearUserSession(event)
     throw createError({ statusCode: 403, statusMessage: 'Account disabled' })
   }

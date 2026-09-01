@@ -3,6 +3,12 @@
   "type": "module",
   "private": true,
   "packageManager": "pnpm@10.26.2",
+  "pnpm": {
+    "overrides": {
+      "nanoid@<3.3.18": "3.3.18",
+      "esbuild@>=0.27.3 <0.28.1": "0.28.1"
+    }
+  },
   "scripts": {
     "build": "nuxt build",
     "typecheck": "nuxi typecheck",
