@@ -450,13 +450,6 @@ function selectMember(id: string | null) {
           </option></FormSelect
         >
       </section>
-      <ReviewHistoryCalendar
-        v-if="!selectedUser"
-        :selected-date="selectedDate"
-        :history="history"
-        :max-date="today"
-        @select="selectedDate = $event"
-      />
       <USkeleton
         v-if="loading"
         class="h-[38rem] rounded-2xl"
@@ -469,12 +462,9 @@ function selectMember(id: string | null) {
         ><AppButton @click="load">{{ $t('common.tryAgain') }}</AppButton></EmptyState
       >
       <template v-else-if="daily && reportData">
-        <ReviewDayDigest
-          v-if="previous"
-          :previous="previous"
-          :current="daily"
-          :previous-label="format(parseISO(previous.date), 'd MMM', { locale: dateLocale })"
-          :current-label="format(parseISO(daily.date), 'd MMM', { locale: dateLocale })"
+        <ReviewDailyBrief
+          :data="daily"
+          @open="openTask"
         />
         <ReviewDecisionQueue
           :items="daily.attention"
@@ -545,6 +535,13 @@ function selectMember(id: string | null) {
             @update:content="content = $event"
           />
         </section>
+        <ReviewHistoryCalendar
+          v-if="!selectedUser"
+          :selected-date="selectedDate"
+          :history="history"
+          :max-date="today"
+          @select="selectedDate = $event"
+        />
       </template>
     </template>
 

@@ -16,6 +16,10 @@ const entryComposer = readFileSync(
   resolve(process.cwd(), 'app/presentation/components/review/ReviewEntryComposer.vue'),
   'utf8'
 )
+const dailyBrief = readFileSync(
+  resolve(process.cwd(), 'app/presentation/components/review/ReviewDailyBrief.vue'),
+  'utf8'
+)
 
 describe('Review 2.0 workspace contract', () => {
   it('keeps day and week modes while using date navigation for history and team as context', () => {
@@ -38,7 +42,7 @@ describe('Review 2.0 workspace contract', () => {
     expect(workspace).toContain('<ReviewTaskTimeline')
     expect(workspace).toContain('<ReviewTimeline')
     expect(workspace).toContain('<ReviewDecisionQueue')
-    expect(workspace).toContain('<ReviewDayDigest')
+    expect(workspace).toContain('<ReviewDailyBrief')
     expect(workspace).toContain('<ReviewReflectionEditor')
     expect(workspace).toContain('<ReviewHistoryCalendar')
     expect(workspace).toContain('<ReviewStandupPanel')
@@ -64,5 +68,17 @@ describe('Review 2.0 workspace contract', () => {
     expect(workspace).toContain('structuredContent: { standup: finalStandup.value, reflection: reflection.value }')
     expect(workspace).toContain('resolveDecision')
     expect(workspace).toContain('updateTask(task.id')
+  })
+
+  it('starts with a bounded, semantic daily brief instead of metric-card noise', () => {
+    expect(workspace).toContain('<ReviewDailyBrief')
+    expect(workspace).not.toContain('<ReviewDayDigest')
+    expect(dailyBrief).toContain("section('completed'")
+    expect(dailyBrief).toContain("section('worked'")
+    expect(dailyBrief).toContain("section('next'")
+    expect(dailyBrief).toContain("section('attention'")
+    expect(dailyBrief).toContain('const previewLimit = 4')
+    expect(dailyBrief).toContain('new Map(tasks.map')
+    expect(dailyBrief).toContain("emit('open'")
   })
 })

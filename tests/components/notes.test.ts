@@ -2,6 +2,8 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NotesPage from '~/presentation/pages/notes/index.vue'
+import NotesToolbar from '~/presentation/components/notes/NotesToolbar.vue'
+import NotesSection from '~/presentation/components/notes/NotesSection.vue'
 
 const repository = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -52,7 +54,7 @@ describe('daily sticky-note board', () => {
         stubs: {
           UIcon: { template: '<span />' },
           USkeleton: { template: '<div />' },
-          PageHeader: { template: '<header />' }
+          PageHeader: { template: '<header><slot name="actions" /></header>' }
         }
       }
     })
@@ -60,10 +62,12 @@ describe('daily sticky-note board', () => {
     expect(wrapper.get('.sticky-note__items').text()).toContain('Підготувати питання на дейлік')
     expect(wrapper.get('.sticky-note__items').text()).toContain('Записати рішення')
 
-    const composer = wrapper.find('section textarea')
-    await composer.trigger('focus')
-    await composer.setValue('Передзвонити клієнту\nНадіслати підсумок')
-    await wrapper.get('.notes-quick-capture__main .app-button').trigger('click')
+    await wrapper.get('.notes-quick-capture__trigger').trigger('click')
+    const firstItem = wrapper.get('[data-capture-item="0"]')
+    await firstItem.setValue('Передзвонити клієнту')
+    await firstItem.trigger('keydown', { key: 'Enter' })
+    await wrapper.get('[data-capture-item="1"]').setValue('Надіслати підсумок')
+    await wrapper.get('.notes-quick-capture__paper footer .app-button').trigger('click')
     await flushPromises()
 
     expect(repository.create).toHaveBeenCalledWith(
@@ -80,7 +84,7 @@ describe('daily sticky-note board', () => {
         stubs: {
           UIcon: { template: '<span />' },
           USkeleton: { template: '<div />' },
-          PageHeader: { template: '<header />' }
+          PageHeader: { template: '<header><slot name="actions" /></header>' }
         }
       }
     })
@@ -97,5 +101,42 @@ describe('daily sticky-note board', () => {
 
     await wrapper.get('.sticky-note__footer .ui-icon-button--danger').trigger('click')
     expect(repository.remove).toHaveBeenCalledWith('note-1')
+  })
+})
+
+describe('compact sticky-note controls', () => {
+  it('opens search from an icon and selects a view from one dropdown', async () => {
+    const wrapper = await mountSuspended(NotesToolbar, {
+      props: { view: 'today', query: '', counts: { today: 3, pinned: 1, all: 4, archive: 0 } },
+      global: { stubs: { UIcon: { template: '<span />' } } }
+    })
+
+    expect(wrapper.findAll('.notes-toolbar__view-trigger')).toHaveLength(1)
+    expect(wrapper.findAll('.notes-toolbar__search-trigger')).toHaveLength(1)
+    await wrapper.get('.notes-toolbar__view-trigger').trigger('click')
+    await wrapper.findAll('.notes-toolbar__view-menu button')[1]!.trigger('click')
+    expect(wrapper.emitted('view')?.[0]).toEqual(['pinned'])
+
+    await wrapper.get('.notes-toolbar__search-trigger').trigger('click')
+    await wrapper.get('.notes-toolbar__search-popover input').setValue('рішення')
+    expect(wrapper.emitted('query')?.at(-1)).toEqual(['рішення'])
+  })
+})
+
+describe('aligned sticky-note sorting', () => {
+  it('persists card order and resets freeform coordinates after sorting', async () => {
+    const wrapper = await mountSuspended(NotesSection, {
+      props: { title: 'Сьогодні', icon: 'i-lucide-sticky-note', notes: [note], editingId: null, empty: 'Порожньо' },
+      global: { stubs: { UIcon: { template: '<span />' } } }
+    })
+    await flushPromises()
+
+    const sortable = wrapper.findComponent({ name: 'draggable' })
+    sortable.vm.$emit('start')
+    sortable.vm.$emit('end')
+    await flushPromises()
+
+    expect(wrapper.emitted('patch')?.[0]?.[0]).toEqual(note)
+    expect(wrapper.emitted('patch')?.[0]?.[1]).toEqual({ positionX: 0, positionY: 0, sortOrder: 2 })
   })
 })

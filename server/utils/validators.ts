@@ -214,7 +214,7 @@ export const updateStickyNoteSchema = z
     noteDate: z.iso.date().nullable().optional(),
     pinned: z.boolean().optional(),
     archivedAt: z.number().int().positive().nullable().optional(),
-    sortOrder: z.number().int().min(0).max(100_000).optional(),
+    sortOrder: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
     labels: z.array(z.string().trim().min(1).max(30)).max(10).optional(),
     linkedTaskId: z.string().uuid().nullable().optional(),
     completedAt: z.number().int().positive().nullable().optional()

@@ -54,6 +54,7 @@ const pinnedNotes = computed(() => (view.value === 'today' ? visible.value.filte
 const regularNotes = computed(() =>
   view.value === 'today' ? visible.value.filter((note) => !note.pinned) : visible.value
 )
+const editingNote = computed(() => notes.value.find((note) => note.id === editingId.value) ?? null)
 
 stickyCreatedBus.on((note) => {
   if (!notes.value.some((item) => item.id === note.id)) notes.value.unshift(note)
@@ -175,15 +176,18 @@ function changeView(next: NotesView) {
       :title="$t('pages.notes.title')"
       :description="$t('pages.notes.description')"
       icon="i-lucide-sticky-note"
-    />
-    <NotesQuickCapture @create="addNote" />
-    <NotesToolbar
-      :view="view"
-      :query="query"
-      :counts="counts"
-      @view="changeView"
-      @query="query = $event"
-    />
+    >
+      <template #actions>
+        <NotesToolbar
+          :view="view"
+          :query="query"
+          :counts="counts"
+          @view="changeView"
+          @query="query = $event"
+        />
+        <NotesQuickCapture @create="addNote" />
+      </template>
+    </PageHeader>
 
     <div
       v-if="loading"
@@ -206,7 +210,7 @@ function changeView(next: NotesView) {
         :notes="pinnedNotes"
         :editing-id="editingId"
         :empty="$t('pages.notes.emptyHint')"
-        @edit="editingId = editingId === $event ? null : $event"
+        @edit="editingId = $event"
         @patch="patchNote"
         @save="saveContent"
         @toggle-item="toggleItem"
@@ -221,7 +225,7 @@ function changeView(next: NotesView) {
         :notes="regularNotes"
         :editing-id="editingId"
         :empty="query ? $t('pages.notes.noResults') : $t('pages.notes.emptyHint')"
-        @edit="editingId = editingId === $event ? null : $event"
+        @edit="editingId = $event"
         @patch="patchNote"
         @save="saveContent"
         @toggle-item="toggleItem"
@@ -231,5 +235,12 @@ function changeView(next: NotesView) {
         @convert="convertToTask"
       />
     </main>
+    <StickyNoteEditorModal
+      :open="Boolean(editingNote)"
+      :note="editingNote"
+      @close="editingId = null"
+      @patch="editingNote && patchNote(editingNote, $event)"
+      @save="editingNote && saveContent(editingNote, $event)"
+    />
   </div>
 </template>

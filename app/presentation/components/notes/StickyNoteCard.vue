@@ -49,25 +49,21 @@ const formattedDate = computed(() =>
   >
     <div class="sticky-note-card__toolbar mb-3 flex items-center justify-between gap-2">
       <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          class="sticky-note-card__drag-handle"
+          data-drag-handle
+          :aria-label="$t('pages.notes.drag')"
+        >
+          <UIcon name="i-lucide-grip" />
+        </button>
         <UIcon
           name="i-lucide-sticky-note"
           class="size-4 opacity-55"
         />
         <time class="text-[10px] font-semibold tracking-wide uppercase opacity-55">{{ formattedDate }}</time>
       </div>
-      <div class="flex items-center gap-1">
-        <button
-          v-for="color in colors"
-          :key="color"
-          type="button"
-          class="size-4 rounded-full border border-black/15 transition-transform hover:scale-125"
-          :class="[
-            colorClasses[color].split(' ')[0],
-            note.color === color ? 'ring-2 ring-black/35 ring-offset-1 ring-offset-transparent' : ''
-          ]"
-          :aria-label="$t('pages.notes.changeColor', { color: $t(`pages.notes.colors.${color}`) })"
-          @click="emit('patch', { color })"
-        />
+      <div class="sticky-note-card__quick-actions flex items-center gap-1">
         <IconButton
           class="ml-1"
           icon="i-lucide-pencil"
@@ -184,6 +180,20 @@ const formattedDate = computed(() =>
         <div
           class="absolute right-0 bottom-9 z-10 grid w-44 gap-1 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] p-1.5 text-[var(--color-text-primary)] shadow-xl"
         >
+          <div class="sticky-note-card__menu-colors flex items-center gap-2 px-2 py-1.5">
+            <button
+              v-for="color in colors"
+              :key="color"
+              type="button"
+              class="size-4 rounded-full border border-black/15 transition-transform hover:scale-125"
+              :class="[
+                colorClasses[color].split(' ')[0],
+                note.color === color ? 'ring-2 ring-[var(--color-text-primary)] ring-offset-1' : ''
+              ]"
+              :aria-label="$t('pages.notes.changeColor', { color: $t(`pages.notes.colors.${color}`) })"
+              @click="emit('patch', { color })"
+            />
+          </div>
           <button
             type="button"
             class="rounded-lg px-2 py-1.5 text-left text-xs hover:bg-[var(--color-bg-muted)]"
@@ -218,3 +228,53 @@ const formattedDate = computed(() =>
     </footer>
   </article>
 </template>
+
+<style scoped>
+.sticky-note-card {
+  position: relative;
+  border-radius: 0.35rem 1rem 0.45rem 0.85rem;
+}
+.sticky-note-card::before {
+  position: absolute;
+  top: -0.35rem;
+  left: 50%;
+  width: 3.75rem;
+  height: 0.9rem;
+  content: '';
+  background: rgb(255 255 255 / 0.25);
+  transform: translateX(-50%) rotate(-1deg);
+}
+.sticky-note-card__quick-actions {
+  opacity: 0.48;
+  transition: opacity 0.15s;
+}
+.sticky-note-card__drag-handle {
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  cursor: grab;
+  place-items: center;
+  border-radius: 0.4rem;
+  opacity: 0.5;
+  touch-action: none;
+}
+.sticky-note-card__drag-handle:hover {
+  background: rgb(0 0 0 / 0.06);
+  opacity: 1;
+}
+.sticky-note-card__drag-handle:active {
+  cursor: grabbing;
+}
+.sticky-note-card:hover .sticky-note-card__quick-actions,
+.sticky-note-card:focus-within .sticky-note-card__quick-actions {
+  opacity: 1;
+}
+.sticky-note-card__menu-colors {
+  border-bottom: 1px solid var(--color-panel-border);
+}
+@media (hover: none) {
+  .sticky-note-card__quick-actions {
+    opacity: 1;
+  }
+}
+</style>
