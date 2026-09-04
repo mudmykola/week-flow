@@ -2,7 +2,8 @@
 import type { ReviewReflection } from '~/domain/entities/review'
 const props = defineProps<{ modelValue: ReviewReflection; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: ReviewReflection] }>()
-const fields = ['result', 'progress', 'blockers', 'decisions', 'nextFocus'] as const
+const primaryFields = ['result', 'nextFocus', 'blockers'] as const
+const advancedFields = ['progress', 'decisions'] as const
 function update(field: keyof ReviewReflection, value: string) {
   emit('update:modelValue', { ...props.modelValue, [field]: value })
 }
@@ -18,7 +19,7 @@ function update(field: keyof ReviewReflection, value: string) {
     </header>
     <div class="review-reflection-editor__fields">
       <label
-        v-for="field in fields"
+        v-for="field in primaryFields"
         :key="field"
         ><span>{{ $t(`pages.review.close.fields.${field}`) }}</span
         ><FormTextarea
@@ -29,6 +30,24 @@ function update(field: keyof ReviewReflection, value: string) {
           @update:model-value="update(field, $event ?? '')"
       /></label>
     </div>
+    <details class="review-reflection-editor__advanced">
+      <summary><UIcon name="i-lucide-sliders-horizontal" />{{ $t('pages.review.v2.advancedReflection') }}</summary>
+      <div class="review-reflection-editor__fields">
+        <label
+          v-for="field in advancedFields"
+          :key="field"
+        >
+          <span>{{ $t(`pages.review.close.fields.${field}`) }}</span>
+          <FormTextarea
+            :model-value="modelValue[field]"
+            :disabled="disabled"
+            rows="2"
+            :placeholder="$t(`pages.review.close.placeholders.${field}`)"
+            @update:model-value="update(field, $event ?? '')"
+          />
+        </label>
+      </div>
+    </details>
   </section>
 </template>
 
@@ -54,9 +73,6 @@ function update(field: keyof ReviewReflection, value: string) {
   gap: 0.55rem;
   margin-top: 0.65rem;
 }
-.review-reflection-editor label:last-child {
-  grid-column: 1/-1;
-}
 .review-reflection-editor label > span {
   display: block;
   margin-bottom: 0.25rem;
@@ -64,12 +80,23 @@ function update(field: keyof ReviewReflection, value: string) {
   font-size: 0.65rem;
   font-weight: 700;
 }
+.review-reflection-editor__advanced {
+  margin-top: 0.7rem;
+  border-top: 1px solid var(--color-panel-border);
+  padding-top: 0.6rem;
+}
+.review-reflection-editor__advanced summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
 @media (max-width: 650px) {
   .review-reflection-editor__fields {
     grid-template-columns: 1fr;
-  }
-  .review-reflection-editor label:last-child {
-    grid-column: auto;
   }
 }
 </style>

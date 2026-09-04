@@ -20,7 +20,6 @@ const editorOpen = ref(false)
 const editingTask = ref<Task | null>(null)
 const editorDefaultStatus = ref<Task['status']>('todo')
 
-const projectEditorOpen = ref(false)
 const search = ref('')
 const priorityFilter = ref<TaskPriority | null>(
   typeof route.query.priority === 'string' && ['low', 'medium', 'high', 'urgent'].includes(route.query.priority)
@@ -315,19 +314,6 @@ async function handleMoveIncomplete() {
   await tasksStore.moveIncompleteToNextWeek(week.value)
 }
 
-async function handleSaveProject(payload: { name: string; color: string }) {
-  await projectsStore.addProject(payload)
-  projectEditorOpen.value = false
-}
-
-async function handleDeleteProject(id: string) {
-  await projectsStore.removeProject(id)
-  if (tasksStore.filterProjectId === id) {
-    tasksStore.filterProjectId = null
-  }
-  await loadWeek()
-}
-
 async function logout() {
   await clear()
   await navigateTo('/login')
@@ -369,17 +355,13 @@ async function saveView() {
               {{ project.name }}
             </option>
           </select>
-          <button
-            type="button"
-            class="text-secondary inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-bg)] px-3 text-sm font-semibold hover:text-[var(--color-text-primary)]"
-            :title="$t('board.manageProjects')"
-            @click="projectEditorOpen = true"
+          <AppButton
+            variant="ghost"
+            icon="i-lucide-folder-kanban"
+            @click="navigateTo('/projects')"
           >
-            <UIcon
-              name="i-lucide-folder-kanban"
-              class="size-4"
-            />{{ $t('board.projects') }}
-          </button>
+            {{ $t('board.projects') }}
+          </AppButton>
         </div></template
       >
     </PageHeader>
@@ -733,13 +715,6 @@ async function saveView() {
       @promoted="handlePromoted"
     />
 
-    <ProjectEditor
-      :open="projectEditorOpen"
-      :projects="projectsStore.projects"
-      @close="projectEditorOpen = false"
-      @save="handleSaveProject"
-      @delete="handleDeleteProject"
-    />
     <TaskCommandMenu
       :open="commandOpen"
       @close="commandOpen = false"

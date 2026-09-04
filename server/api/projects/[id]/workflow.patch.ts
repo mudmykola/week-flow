@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { useDb } from '../../../db'
 import { workflowStages } from '../../../db/schema'
+import { requireManager } from '../../../utils/auth'
 import { requireProjectAccess } from '../../../utils/projectAccess'
 
 const schema = z.object({
@@ -11,6 +12,7 @@ const schema = z.object({
     .max(100)
 })
 export default defineEventHandler(async (event) => {
+  await requireManager(event)
   const projectId = getRouterParam(event, 'id')!
   await requireProjectAccess(event, projectId, true)
   const body = await readValidatedBody(event, schema.parse)

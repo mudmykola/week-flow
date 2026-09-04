@@ -10,6 +10,7 @@ import { isInboxTask } from '~/domain/services/inbox'
 import {
   navigationForRole,
   navigationSections,
+  sidebarNavigationForRole,
   taskBoardLink,
   type NavigationSection
 } from '~/domain/services/navigation'
@@ -72,8 +73,12 @@ const reusableTags = computed(() =>
   [...new Set(allTasks.value.flatMap((task) => task.tags ?? []))].sort((a, b) => a.localeCompare(b, 'uk'))
 )
 
-const navigation = computed(() =>
+const searchableNavigation = computed(() =>
   navigationForRole(user.value?.role).map((item) => ({ ...item, label: t(item.label) }))
+)
+
+const navigation = computed(() =>
+  sidebarNavigationForRole(user.value?.role).map((item) => ({ ...item, label: t(item.label) }))
 )
 
 const groupedNavigation = computed(() =>
@@ -99,7 +104,7 @@ const results = computed(() => {
 const navMatches = computed(() => {
   const term = query.value.trim().toLowerCase()
   if (!term) return []
-  return navigation.value.filter((item) => item.label.toLowerCase().includes(term)).slice(0, 5)
+  return searchableNavigation.value.filter((item) => item.label.toLowerCase().includes(term)).slice(0, 5)
 })
 
 async function openCommand() {

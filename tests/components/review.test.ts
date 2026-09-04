@@ -16,8 +16,8 @@ const entryComposer = readFileSync(
   resolve(process.cwd(), 'app/presentation/components/review/ReviewEntryComposer.vue'),
   'utf8'
 )
-const dailyBrief = readFileSync(
-  resolve(process.cwd(), 'app/presentation/components/review/ReviewDailyBrief.vue'),
+const standupSummary = readFileSync(
+  resolve(process.cwd(), 'app/presentation/components/review/ReviewStandupSummary.vue'),
   'utf8'
 )
 
@@ -27,6 +27,9 @@ describe('Review 2.0 workspace contract', () => {
     for (const tab of ['daily', 'weekly']) expect(workspace).toContain(`'${tab}'`)
     expect(workspace).not.toContain("type Tab = 'daily' | 'weekly' | 'history'")
     expect(workspace).toContain('selectMember')
+    expect(workspace).toContain('icon="i-lucide-calendar-days"')
+    expect(workspace).toContain('input.showPicker()')
+    expect(workspace).toContain('class="review-toolbar__date-picker"')
   })
 
   it('uses actual review data, persisted autosave, standup copy and keyboard date navigation', () => {
@@ -40,9 +43,10 @@ describe('Review 2.0 workspace contract', () => {
 
   it('supports task and subtask progress journaling with edit and delete actions', () => {
     expect(workspace).toContain('<ReviewTaskTimeline')
-    expect(workspace).toContain('<ReviewTimeline')
+    expect(workspace).not.toContain('<ReviewTimeline')
     expect(workspace).toContain('<ReviewDecisionQueue')
-    expect(workspace).toContain('<ReviewDailyBrief')
+    expect(workspace).not.toContain('<ReviewDailyBrief')
+    expect(workspace).toContain('<ReviewStandupSummary')
     expect(workspace).toContain('<ReviewReflectionEditor')
     expect(workspace).toContain('<ReviewHistoryCalendar')
     expect(workspace).toContain('<ReviewStandupPanel')
@@ -70,15 +74,17 @@ describe('Review 2.0 workspace contract', () => {
     expect(workspace).toContain('updateTask(task.id')
   })
 
-  it('starts with a bounded, semantic daily brief instead of metric-card noise', () => {
-    expect(workspace).toContain('<ReviewDailyBrief')
-    expect(workspace).not.toContain('<ReviewDayDigest')
-    expect(dailyBrief).toContain("section('completed'")
-    expect(dailyBrief).toContain("section('worked'")
-    expect(dailyBrief).toContain("section('next'")
-    expect(dailyBrief).toContain("section('attention'")
-    expect(dailyBrief).toContain('const previewLimit = 4')
-    expect(dailyBrief).toContain('new Map(tasks.map')
-    expect(dailyBrief).toContain("emit('open'")
+  it('keeps the first screen focused and moves supporting tools to URL-addressable panels', () => {
+    expect(workspace).toContain("type ReviewPanel = 'journal' | 'reflection' | 'history' | null")
+    expect(workspace).toContain('panel: activePanel.value || undefined')
+    expect(workspace).toContain("openPanel('journal')")
+    expect(workspace).toContain("activePanel === 'reflection'")
+    expect(workspace).toContain("activePanel === 'history'")
+    expect(workspace).toContain('size="fullscreen"')
+    expect(standupSummary).toContain('props.data.completed')
+    expect(standupSummary).toContain('props.data.planned')
+    expect(standupSummary).toContain('props.data.blockers')
+    expect(standupSummary).toContain('.slice(0, 5)')
+    expect(standupSummary).toContain("emit('open'")
   })
 })

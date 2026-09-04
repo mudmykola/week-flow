@@ -6,6 +6,7 @@ import {
   appNavigation,
   navigationForRole,
   navigationSections,
+  sidebarNavigationForRole,
   taskBoardLink
 } from '../../app/domain/services/navigation'
 
@@ -20,6 +21,7 @@ describe('application navigation', () => {
   it('keeps destinations unique and respects role boundaries', () => {
     expect(new Set(appNavigation.map((item) => item.to)).size).toBe(appNavigation.length)
     expect(navigationForRole('user').some((item) => item.to === '/analytics')).toBe(true)
+    expect(sidebarNavigationForRole('user').some((item) => item.to === '/analytics')).toBe(false)
     expect(navigationForRole('user').some((item) => item.to === '/admin')).toBe(false)
     expect(navigationForRole('pm').some((item) => item.to === '/team')).toBe(true)
     expect(navigationForRole('admin').some((item) => item.to === '/admin')).toBe(true)
@@ -30,10 +32,11 @@ describe('application navigation', () => {
     expect(appNavigation.filter((item) => item.section === 'work').map((item) => item.to)).toEqual([
       '/today',
       '/',
-      '/inbox',
-      '/focus'
+      '/inbox'
     ])
-    expect(appNavigation.find((item) => item.to === '/workflows')?.section).toBe('team')
+    expect(appNavigation.find((item) => item.to === '/projects')?.section).toBe('planning')
+    expect(navigationForRole('user').some((item) => item.to === '/workflows')).toBe(false)
+    expect(sidebarNavigationForRole('admin').some((item) => item.to === '/workflows')).toBe(false)
     expect(appNavigation.filter((item) => item.section === 'system').map((item) => item.to)).toEqual([
       '/settings',
       '/admin'

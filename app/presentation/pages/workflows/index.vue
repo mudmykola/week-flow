@@ -4,6 +4,11 @@ import { fetchAllTasks } from '~/data/repositories/tasksRepository'
 import type { AssignableUser, Task, TaskPriority } from '~/domain/entities/task'
 import { normalizeAutomationTrigger, orderedWorkflowStages, workflowStageUsage } from '~/domain/services/workflows'
 
+const { user } = useUserSession()
+const { t } = useI18n()
+if (user.value?.role !== 'pm' && user.value?.role !== 'admin')
+  throw createError({ statusCode: 403, statusMessage: t('pages.workflows.forbidden') })
+
 type Stage = {
   id: string
   name: string
@@ -38,7 +43,6 @@ type Execution = {
 type DeleteTarget = { type: 'stage' | 'rule'; id: string; name: string } | null
 
 const projectsStore = useProjectsStore()
-const { t } = useI18n()
 const toast = useToast()
 const projectId = ref<string | null>(null)
 const stages = ref<Stage[]>([])

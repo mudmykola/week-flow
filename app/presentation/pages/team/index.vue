@@ -207,8 +207,23 @@ function toggleAllGoals() {
       :title="$t('nav.team')"
       :description="$t('pages.team.description')"
       icon="i-lucide-users-round"
-      ><template #actions
-        ><select
+    >
+      <template #actions>
+        <AppButton
+          variant="ghost"
+          icon="i-lucide-git-pull-request-arrow"
+          @click="navigateTo('/delegation')"
+        >
+          {{ $t('nav.delegation') }}
+        </AppButton>
+        <AppButton
+          variant="ghost"
+          icon="i-lucide-workflow"
+          @click="navigateTo('/workflows')"
+        >
+          {{ $t('nav.workflows') }}
+        </AppButton>
+        <select
           v-if="user?.role === 'admin' && data?.teams?.length"
           v-model="selectedTeamId"
           :aria-label="$t('pages.team.select')"
@@ -222,9 +237,9 @@ function toggleAllGoals() {
           >
             {{ team.name }} · {{ team.managerName }}
           </option>
-        </select></template
-      ></PageHeader
-    >
+        </select>
+      </template>
+    </PageHeader>
     <USkeleton
       v-if="status === 'pending'"
       class="h-64 rounded-xl"

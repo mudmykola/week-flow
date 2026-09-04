@@ -1,5 +1,6 @@
 import { useDb } from '../../../db'
 import { workflowStages } from '../../../db/schema'
+import { requireManager } from '../../../utils/auth'
 import { requireProjectAccess } from '../../../utils/projectAccess'
 import { z } from 'zod'
 
@@ -12,6 +13,7 @@ const schema = z.object({
   wipPolicy: z.enum(['warn', 'block']).optional().default('warn')
 })
 export default defineEventHandler(async (event) => {
+  await requireManager(event)
   const projectId = getRouterParam(event, 'id')!
   await requireProjectAccess(event, projectId, true)
   const body = await readValidatedBody(event, schema.parse)

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Project } from '~/domain/entities/project'
 
+const { user } = useUserSession()
+
 const props = defineProps<{
   open: boolean
   projects: Project[]
@@ -69,6 +71,7 @@ async function invite() {
         </span>
         <div class="flex items-center gap-1">
           <IconButton
+            v-if="user?.role === 'pm' || user?.role === 'admin'"
             icon="i-lucide-workflow"
             :label="$t('nav.workflows')"
             size="sm"

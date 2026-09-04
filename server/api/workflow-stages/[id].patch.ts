@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { useDb } from '../../db'
 import { workflowStages } from '../../db/schema'
+import { requireManager } from '../../utils/auth'
 import { requireProjectAccess } from '../../utils/projectAccess'
 
 const schema = z.object({
@@ -16,6 +17,7 @@ const schema = z.object({
   wipPolicy: z.enum(['warn', 'block']).optional()
 })
 export default defineEventHandler(async (event) => {
+  await requireManager(event)
   const id = getRouterParam(event, 'id')!
   const db = useDb(event)
   const [stage] = await db.select().from(workflowStages).where(eq(workflowStages.id, id))

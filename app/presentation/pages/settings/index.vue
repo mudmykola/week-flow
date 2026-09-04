@@ -174,7 +174,10 @@ async function deleteAccount() {
           {{ $t('settings.deleteAccount') }}
         </UButton>
       </div>
-      <div class="p-4">
+      <div
+        id="templates"
+        class="scroll-mt-20 p-4"
+      >
         <h2 class="font-display text-base">{{ $t('nav.templates') }}</h2>
         <p class="text-secondary mt-0.5 text-xs">{{ $t('pages.templates.description') }}</p>
         <div class="mt-3 grid gap-2 sm:grid-cols-2">

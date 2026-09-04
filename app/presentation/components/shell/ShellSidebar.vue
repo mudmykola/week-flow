@@ -21,6 +21,10 @@ function countFor(item: AppNavigationItem) {
   if (item.to === '/goals') return props.goalsCount
   return 0
 }
+
+function isActive(item: AppNavigationItem) {
+  return route.path === item.to || (item.to !== '/' && route.path.startsWith(`${item.to}/`))
+}
 </script>
 
 <template>
@@ -100,7 +104,7 @@ function countFor(item: AppNavigationItem) {
             :key="item.to"
             :item="item"
             :collapsed="collapsed"
-            :active="route.path === item.to"
+            :active="isActive(item)"
             :count="countFor(item)"
             @navigate="mobileOpen = false"
           />
@@ -114,7 +118,7 @@ function countFor(item: AppNavigationItem) {
         :key="item.to"
         :item="item"
         :collapsed="collapsed"
-        :active="route.path === item.to"
+        :active="isActive(item)"
         @navigate="mobileOpen = false"
       />
     </div>

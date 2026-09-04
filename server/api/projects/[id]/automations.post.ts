@@ -1,8 +1,10 @@
 import { useDb } from '../../../db'
 import { automationRules } from '../../../db/schema'
+import { requireManager } from '../../../utils/auth'
 import { requireProjectAccess } from '../../../utils/projectAccess'
 import { automationRuleSchema } from '../../../utils/workflowValidators'
 export default defineEventHandler(async (event) => {
+  await requireManager(event)
   const projectId = getRouterParam(event, 'id')!
   await requireProjectAccess(event, projectId, true)
   const body = await readValidatedBody(event, automationRuleSchema.parse)

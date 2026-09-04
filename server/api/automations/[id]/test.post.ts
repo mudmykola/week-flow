@@ -3,10 +3,12 @@ import { z } from 'zod'
 import { useDb } from '../../../db'
 import { automationRules } from '../../../db/schema'
 import { previewAutomation } from '../../../utils/automations'
+import { requireManager } from '../../../utils/auth'
 import { requireProjectAccess } from '../../../utils/projectAccess'
 import { requireTaskAccess } from '../../../utils/taskAccess'
 
 export default defineEventHandler(async (event) => {
+  await requireManager(event)
   const id = getRouterParam(event, 'id')!
   const { taskId } = await readValidatedBody(event, z.object({ taskId: z.string().uuid() }).parse)
   const db = useDb(event)

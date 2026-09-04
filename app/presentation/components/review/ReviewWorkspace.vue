@@ -17,7 +17,7 @@ import { localDateKey, localDayRange } from '~/domain/services/today'
 import { dateToWeek, getNextWeek } from '~/domain/services/week'
 
 type Tab = 'daily' | 'weekly'
-type DailyView = 'timeline' | 'tasks'
+type ReviewPanel = 'journal' | 'reflection' | 'history' | null
 type TeamMember = { id: string; name: string; avatarUrl: string | null; taskActive: number; taskOverdue: number }
 
 const route = useRoute()
@@ -26,7 +26,8 @@ const { report } = useApiFeedback()
 const today = localDateKey()
 const selectedDate = ref(typeof route.query.date === 'string' ? route.query.date : today)
 const tab = ref<Tab>(['daily', 'weekly'].includes(String(route.query.tab)) ? (route.query.tab as Tab) : 'daily')
-const dailyView = ref<DailyView>(route.query.view === 'tasks' ? 'tasks' : 'timeline')
+const activePanel = ref<ReviewPanel>(panelFromQuery(route.query.panel))
+const datePicker = ref<HTMLInputElement | null>(null)
 const daily = ref<DailyReviewData | null>(null)
 const previous = ref<DailyReviewData | null>(null)
 const saved = ref<SavedDailyReview | null>(null)
@@ -127,7 +128,14 @@ watch([selectedDate, selectedUser], () => {
   void loadWeekly()
 })
 watch(tab, syncRoute)
-watch(dailyView, syncRoute)
+watch(activePanel, syncRoute)
+watch(
+  () => route.query.panel,
+  (value) => {
+    const next = panelFromQuery(value)
+    if (activePanel.value !== next) activePanel.value = next
+  }
+)
 watch(
   [content, reflection],
   () => {
@@ -222,19 +230,39 @@ function changeDate(amount: number) {
   const next = format(addDays(parseISO(selectedDate.value), amount), 'yyyy-MM-dd')
   if (next <= today) selectedDate.value = next
 }
+function openDatePicker() {
+  const input = datePicker.value
+  if (!input) return
+  try {
+    input.showPicker()
+  } catch {
+    input.focus()
+    input.click()
+  }
+}
 function syncRoute() {
   void navigateTo(
     {
       query: {
         ...route.query,
         tab: tab.value === 'daily' ? undefined : tab.value,
-        view: tab.value === 'daily' && dailyView.value === 'tasks' ? 'tasks' : undefined,
+        view: undefined,
+        panel: activePanel.value || undefined,
         date: selectedDate.value === today ? undefined : selectedDate.value,
         user: selectedUser.value || undefined
       }
     },
     { replace: true }
   )
+}
+function panelFromQuery(value: unknown): ReviewPanel {
+  return ['journal', 'reflection', 'history'].includes(String(value)) ? (value as ReviewPanel) : null
+}
+function openPanel(panel: Exclude<ReviewPanel, null>) {
+  activePanel.value = panel
+}
+function closePanel() {
+  activePanel.value = null
 }
 function keyboardDate(event: KeyboardEvent, amount: number) {
   if (isTyping(event)) return
@@ -375,6 +403,7 @@ async function removeProgress(id: string) {
 function showHistory(item: SavedDailyReview) {
   selectedDate.value = item.reviewDate
   tab.value = 'daily'
+  activePanel.value = null
 }
 function selectMember(id: string | null) {
   selectedUser.value = id
@@ -384,75 +413,110 @@ function selectMember(id: string | null) {
 
 <template>
   <div class="review-workspace app-container">
-    <PageHeader
-      :title="$t('pages.review.v2.title')"
-      :description="$t('pages.review.v2.description')"
-      icon="i-lucide-notebook-tabs"
-    />
-
-    <nav
-      class="review-tabs surface-card"
-      :aria-label="$t('pages.review.v2.tabsLabel')"
-    >
-      <button
-        v-for="item in ['daily', 'weekly'] as Tab[]"
-        :key="item"
-        :class="{ 'is-active': tab === item }"
-        @click="tab = item"
+    <header class="review-toolbar surface-card">
+      <div class="review-toolbar__identity">
+        <span><UIcon name="i-lucide-notebook-tabs" /></span>
+        <div>
+          <h1>{{ $t('pages.review.v2.title') }}</h1>
+          <p>{{ $t('pages.review.v2.description') }}</p>
+        </div>
+      </div>
+      <nav
+        class="review-toolbar__tabs"
+        :aria-label="$t('pages.review.v2.tabsLabel')"
       >
-        <UIcon :name="item === 'daily' ? 'i-lucide-sun' : 'i-lucide-calendar-range'" /><span>{{
-          $t(`pages.review.v2.tabs.${item}`)
-        }}</span>
-      </button>
-    </nav>
-
-    <template v-if="tab === 'daily'">
-      <section class="review-datebar surface-card">
+        <button
+          v-for="item in ['daily', 'weekly'] as Tab[]"
+          :key="item"
+          :class="{ 'is-active': tab === item }"
+          @click="tab = item"
+        >
+          <UIcon :name="item === 'daily' ? 'i-lucide-sun' : 'i-lucide-calendar-range'" />
+          <span>{{ $t(`pages.review.v2.tabs.${item}`) }}</span>
+        </button>
+      </nav>
+      <div class="review-toolbar__date">
         <IconButton
           icon="i-lucide-chevron-left"
           :label="$t('pages.review.v2.previous')"
           @click="changeDate(-1)"
         />
-        <div>
+        <button
+          type="button"
+          class="review-toolbar__date-label"
+          @click="selectedDate = today"
+        >
           <strong>{{ selectedLabel }}</strong
           ><small>{{ selectedUser ? daily?.user.name : $t('pages.review.v2.myStandup') }}</small>
-        </div>
-        <input
-          v-model="selectedDate"
-          type="date"
-          :max="today"
-          :aria-label="$t('pages.review.v2.selectDate')"
-        />
-        <AppButton
-          size="sm"
-          icon="i-lucide-locate-fixed"
-          @click="selectedDate = today"
-          >{{ $t('pages.review.v2.today') }}</AppButton
-        >
+        </button>
         <IconButton
           icon="i-lucide-chevron-right"
           :label="$t('pages.review.v2.next')"
           :disabled="selectedDate >= today"
           @click="changeDate(1)"
         />
-        <FormSelect
-          v-if="teamMembers.length"
-          :model-value="selectedUser"
-          class="review-member"
-          @update:model-value="selectMember($event ?? null)"
-          ><option :value="null">{{ $t('pages.review.v2.myStandup') }}</option>
-          <option
-            v-for="member in teamMembers"
-            :key="member.id"
-            :value="member.id"
-          >
-            {{ member.name }} · {{ member.taskActive }} / {{ member.taskOverdue }}
-          </option></FormSelect
+        <div class="review-toolbar__date-picker">
+          <IconButton
+            icon="i-lucide-calendar-days"
+            :label="$t('pages.review.v2.selectDate')"
+            @click="openDatePicker"
+          />
+          <input
+            ref="datePicker"
+            v-model="selectedDate"
+            type="date"
+            :max="today"
+            tabindex="-1"
+            aria-hidden="true"
+          />
+        </div>
+      </div>
+      <FormSelect
+        v-if="teamMembers.length"
+        :model-value="selectedUser"
+        class="review-toolbar__member"
+        @update:model-value="selectMember($event ?? null)"
+      >
+        <option :value="null">{{ $t('pages.review.v2.myStandup') }}</option>
+        <option
+          v-for="member in teamMembers"
+          :key="member.id"
+          :value="member.id"
         >
-      </section>
+          {{ member.name }}
+        </option>
+      </FormSelect>
+      <details class="review-toolbar__more">
+        <summary :aria-label="$t('pages.review.v2.moreActions')"><UIcon name="i-lucide-ellipsis" /></summary>
+        <div>
+          <button
+            type="button"
+            @click="openPanel('journal')"
+          >
+            <UIcon name="i-lucide-list-tree" />{{ $t('pages.review.final.dayJournal') }}
+          </button>
+          <button
+            type="button"
+            @click="openPanel('reflection')"
+          >
+            <UIcon name="i-lucide-notebook-pen" />{{ $t('pages.review.close.reflection') }}
+          </button>
+          <button
+            type="button"
+            @click="openPanel('history')"
+          >
+            <UIcon name="i-lucide-history" />{{ $t('pages.review.close.history') }}
+          </button>
+          <NuxtLink to="/analytics"><UIcon name="i-lucide-chart-no-axes-combined" />{{ $t('nav.analytics') }}</NuxtLink>
+          <NuxtLink to="/activity"><UIcon name="i-lucide-activity" />{{ $t('nav.activity') }}</NuxtLink>
+        </div>
+      </details>
+    </header>
+
+    <template v-if="tab === 'daily'">
       <USkeleton
         v-if="loading"
-        class="h-[38rem] rounded-2xl"
+        class="h-[30rem] rounded-2xl"
       />
       <EmptyState
         v-else-if="loadError"
@@ -462,64 +526,42 @@ function selectMember(id: string | null) {
         ><AppButton @click="load">{{ $t('common.tryAgain') }}</AppButton></EmptyState
       >
       <template v-else-if="daily && reportData">
-        <ReviewDailyBrief
-          :data="daily"
-          @open="openTask"
-        />
-        <ReviewDecisionQueue
-          :items="daily.attention"
-          :resolving="resolvingTask"
-          @resolve="resolveDecision"
-          @open="openTask"
-        />
         <section class="review-daily-layout">
-          <div class="review-day-work">
-            <header class="review-day-work__header">
-              <div>
-                <h2>{{ $t('pages.review.final.dayJournal') }}</h2>
-                <p>{{ $t('pages.review.final.dayJournalHint') }}</p>
-              </div>
-              <div
-                role="tablist"
-                :aria-label="$t('pages.review.final.viewLabel')"
+          <div class="review-daily-layout__main">
+            <ReviewStandupSummary
+              :data="reportData"
+              @open="openTask"
+            />
+            <ReviewDecisionQueue
+              :items="daily.attention"
+              :resolving="resolvingTask"
+              @resolve="resolveDecision"
+              @open="openTask"
+            />
+            <nav
+              class="review-detail-actions"
+              :aria-label="$t('pages.review.v2.details')"
+            >
+              <button
+                type="button"
+                @click="openPanel('journal')"
               >
-                <button
-                  :class="{ 'is-active': dailyView === 'timeline' }"
-                  @click="dailyView = 'timeline'"
-                >
-                  <UIcon name="i-lucide-list-tree" />{{ $t('pages.review.final.timeline') }}
-                </button>
-                <button
-                  :class="{ 'is-active': dailyView === 'tasks' }"
-                  @click="dailyView = 'tasks'"
-                >
-                  <UIcon name="i-lucide-rows-3" />{{ $t('pages.review.final.byTasks') }}
-                </button>
-              </div>
-            </header>
-            <ReviewTimeline
-              v-if="dailyView === 'timeline'"
-              :events="daily.timeline"
-              :tasks="daily.availableTasks"
-              @open="openTask"
-            />
-            <ReviewTaskTimeline
-              v-else
-              :journals="daily.journals"
-              :tasks="dailyTimelineTasks"
-              :available-tasks="daily.availableTasks"
-              :subtasks="daily.taskSubtasks"
-              :can-edit="canEdit"
-              :saving="progressSaving"
-              @create="addProgress"
-              @update="editProgress"
-              @delete="removeProgress"
-              @open="openTask"
-            />
-            <ReviewReflectionEditor
-              v-model="reflection"
-              :disabled="!canEdit || saved?.status === 'submitted'"
-            />
+                <UIcon name="i-lucide-list-tree" /><span>{{ $t('pages.review.final.dayJournal') }}</span>
+              </button>
+              <button
+                type="button"
+                @click="openPanel('reflection')"
+              >
+                <UIcon name="i-lucide-notebook-pen" /><span>{{ $t('pages.review.close.reflection') }}</span>
+              </button>
+              <button
+                v-if="!selectedUser"
+                type="button"
+                @click="openPanel('history')"
+              >
+                <UIcon name="i-lucide-history" /><span>{{ $t('pages.review.close.history') }}</span>
+              </button>
+            </nav>
           </div>
           <ReviewStandupPanel
             :standup="finalStandup"
@@ -535,39 +577,15 @@ function selectMember(id: string | null) {
             @update:content="content = $event"
           />
         </section>
-        <ReviewHistoryCalendar
-          v-if="!selectedUser"
-          :selected-date="selectedDate"
-          :history="history"
-          :max-date="today"
-          @select="selectedDate = $event"
-        />
       </template>
     </template>
 
     <template v-else-if="tab === 'weekly'">
-      <section class="review-metrics">
-        <MetricCard
-          :label="$t('pages.review.completed')"
-          :value="weeklyDone.length"
-          icon="i-lucide-circle-check-big"
-          tone="success"
-        /><MetricCard
-          :label="$t('pages.review.remaining')"
-          :value="weeklyRemaining.length"
-          icon="i-lucide-list-todo"
-          tone="warning"
-        /><MetricCard
-          :label="$t('pages.review.result')"
-          :value="`${weeklyScore}%`"
-          icon="i-lucide-trophy"
-          tone="accent"
-        />
-      </section>
       <div class="review-weekly surface-card">
         <div>
           <h2>{{ $t('pages.review.v2.weekResults') }}</h2>
-          <p>{{ $t('pages.review.v2.weekHint') }}</p>
+          <p>{{ weeklyDone.length }} / {{ weeklyTasks.length }} · {{ weeklyScore }}%</p>
+          <span><i :style="{ width: `${weeklyScore}%` }" /></span>
         </div>
         <AppButton
           v-if="weeklyRemaining.length && !moved"
@@ -593,24 +611,82 @@ function selectMember(id: string | null) {
           @open="openTask"
         />
       </section>
-      <AppSurface
-        v-if="weeklyReflections.length"
-        class="review-week-reflections"
+      <AppButton
+        v-if="!selectedUser"
+        variant="ghost"
+        icon="i-lucide-history"
+        @click="openPanel('history')"
+        >{{ $t('pages.review.close.history') }}</AppButton
       >
-        <h2><UIcon name="i-lucide-notebook-text" />{{ $t('pages.review.v2.weekReflections') }}</h2>
-        <div>
-          <button
-            v-for="item in weeklyReflections"
-            :key="item.id"
-            @click="showHistory(item)"
-          >
-            <strong>{{ format(parseISO(item.reviewDate), 'EEE, d MMM', { locale: dateLocale }) }}</strong
-            ><span>{{ item.content.slice(0, 180) }}</span>
-          </button>
-        </div>
-      </AppSurface>
     </template>
   </div>
+
+  <AppDrawer
+    :open="activePanel === 'journal'"
+    :title="$t('pages.review.final.dayJournal')"
+    :eyebrow="selectedLabel"
+    icon="i-lucide-list-tree"
+    size="fullscreen"
+    class="review-context-panel"
+    @close="closePanel"
+  >
+    <ReviewTaskTimeline
+      v-if="daily"
+      :journals="daily.journals"
+      :tasks="dailyTimelineTasks"
+      :available-tasks="daily.availableTasks"
+      :subtasks="daily.taskSubtasks"
+      :can-edit="canEdit"
+      :saving="progressSaving"
+      @create="addProgress"
+      @update="editProgress"
+      @delete="removeProgress"
+      @open="openTask"
+    />
+  </AppDrawer>
+  <AppDrawer
+    :open="activePanel === 'reflection'"
+    :title="$t('pages.review.close.reflection')"
+    :eyebrow="selectedLabel"
+    icon="i-lucide-notebook-pen"
+    size="wide"
+    @close="closePanel"
+  >
+    <ReviewReflectionEditor
+      v-model="reflection"
+      :disabled="!canEdit || saved?.status === 'submitted'"
+    />
+  </AppDrawer>
+  <AppDrawer
+    :open="activePanel === 'history'"
+    :title="$t('pages.review.close.history')"
+    :eyebrow="$t('pages.review.close.historyHint')"
+    icon="i-lucide-history"
+    size="wide"
+    @close="closePanel"
+  >
+    <ReviewHistoryCalendar
+      v-if="!selectedUser"
+      :selected-date="selectedDate"
+      :history="history"
+      :max-date="today"
+      @select="selectedDate = $event"
+    />
+    <div
+      v-if="weeklyReflections.length"
+      class="review-history-list"
+    >
+      <button
+        v-for="item in weeklyReflections"
+        :key="item.id"
+        type="button"
+        @click="showHistory(item)"
+      >
+        <strong>{{ format(parseISO(item.reviewDate), 'EEE, d MMM', { locale: dateLocale }) }}</strong
+        ><span>{{ item.content.slice(0, 180) }}</span>
+      </button>
+    </div>
+  </AppDrawer>
 </template>
 
 <style scoped>
@@ -618,226 +694,304 @@ function selectMember(id: string | null) {
   margin-inline: auto;
   padding: 1rem;
 }
-.review-tabs,
-.review-datebar,
-.review-weekly {
+.review-toolbar {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 10;
   display: flex;
   align-items: center;
-}
-.review-tabs {
-  gap: 0.25rem;
-  padding: 0.3rem;
+  gap: 0.55rem;
+  padding: 0.5rem;
   margin-bottom: 0.65rem;
+  backdrop-filter: blur(18px);
 }
-.review-tabs button {
+.review-toolbar__identity {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.6rem;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 700;
+  gap: 0.55rem;
+  min-width: 0;
+  margin-right: auto;
 }
-.review-tabs button.is-active {
+.review-toolbar__identity > span {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  color: var(--color-accent);
+}
+.review-toolbar__identity h1 {
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+.review-toolbar__identity p {
+  max-width: 25rem;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.6rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-toolbar__tabs {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.18rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.62rem;
+}
+.review-toolbar__tabs button {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.36rem 0.5rem;
+  border-radius: 0.45rem;
+  color: var(--color-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+.review-toolbar__tabs button.is-active {
   background: var(--color-text-primary);
   color: var(--color-bg);
 }
-.review-datebar {
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.55rem;
-  margin-bottom: 0.65rem;
+.review-toolbar__date {
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
 }
-.review-datebar > div {
-  min-width: 17rem;
+.review-toolbar__date-label {
+  min-width: 10rem;
   text-align: center;
 }
-.review-datebar strong,
-.review-datebar small {
+.review-toolbar__date-label strong,
+.review-toolbar__date-label small {
   display: block;
   text-transform: capitalize;
 }
-.review-datebar small {
+.review-toolbar__date-label strong {
+  font-size: 0.66rem;
+}
+.review-toolbar__date-label small {
   color: var(--color-text-secondary);
-  font-size: 0.65rem;
+  font-size: 0.57rem;
 }
-.review-datebar input {
-  padding: 0.45rem;
+.review-toolbar__date-picker {
+  position: relative;
+}
+.review-toolbar__date-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.review-toolbar__member {
+  width: 10rem;
+}
+.review-toolbar__more {
+  position: relative;
+}
+.review-toolbar__more summary {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.52rem;
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-text-secondary);
+}
+.review-toolbar__more summary::-webkit-details-marker {
+  display: none;
+}
+.review-toolbar__more[open] summary,
+.review-toolbar__more summary:hover {
+  background: var(--color-bg-alt);
+  color: var(--color-text-primary);
+}
+.review-toolbar__more > div {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  min-width: 12rem;
+  padding: 0.3rem;
   border: 1px solid var(--color-panel-border);
-  border-radius: 0.55rem;
+  border-radius: 0.7rem;
   background: var(--color-panel-bg);
-  font-size: 0.7rem;
+  box-shadow: var(--shadow-elevated);
 }
-.review-member {
-  width: 13rem;
-  margin-left: 0.25rem;
+.review-toolbar__more button,
+.review-toolbar__more a {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem;
+  border-radius: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.review-toolbar__more button:hover,
+.review-toolbar__more a:hover {
+  background: var(--color-bg-alt);
 }
 .review-daily-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 23rem);
   gap: 0.65rem;
   align-items: start;
-  margin-bottom: 1rem;
 }
-.review-day-work {
+.review-daily-layout__main {
+  display: grid;
   min-width: 0;
+  gap: 0.55rem;
 }
-.review-day-work__header {
+.review-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.review-detail-actions button {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 0.65rem;
-  margin-bottom: 0.55rem;
-}
-.review-day-work__header h2 {
-  font-size: 0.9rem;
-  font-weight: 800;
-}
-.review-day-work__header p {
-  color: var(--color-text-secondary);
-  font-size: 0.66rem;
-}
-.review-day-work__header > div:last-child {
-  display: flex;
-  gap: 0.2rem;
-  padding: 0.2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  padding: 0.6rem;
   border: 1px solid var(--color-panel-border);
   border-radius: 0.65rem;
-}
-.review-day-work__header button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.45rem;
   color: var(--color-text-secondary);
-  font-size: 0.64rem;
-  font-weight: 700;
+  font-size: 0.67rem;
+  font-weight: 750;
 }
-.review-day-work__header button.is-active {
+.review-detail-actions button:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-panel-border));
   color: var(--color-text-primary);
-  background: var(--color-bg-alt);
-}
-.review-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.55rem;
-  margin-bottom: 0.65rem;
+  background: var(--color-panel-bg);
 }
 .review-board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
   margin-bottom: 0.65rem;
 }
-.review-board--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 .review-weekly {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-}
-.review-weekly {
   padding: 0.75rem;
   margin-bottom: 0.65rem;
 }
+.review-weekly > div {
+  flex: 1;
+}
 .review-weekly h2 {
+  font-size: 0.85rem;
   font-weight: 800;
 }
 .review-weekly p {
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
 }
-.review-week-reflections {
-  margin-bottom: 0.65rem;
+.review-weekly span {
+  display: block;
+  height: 0.28rem;
+  margin-top: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-bg-alt);
 }
-.review-week-reflections h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.85rem;
-  font-weight: 800;
+.review-weekly span i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
 }
-.review-week-reflections > div {
+.review-history-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   gap: 0.4rem;
+  margin-top: 0.65rem;
 }
-.review-week-reflections button {
-  padding: 0.6rem;
+.review-history-list button {
+  padding: 0.65rem;
   border: 1px solid var(--color-panel-border);
   border-radius: 0.65rem;
   text-align: left;
 }
-.review-week-reflections strong,
-.review-week-reflections span {
+.review-history-list strong,
+.review-history-list span {
   display: block;
 }
-.review-week-reflections span {
+.review-history-list span {
   display: -webkit-box;
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   color: var(--color-text-secondary);
   font-size: 0.65rem;
 }
+.review-context-panel :deep(.ui-drawer__body > *) {
+  width: 100%;
+  max-width: 96rem;
+  margin-inline: auto;
+}
 @media (max-width: 1000px) {
+  .review-toolbar__identity p,
+  .review-toolbar__member {
+    display: none;
+  }
   .review-daily-layout {
     grid-template-columns: 1fr;
   }
   .review-daily-layout :deep(.review-standup-panel) {
     position: static;
   }
-  .review-metrics {
-    grid-template-columns: repeat(2, 1fr);
+}
+@media (max-width: 640px) {
+  .review-workspace {
+    padding: 0.6rem;
+  }
+  .review-toolbar {
+    top: 0.25rem;
+    flex-wrap: wrap;
+  }
+  .review-toolbar__identity {
+    flex: 1;
+  }
+  .review-toolbar__identity p {
+    display: none;
+  }
+  .review-toolbar__tabs {
+    order: 3;
+    flex: 1;
+  }
+  .review-toolbar__tabs button {
+    flex: 1;
+    justify-content: center;
+  }
+  .review-toolbar__date {
+    order: 4;
+    width: 100%;
+    justify-content: center;
+    border-top: 1px solid var(--color-panel-border);
+    padding-top: 0.4rem;
+  }
+  .review-toolbar__date-label {
+    flex: 1;
+  }
+  .review-detail-actions {
+    grid-template-columns: 1fr;
   }
   .review-board {
     grid-template-columns: 1fr;
   }
-}
-@media (max-width: 640px) {
-  .review-workspace {
-    padding: 0.65rem;
-  }
-  .review-tabs button {
-    flex: 1;
-    justify-content: center;
-  }
-  .review-tabs button {
-    padding-inline: 0.35rem;
-    font-size: 0.66rem;
-  }
-  .review-datebar {
-    flex-wrap: wrap;
-  }
-  .review-datebar > div {
-    order: -1;
-    width: 100%;
-    min-width: 0;
-  }
-  .review-datebar input {
-    flex: 1;
-  }
-  .review-member {
-    width: 100%;
-    margin-left: 0;
-  }
-  .review-day-work__header {
+  .review-weekly {
     align-items: stretch;
     flex-direction: column;
-  }
-  .review-day-work__header > div:last-child,
-  .review-day-work__header button {
-    flex: 1;
-  }
-  .review-day-work__header button {
-    justify-content: center;
-  }
-  .review-metrics {
-    gap: 0.35rem;
   }
 }
 </style>
