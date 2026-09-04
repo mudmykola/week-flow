@@ -32,8 +32,12 @@ describe('application navigation', () => {
     expect(appNavigation.filter((item) => item.section === 'work').map((item) => item.to)).toEqual([
       '/today',
       '/',
+      '/backlog',
       '/inbox'
     ])
+    expect(sidebarNavigationForRole('user').some((item) => item.to === '/inbox')).toBe(false)
+    expect(sidebarNavigationForRole('user').some((item) => item.to === '/backlog')).toBe(true)
+    expect(sidebarNavigationForRole('user').some((item) => item.to === '/capacity')).toBe(true)
     expect(appNavigation.find((item) => item.to === '/projects')?.section).toBe('planning')
     expect(navigationForRole('user').some((item) => item.to === '/workflows')).toBe(false)
     expect(sidebarNavigationForRole('admin').some((item) => item.to === '/workflows')).toBe(false)

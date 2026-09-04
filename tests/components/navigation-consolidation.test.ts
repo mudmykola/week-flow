@@ -12,7 +12,8 @@ describe('consolidated product navigation', () => {
     const shell = source('app/presentation/components/shell/AppShell.vue')
 
     expect(navigation).toContain("to: '/projects'")
-    expect(navigation.match(/visibility: 'contextual'/g)).toHaveLength(4)
+    expect(navigation.match(/visibility: 'contextual'/g)).toHaveLength(5)
+    expect(navigation).toContain("to: '/inbox'")
     expect(navigation).toContain("roles: ['pm', 'admin']")
     expect(shell).toContain('searchableNavigation')
     expect(shell).toContain('sidebarNavigationForRole')

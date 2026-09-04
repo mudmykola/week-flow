@@ -40,7 +40,7 @@ describe('Brand and Global Create 2.0 contracts', () => {
     expect(focus).not.toContain('/?new=1')
   })
 
-  it('keeps Today and Inbox counters visible when the desktop sidebar is collapsed', () => {
+  it('keeps the Today counter visible and Inbox capture contextual', () => {
     const shell = read('app/presentation/components/shell/AppShell.vue')
     const sidebar = read('app/presentation/components/shell/ShellSidebar.vue')
     const navigationItem = read('app/presentation/components/shell/ShellNavigationItem.vue')
@@ -48,6 +48,9 @@ describe('Brand and Global Create 2.0 contracts', () => {
     expect(shell).toContain('tasksStore.syncListTask(task)')
     expect(sidebar).toContain("item.to === '/today'")
     expect(sidebar).toContain("item.to === '/inbox'")
+    expect(read('app/domain/services/navigation.ts')).toContain(
+      "to: '/inbox',\n    section: 'work',\n    visibility: 'contextual'"
+    )
     expect(navigationItem).toContain('shell-navigation-item__badge')
     expect(navigationItem).toContain('lg:absolute')
     expect(sidebar).not.toContain("item.to === '/today' && overdueCount")

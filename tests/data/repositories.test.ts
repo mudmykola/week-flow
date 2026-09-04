@@ -7,6 +7,7 @@ import {
   deleteTask,
   duplicateTask,
   fetchAllTasks,
+  fetchBacklogTasks,
   fetchTaskPage,
   fetchArchivedTasks,
   fetchDueTasks,
@@ -97,6 +98,8 @@ describe('API repositories', () => {
   it('maps scoped task queries and bulk/duplicate mutations to their endpoints', async () => {
     await fetchInboxTasks()
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'inbox' } })
+    await fetchBacklogTasks()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'backlog' } })
     await fetchDueTasks()
     expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks', { query: { scope: 'due' } })
     await fetchTodayTasks('2026-08-12')

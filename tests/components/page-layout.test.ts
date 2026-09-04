@@ -11,6 +11,8 @@ const pageRoots = [
   'app/presentation/pages/activity/index.vue',
   'app/presentation/pages/admin/index.vue',
   'app/presentation/pages/analytics/index.vue',
+  'app/presentation/pages/backlog/index.vue',
+  'app/presentation/pages/capacity/index.vue',
   'app/presentation/pages/delegation/index.vue',
   'app/presentation/pages/focus/index.vue',
   'app/presentation/pages/goals/index.vue',

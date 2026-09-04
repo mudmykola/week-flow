@@ -55,5 +55,5 @@ claude/
 .codex
 .agents
 BACKLOG*.md
-backlog/
+/backlog/
 CLAUDE*.md

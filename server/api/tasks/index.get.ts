@@ -31,13 +31,20 @@ export default defineEventHandler(async (event) => {
       : undefined,
     scope === 'inbox'
       ? and(isNull(tasks.projectId), isNull(tasks.dueDate), ne(tasks.status, 'done'), isNull(tasks.archivedAt))
-      : scope === 'today'
-        ? and(eq(tasks.plannedDate, date!), ne(tasks.status, 'done'), isNull(tasks.archivedAt))
-        : scope === 'due'
-          ? and(isNotNull(tasks.dueDate), isNull(tasks.archivedAt))
-          : scope === 'archived'
-            ? isNotNull(tasks.archivedAt)
-            : undefined
+      : scope === 'backlog'
+        ? and(
+            isNull(tasks.plannedDate),
+            ne(tasks.status, 'done'),
+            isNull(tasks.archivedAt),
+            ne(tasks.workState, 'cancelled')
+          )
+        : scope === 'today'
+          ? and(eq(tasks.plannedDate, date!), ne(tasks.status, 'done'), isNull(tasks.archivedAt))
+          : scope === 'due'
+            ? and(isNotNull(tasks.dueDate), isNull(tasks.archivedAt))
+            : scope === 'archived'
+              ? isNotNull(tasks.archivedAt)
+              : undefined
   ].filter((c) => c !== undefined)
 
   const rows = await db

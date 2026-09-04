@@ -70,9 +70,7 @@ function keydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div
-    class="task-quick-create rounded-xl border border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-panel-border))] bg-[var(--color-panel-bg)] p-2.5 shadow-lg"
-  >
+  <div class="task-quick-create surface-card">
     <div class="flex items-center gap-2">
       <UIcon
         name="i-lucide-plus"
@@ -144,3 +142,20 @@ function keydown(event: KeyboardEvent) {
     <p class="text-secondary mt-2 text-[10px]">{{ $t('task.quickCreateHint') }}</p>
   </div>
 </template>
+
+<style scoped>
+.task-quick-create {
+  padding: 0.625rem;
+  border-color: var(--color-panel-border);
+  background: var(--color-panel-bg);
+  box-shadow: var(--shadow-surface);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.task-quick-create:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-panel-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+</style>

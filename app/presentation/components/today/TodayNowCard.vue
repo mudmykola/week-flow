@@ -80,8 +80,8 @@ function toggleFocus() {
 <style scoped>
 .today-now-card {
   padding: 1rem;
-  border-color: color-mix(in srgb, var(--color-accent) 38%, var(--color-panel-border));
-  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-panel-bg));
+  border-color: var(--color-panel-border);
+  background: var(--color-panel-bg);
 }
 .today-now-card__header,
 .today-now-card__task,
@@ -94,7 +94,6 @@ function toggleFocus() {
 .today-now-card__header {
   justify-content: space-between;
   margin-bottom: 0.8rem;
-  color: var(--color-accent);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -103,6 +102,13 @@ function toggleFocus() {
 .today-now-card__header span,
 .today-now-card__content span {
   gap: 0.4rem;
+}
+.today-now-card__header > span {
+  width: fit-content;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  color: var(--color-accent);
 }
 .today-now-card__header strong {
   font-variant-numeric: tabular-nums;

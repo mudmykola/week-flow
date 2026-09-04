@@ -26,6 +26,10 @@ export function fetchInboxTasks() {
   return apiRequest<Task[]>('/api/tasks', { query: { scope: 'inbox' } })
 }
 
+export function fetchBacklogTasks() {
+  return apiRequest<Task[]>('/api/tasks', { query: { scope: 'backlog' } })
+}
+
 export function fetchDueTasks() {
   return apiRequest<Task[]>('/api/tasks', { query: { scope: 'due' } })
 }

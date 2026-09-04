@@ -13,8 +13,16 @@ export interface AppNavigationItem {
 export const appNavigation: AppNavigationItem[] = [
   { label: 'nav.today', icon: 'i-lucide-sun', to: '/today', section: 'work' },
   { label: 'nav.board', icon: 'i-lucide-layout-dashboard', to: '/', section: 'work' },
-  { label: 'nav.inbox', icon: 'i-lucide-inbox', to: '/inbox', section: 'work' },
+  { label: 'nav.backlog', icon: 'i-lucide-list-filter', to: '/backlog', section: 'work' },
+  {
+    label: 'nav.inbox',
+    icon: 'i-lucide-inbox',
+    to: '/inbox',
+    section: 'work',
+    visibility: 'contextual'
+  },
   { label: 'nav.calendar', icon: 'i-lucide-calendar-days', to: '/calendar', section: 'planning' },
+  { label: 'nav.capacity', icon: 'i-lucide-gauge', to: '/capacity', section: 'planning' },
   { label: 'nav.projects', icon: 'i-lucide-folder-kanban', to: '/projects', section: 'planning' },
   { label: 'nav.goals', icon: 'i-lucide-target', to: '/goals', section: 'planning' },
   { label: 'nav.notes', icon: 'i-lucide-sticky-note', to: '/notes', section: 'planning' },
