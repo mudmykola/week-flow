@@ -96,6 +96,7 @@
     "workflows": "Workflows",
     "archive": "Archive",
     "settings": "Settings",
+    "about": "About the developer",
     "team": "Team",
     "admin": "Control center"
   },
@@ -756,7 +757,39 @@
     "login": {
       "description": "Sign in to manage your projects and tasks.",
       "error": "Could not sign in with Google.",
-      "google": "Sign in with Google"
+      "google": "Sign in with Google",
+      "aboutDeveloper": "About the developer"
+    },
+    "about": {
+      "metaTitle": "About the WeekFlow developer — Mykola Mud",
+      "metaDescription": "The story behind WeekFlow, its product principles and developer Mykola Mud.",
+      "eyebrow": "An independent product from Ukraine",
+      "developerName": "Mykola Mud",
+      "initials": "MM",
+      "title": "I build calm tools for focused work.",
+      "intro": "I’m Mykola, the developer behind WeekFlow. I combine engineering, product thinking and attention to detail to make complex planning feel simple.",
+      "profile": "I design and build web products from the first idea to a stable production release.",
+      "contact": "Get in touch",
+      "signIn": "Sign in",
+      "openWorkspace": "Open WeekFlow",
+      "principles": {
+        "focus": {
+          "title": "Focus over noise",
+          "text": "Every screen should help make the next decision instead of introducing more complexity."
+        },
+        "trust": {
+          "title": "Privacy by default",
+          "text": "Account data is isolated, access is verified server-side and security is part of the architecture."
+        },
+        "craft": {
+          "title": "Quality in the details",
+          "text": "Responsive UI, fast interactions, tests and automated release control work as one system."
+        }
+      },
+      "productTitle": "WeekFlow grew from a real need to see the day and week as one coherent system.",
+      "productText": "Tasks, focus, goals, notes, daily updates and reviews live in one workspace. The product evolves through daily use: every feature should save attention rather than demand it.",
+      "stack": "Technology",
+      "footer": "Designed and built with care for the details."
     },
     "timeline": {
       "description": "A horizontal plan of upcoming deadlines.",

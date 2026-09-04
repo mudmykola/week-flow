@@ -1,4 +1,4 @@
-import { verifyOAuthEntry, verifyProductionHealth } from './production-health.mjs'
+import { verifyOAuthEntry, verifyProductionHealth, verifySessionEndpoint } from './production-health.mjs'
 
 const green = '\x1b[32m'
 const red = '\x1b[31m'
@@ -18,11 +18,15 @@ try {
     }
   })
   console.log(`${green}✓ Production API and D1 are healthy (${payload.requestId ?? requestId})${reset}`)
+  await verifySessionEndpoint({ url: new URL('/api/_auth/session', url).toString() })
+  console.log(`${green}✓ Session endpoint is reachable${reset}`)
   const oauth = await verifyOAuthEntry({
     url: new URL('/auth/google', url).toString(),
     expectedRedirectUri: new URL('/auth/google', url).toString()
   })
-  console.log(`${green}✓ Google OAuth entry and callback URL are valid (${oauth.durationMs}ms)${reset}`)
+  console.log(
+    `${green}✓ Google OAuth state, cookie and callback URL are valid (${oauth.hops} redirects, ${oauth.durationMs}ms)${reset}`
+  )
 } catch (error) {
   console.error(`${red}✗ ${error instanceof Error ? error.message : 'Production health check failed'}${reset}`)
   process.exitCode = 1

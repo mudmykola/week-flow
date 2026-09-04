@@ -31,13 +31,14 @@ export function useOfflineMutationQueue() {
   async function flush() {
     if (syncing.value || conflict.value || !online.value || !queue.value.length) return
     syncing.value = true
+    let replayed = false
     try {
       while (queue.value.length && online.value) {
         const mutation = queue.value[0]!
         try {
           await $fetch(mutation.url, { method: mutation.method, body: mutation.body })
           queue.value = queue.value.slice(1)
-          broadcastSync('tasks')
+          replayed = true
         } catch (cause) {
           const error = normalizeAppError(cause)
           if (error.code === 'conflict') conflict.value = mutation
@@ -47,6 +48,7 @@ export function useOfflineMutationQueue() {
       }
     } finally {
       syncing.value = false
+      if (replayed) broadcastSync('tasks')
     }
   }
 

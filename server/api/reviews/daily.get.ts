@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
   const historyStart = new Date(`${date}T12:00:00`)
   historyStart.setDate(historyStart.getDate() - 30)
   const historyStartDate = historyStart.toISOString().slice(0, 10)
-  const [activity, progressHistory, completedSubtasks, focus, progressEntries, taskSubtasks] = await Promise.all([
+  const [activity, progressHistory, completedSubtasks, focus, taskSubtasks] = await Promise.all([
     taskIds.length
       ? db
           .select({
@@ -142,32 +142,6 @@ export default defineEventHandler(async (event) => {
     taskIds.length
       ? db
           .select({
-            id: reviewProgressEntries.id,
-            ownerId: reviewProgressEntries.ownerId,
-            taskId: reviewProgressEntries.taskId,
-            subtaskId: reviewProgressEntries.subtaskId,
-            subtaskTitle: subtasks.title,
-            workDate: reviewProgressEntries.workDate,
-            kind: reviewProgressEntries.kind,
-            note: reviewProgressEntries.note,
-            minutes: reviewProgressEntries.minutes,
-            nextStep: reviewProgressEntries.nextStep,
-            createdAt: reviewProgressEntries.createdAt,
-            updatedAt: reviewProgressEntries.updatedAt
-          })
-          .from(reviewProgressEntries)
-          .leftJoin(subtasks, eq(subtasks.id, reviewProgressEntries.subtaskId))
-          .where(
-            and(
-              eq(reviewProgressEntries.ownerId, target.id),
-              eq(reviewProgressEntries.workDate, date),
-              inArray(reviewProgressEntries.taskId, taskIds)
-            )
-          )
-      : [],
-    taskIds.length
-      ? db
-          .select({
             id: subtasks.id,
             taskId: subtasks.taskId,
             title: subtasks.title,
@@ -179,6 +153,7 @@ export default defineEventHandler(async (event) => {
           .where(inArray(subtasks.taskId, taskIds))
       : []
   ])
+  const progressEntries = progressHistory.filter((item) => item.workDate === date)
   return buildDailyReview({
     date,
     user: target,

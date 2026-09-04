@@ -2,6 +2,7 @@ import { and, desc, eq, gte, like, lt, ne, or, sql } from 'drizzle-orm'
 import { useDb } from '../../db'
 import { activityLogs, goals, projects, tasks, users } from '../../db/schema'
 import { requireAppUser } from '../../utils/auth'
+import { escapeCsvField } from '../../utils/csv'
 
 const allowedActions = new Set([
   'task.created',
@@ -94,12 +95,11 @@ export default defineEventHandler(async (event) => {
   if (exporting) {
     setResponseHeader(event, 'content-type', 'text/csv; charset=utf-8')
     setResponseHeader(event, 'content-disposition', `attachment; filename="weekflow-activity-${Date.now()}.csv"`)
-    const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`
     return [
       'date,actor,action,entity,project',
       ...items.map((item) =>
         [new Date(item.createdAt).toISOString(), item.actorName, item.action, item.entityTitle, item.projectName]
-          .map(escape)
+          .map(escapeCsvField)
           .join(',')
       )
     ].join('\n')

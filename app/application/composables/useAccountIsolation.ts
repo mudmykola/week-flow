@@ -11,7 +11,8 @@ export const accountStorageKeys = [
   'weekflow-focus-timer-v2',
   'weekflow-calendar-filters-v3',
   'weekflow-today-filters-v1',
-  'weekflow-offline-mutations-v1'
+  'weekflow-offline-mutations-v1',
+  'weekflow-activity-last-seen'
 ]
 export const accountStoragePrefixes = ['weekflow-review-draft-']
 

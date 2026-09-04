@@ -96,6 +96,10 @@ export default defineEventHandler(async (event) => {
       logOAuthFailure(event, createError({ statusCode: 403, statusMessage: 'Invalid OAuth state' }))
       return sendRedirect(event, '/login?error=oauth')
     }
+    if (typeof query.error === 'string') {
+      logOAuthFailure(event, createError({ statusCode: 400, statusMessage: query.error }))
+      return sendRedirect(event, '/login?error=oauth')
+    }
   }
 
   return googleOAuthHandler(event)

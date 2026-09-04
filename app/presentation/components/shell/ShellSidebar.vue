@@ -170,6 +170,16 @@ function countFor(item: AppNavigationItem) {
             class="size-4"
           />{{ $t('nav.settings') }}
         </NuxtLink>
+        <NuxtLink
+          to="/about"
+          class="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+          @click="mobileOpen = false"
+        >
+          <UIcon
+            name="i-lucide-user-round"
+            class="size-4"
+          />{{ $t('nav.about') }}
+        </NuxtLink>
         <button
           type="button"
           class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-500 hover:bg-red-500/10"

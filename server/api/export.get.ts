@@ -1,5 +1,6 @@
 import { eq, inArray } from 'drizzle-orm'
 import { useDb } from '../db'
+import { escapeCsvField } from '../utils/csv'
 import {
   activityLogs,
   automationExecutions,
@@ -105,11 +106,12 @@ export default defineEventHandler(async (event) => {
 
   setHeader(event, 'content-type', 'text/csv; charset=utf-8')
   setHeader(event, 'content-disposition', 'attachment; filename="weekflow-tasks.csv"')
-  const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`
   return [
     'title,status,priority,dueDate,week,tags',
     ...userTasks.map((task) =>
-      [task.title, task.status, task.priority, task.dueDate, task.week, task.tags.join('|')].map(escape).join(',')
+      [task.title, task.status, task.priority, task.dueDate, task.week, task.tags.join('|')]
+        .map(escapeCsvField)
+        .join(',')
     )
   ].join('\n')
 })

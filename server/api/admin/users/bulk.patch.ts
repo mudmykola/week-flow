@@ -2,7 +2,7 @@ import { inArray } from 'drizzle-orm'
 import { useDb } from '../../../db'
 import { users } from '../../../db/schema'
 import { adminBulkAccountSchema } from '../../../utils/adminValidators'
-import { isAdmin, requireAppUser } from '../../../utils/auth'
+import { invalidateAccountCache, isAdmin, requireAppUser } from '../../../utils/auth'
 import { logActivity } from '../../../utils/activity'
 
 export default defineEventHandler(async (event) => {
@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
       updatedAt: Date.now()
     })
     .where(inArray(users.id, body.ids))
+  body.ids.forEach(invalidateAccountCache)
   await Promise.all(
     accounts.map((account) =>
       logActivity(event, {

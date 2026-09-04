@@ -25,6 +25,16 @@ const route = useRoute()
       >
         {{ $t('pages.login.google') }}
       </a>
+      <NuxtLink
+        to="/about"
+        class="text-secondary mt-5 inline-flex items-center gap-2 text-sm transition hover:text-[var(--color-text-primary)]"
+      >
+        <UIcon
+          name="i-lucide-user-round"
+          class="size-4"
+        />
+        {{ $t('pages.login.aboutDeveloper') }}
+      </NuxtLink>
     </section>
   </main>
 </template>

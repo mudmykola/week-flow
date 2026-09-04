@@ -9,6 +9,10 @@ const accountCache = createAsyncTtlCache<{ disabledAt: number | null; role: 'use
   15_000
 )
 
+export function invalidateAccountCache(userId: string) {
+  accountCache.delete(userId)
+}
+
 export async function requireAppUser(event: H3Event) {
   const session = await requireUserSession(event)
   const startedAt = performance.now()

@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
-import { isHealthyPayload, verifyOAuthEntry, verifyProductionHealth } from '../../scripts/production-health.mjs'
+import {
+  isHealthyPayload,
+  verifyOAuthEntry,
+  verifyProductionHealth,
+  verifySessionEndpoint
+} from '../../scripts/production-health.mjs'
 
 function response(body: unknown, contentType = 'application/json', status = 200) {
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
@@ -66,6 +71,58 @@ describe('production health verifier', () => {
         fetchImpl
       })
     ).resolves.toMatchObject({ durationMs: expect.any(Number) })
+  })
+
+  it('follows the protected OAuth state redirect with its cookie', async () => {
+    const provider = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+    provider.searchParams.set('client_id', 'client.apps.googleusercontent.com')
+    provider.searchParams.set('redirect_uri', 'https://weekflow.pp.ua/auth/google')
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: {
+            location: '/auth/google?state=safe-state',
+            'set-cookie': 'weekflow-oauth-state=safe-state; Path=/auth/google; HttpOnly; Secure; SameSite=Lax'
+          }
+        })
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: provider.toString() } }))
+
+    await expect(
+      verifyOAuthEntry({
+        url: 'https://weekflow.pp.ua/auth/google',
+        expectedRedirectUri: 'https://weekflow.pp.ua/auth/google',
+        fetchImpl
+      })
+    ).resolves.toMatchObject({ hops: 2 })
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      new URL('https://weekflow.pp.ua/auth/google?state=safe-state'),
+      expect.objectContaining({ headers: { cookie: 'weekflow-oauth-state=safe-state' } })
+    )
+  })
+
+  it('rejects an OAuth state redirect without a protected cookie', async () => {
+    await expect(
+      verifyOAuthEntry({
+        url: 'https://weekflow.pp.ua/auth/google',
+        expectedRedirectUri: 'https://weekflow.pp.ua/auth/google',
+        fetchImpl: vi
+          .fn()
+          .mockResolvedValue(new Response(null, { status: 302, headers: { location: '/auth/google?state=unsafe' } }))
+      })
+    ).rejects.toThrow('missing protected state cookie')
+  })
+
+  it('verifies that the session endpoint remains reachable without authentication', async () => {
+    await expect(
+      verifySessionEndpoint({
+        url: 'https://weekflow.pp.ua/api/_auth/session',
+        fetchImpl: vi.fn().mockResolvedValue(response({}))
+      })
+    ).resolves.toEqual({ status: 200 })
   })
 
   it('rejects an OAuth redirect with a mismatched callback', async () => {

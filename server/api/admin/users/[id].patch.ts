@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { useDb } from '../../../db'
 import { users } from '../../../db/schema'
 import { adminAccountPatchSchema } from '../../../utils/adminValidators'
-import { isAdmin, requireAppUser } from '../../../utils/auth'
+import { invalidateAccountCache, isAdmin, requireAppUser } from '../../../utils/auth'
 import { logActivity } from '../../../utils/activity'
 
 export default defineEventHandler(async (event) => {
@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
   if (!account) throw createError({ statusCode: 404 })
   const disabledAt = body.disabled === undefined ? undefined : body.disabled ? Date.now() : null
   await db.update(users).set({ role: body.role, disabledAt, updatedAt: Date.now() }).where(eq(users.id, id))
+  invalidateAccountCache(id)
   await logActivity(event, {
     ownerId: id,
     actorId: actor.id,
