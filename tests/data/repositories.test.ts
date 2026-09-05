@@ -33,6 +33,12 @@ import {
   resolveInboxItem,
   updateInboxItem
 } from '~/data/repositories/inboxRepository'
+import {
+  deleteTaskDayPlan,
+  fetchTaskDayPlans,
+  saveTaskDayPlan,
+  updateTaskDayPlan
+} from '~/data/repositories/taskDayPlansRepository'
 
 const fetchMock = vi.hoisted(() => vi.fn())
 mockNuxtImport('$fetch', () => fetchMock)
@@ -181,5 +187,22 @@ describe('API repositories', () => {
       method: 'PATCH',
       body: { reviewDate: '2026-08-12', content: 'Ready', status: 'submitted' }
     })
+  })
+
+  it('maps task day-plan history and mutations to scoped endpoints', async () => {
+    await fetchTaskDayPlans('task-1')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks/task-1/day-plans')
+    await saveTaskDayPlan('task-1', { plannedDate: '2026-09-05', plannedMinutes: 60 })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/tasks/task-1/day-plans', {
+      method: 'POST',
+      body: { plannedDate: '2026-09-05', plannedMinutes: 60 }
+    })
+    await updateTaskDayPlan('plan-1', { status: 'moved' })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/task-day-plans/plan-1', {
+      method: 'PATCH',
+      body: { status: 'moved' }
+    })
+    await deleteTaskDayPlan('plan-1')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/task-day-plans/plan-1', { method: 'DELETE' })
   })
 })

@@ -1,4 +1,5 @@
 import type { Task } from './task'
+import type { TaskDayPlan } from './taskDayPlan'
 
 export type ReviewTask = Task & {
   projectName?: string | null
@@ -80,6 +81,7 @@ export type DailyReviewData = {
   }>
   progressEntries: ReviewProgressEntry[]
   progressHistory?: ReviewProgressEntry[]
+  dayPlans: TaskDayPlan[]
   journals: ReviewTaskJournal[]
   timeline: ReviewTimelineEvent[]
   attention: ReviewAttentionItem[]

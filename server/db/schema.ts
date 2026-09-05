@@ -262,6 +262,32 @@ export const reviewProgressEntries = sqliteTable(
   ]
 )
 
+export const taskDayPlans = sqliteTable(
+  'task_day_plans',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    plannedDate: text('planned_date').notNull(),
+    plannedTime: text('planned_time'),
+    plannedMinutes: integer('planned_minutes'),
+    status: text('status', { enum: ['planned', 'completed', 'moved', 'skipped'] })
+      .notNull()
+      .default('planned'),
+    carryoverReason: text('carryover_reason'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull()
+  },
+  (table) => [
+    uniqueIndex('task_day_plans_task_date_idx').on(table.taskId, table.plannedDate),
+    index('task_day_plans_owner_date_idx').on(table.ownerId, table.plannedDate, table.status)
+  ]
+)
+
 export const comments = sqliteTable(
   'comments',
   {
@@ -507,3 +533,4 @@ export type StickyNote = typeof stickyNotes.$inferSelect
 export type InboxItem = typeof inboxItems.$inferSelect
 export type DailyReview = typeof dailyReviews.$inferSelect
 export type ReviewProgressEntry = typeof reviewProgressEntries.$inferSelect
+export type TaskDayPlan = typeof taskDayPlans.$inferSelect

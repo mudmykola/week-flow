@@ -10,6 +10,7 @@ export type DailyReviewSource = {
   taskSubtasks?: DailyReviewData['taskSubtasks']
   progressEntries?: DailyReviewData['progressEntries']
   progressHistory?: DailyReviewData['progressHistory']
+  dayPlans?: DailyReviewData['dayPlans']
   activityEvents?: Array<{
     id: string
     taskId: string
@@ -33,17 +34,45 @@ export function buildDailyReview(source: DailyReviewSource): DailyReviewData {
   const workedOn = source.tasks.filter(
     (task) => workedIds.has(task.id) && !completed.some((done) => done.id === task.id)
   )
-  const planned = source.tasks
-    .filter((task) => task.status !== 'done' && (task.plannedDate === source.date || task.dueDate === source.date))
-    .sort(reviewTaskOrder)
-  const carriedOver = source.tasks.filter(
-    (task) => task.status !== 'done' && Boolean(task.plannedDate) && task.plannedDate! < source.date
+  const dayPlans = source.dayPlans || []
+  const activePlanTaskIds = new Set(
+    dayPlans
+      .filter((plan) => plan.plannedDate === source.date && (plan.status === 'planned' || plan.status === 'completed'))
+      .map((plan) => plan.taskId)
   )
+  const movedPlanTaskIds = new Set(
+    dayPlans.filter((plan) => plan.plannedDate === source.date && plan.status === 'moved').map((plan) => plan.taskId)
+  )
+  const planned = source.tasks
+    .filter(
+      (task) =>
+        task.status !== 'done' &&
+        (activePlanTaskIds.has(task.id) ||
+          (!dayPlans.some((plan) => plan.taskId === task.id && plan.plannedDate === source.date) &&
+            (task.plannedDate === source.date || task.dueDate === source.date)))
+    )
+    .sort(reviewTaskOrder)
+  const carriedOver = source.tasks.filter((task) => {
+    if (task.status === 'done') return false
+    if (movedPlanTaskIds.has(task.id)) return true
+    const hasPlanHistory = dayPlans.some((plan) => plan.taskId === task.id)
+    return !hasPlanHistory && Boolean(task.plannedDate) && task.plannedDate! < source.date
+  })
   const blockers = source.tasks.filter(
     (task) =>
       task.status !== 'done' && (Boolean(task.blockedByTaskId) || Boolean(task.dueDate && task.dueDate < source.date))
   )
-  const plannedTotal = planned.length + completed.filter((task) => task.plannedDate === source.date).length
+  const plannedTotal = new Set([
+    ...planned.map((task) => task.id),
+    ...completed
+      .filter(
+        (task) =>
+          activePlanTaskIds.has(task.id) ||
+          (!dayPlans.some((plan) => plan.taskId === task.id && plan.plannedDate === source.date) &&
+            task.plannedDate === source.date)
+      )
+      .map((task) => task.id)
+  ]).size
   const progressEntries = source.progressEntries || []
   const progressHistory = source.progressHistory || progressEntries
   const journalTaskIds = new Set([
@@ -179,6 +208,7 @@ export function buildDailyReview(source: DailyReviewSource): DailyReviewData {
     taskSubtasks: source.taskSubtasks || [],
     progressEntries,
     progressHistory,
+    dayPlans,
     journals,
     timeline,
     attention,

@@ -269,6 +269,47 @@ describe('daily review service', () => {
     expect(standup).toContain('Complete the module exercise')
   })
 
+  it('uses immutable day plans to report planned and moved work after rescheduling', () => {
+    const task = makeTask({ id: 'long-task', plannedDate: '2026-08-12', status: 'in_progress' })
+    const review = buildDailyReview({
+      date: '2026-08-11',
+      user: { id: 'user', name: 'Mykola', avatarUrl: null },
+      dayStart,
+      dayEnd,
+      tasks: [task],
+      dayPlans: [
+        {
+          id: 'plan-old',
+          ownerId: 'user',
+          taskId: task.id,
+          plannedDate: '2026-08-11',
+          plannedTime: '10:00',
+          plannedMinutes: 60,
+          status: 'moved',
+          carryoverReason: 'Need another day',
+          createdAt: dayStart,
+          updatedAt: dayStart + 1000
+        },
+        {
+          id: 'plan-next',
+          ownerId: 'user',
+          taskId: task.id,
+          plannedDate: '2026-08-12',
+          plannedTime: '09:00',
+          plannedMinutes: 45,
+          status: 'planned',
+          carryoverReason: null,
+          createdAt: dayStart + 1000,
+          updatedAt: dayStart + 1000
+        }
+      ]
+    })
+
+    expect(review.planned).toEqual([])
+    expect(review.carriedOver.map((item) => item.id)).toEqual(['long-task'])
+    expect(review.dayPlans).toHaveLength(2)
+  })
+
   it('surfaces only actionable review gaps and normalizes meaningful timeline events', () => {
     const review = buildDailyReview({
       date: '2026-08-11',

@@ -166,6 +166,18 @@
     "workLogPlaceholder": "Коротко опишіть фактичний прогрес…",
     "workLogSaved": "Прогрес дня збережено",
     "recordWork": "Записати",
+    "dayPlans": "Історія планування",
+    "dayPlansHint": "Кожен день роботи зберігається окремо — перенесення не стирає історію.",
+    "activeDays": "{count} дн.",
+    "moveToDay": "Перенести",
+    "carryoverReasonPlaceholder": "Чому переносимо? Це потрапить у Review",
+    "noDayPlans": "Ще немає запланованих днів.",
+    "dayPlanStatus": {
+      "planned": "Заплановано",
+      "completed": "Завершено",
+      "moved": "Перенесено",
+      "skipped": "Пропущено"
+    },
     "plannedTime": "Час",
     "estimate": "Оцінка часу",
     "noEstimate": "Без оцінки",

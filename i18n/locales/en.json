@@ -166,6 +166,18 @@
     "workLogPlaceholder": "Briefly describe the actual progress…",
     "workLogSaved": "Daily progress saved",
     "recordWork": "Record",
+    "dayPlans": "Planning history",
+    "dayPlansHint": "Each work day is preserved separately, so rescheduling never erases history.",
+    "activeDays": "{count} days",
+    "moveToDay": "Reschedule",
+    "carryoverReasonPlaceholder": "Why is it moving? This will appear in Review",
+    "noDayPlans": "No planned days yet.",
+    "dayPlanStatus": {
+      "planned": "Planned",
+      "completed": "Completed",
+      "moved": "Moved",
+      "skipped": "Skipped"
+    },
     "plannedTime": "Time",
     "estimate": "Time estimate",
     "noEstimate": "No estimate",

@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { getISOWeek, getISOWeekYear } from 'date-fns'
+import { upsertTaskDayPlan } from '../../../utils/taskDayPlans'
 import { useDb } from '../../../db'
 import { goals, inboxItems, projectMembers, projects, stickyNotes, tasks } from '../../../db/schema'
 import { requireAssignableUser } from '../../../utils/assigneeAccess'
@@ -69,6 +70,7 @@ export default defineEventHandler(async (event) => {
   } else {
     const current = new Date()
     const week = `${getISOWeekYear(current)}-W${String(getISOWeek(current)).padStart(2, '0')}`
+    const plannedDate = body.destination === 'today' ? body.plannedDate! : (body.plannedDate ?? null)
     await db.batch([
       db.insert(tasks).values({
         id: entityId,
@@ -83,7 +85,7 @@ export default defineEventHandler(async (event) => {
         doneAt: null,
         priority: 'medium',
         dueDate: body.dueDate ?? null,
-        plannedDate: body.destination === 'today' ? body.plannedDate! : (body.plannedDate ?? null),
+        plannedDate,
         plannedTime: null,
         estimateMinutes: null,
         dayRank: null,
@@ -95,6 +97,22 @@ export default defineEventHandler(async (event) => {
       }),
       db.delete(inboxItems).where(eq(inboxItems.id, id))
     ])
+    if (plannedDate) {
+      await upsertTaskDayPlan(
+        event,
+        {
+          id: entityId,
+          ownerId: user.id,
+          assigneeId: body.assigneeId ?? null,
+          plannedDate,
+          plannedTime: null,
+          estimateMinutes: null,
+          status: 'todo',
+          carryoverReason: null
+        },
+        { plannedDate }
+      )
+    }
   }
   return { ok: true as const, destination: body.destination, entityId }
 })

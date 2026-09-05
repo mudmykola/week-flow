@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { useDb } from '../../../db'
 import { subtasks, tasks } from '../../../db/schema'
 import { requireTaskAccess } from '../../../utils/taskAccess'
+import { upsertTaskDayPlan } from '../../../utils/taskDayPlans'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -32,6 +33,18 @@ export default defineEventHandler(async (event) => {
     archivedAt: null
   }
   await db.insert(tasks).values(task)
+  if (task.plannedDate) {
+    await upsertTaskDayPlan(
+      event,
+      {
+        ...task,
+        plannedTime: null,
+        estimateMinutes: null,
+        carryoverReason: null
+      },
+      { plannedDate: task.plannedDate, status: task.status === 'done' ? 'completed' : 'planned' }
+    )
+  }
   await db.delete(subtasks).where(eq(subtasks.id, id))
   return task
 })

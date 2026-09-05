@@ -9,6 +9,7 @@ import { requireTaskAccess } from '../../utils/taskAccess'
 import { runTaskAutomations } from '../../utils/automations'
 import { requireAssignableUser } from '../../utils/assigneeAccess'
 import { assertWorkflowWip } from '../../utils/workflowWip'
+import { syncTaskDayPlans } from '../../utils/taskDayPlans'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
@@ -74,6 +75,7 @@ export default defineEventHandler(async (event) => {
   if (!task) {
     throw createError({ statusCode: 404, statusMessage: 'Task not found' })
   }
+  await syncTaskDayPlans(event, existing, task)
   if (body.status === 'done' && existing.status !== 'done' && existing.recurrence && existing.dueDate) {
     const base = new Date(`${existing.dueDate}T12:00:00`)
     const nextDate =

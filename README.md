@@ -20,6 +20,7 @@ WeekFlow — персональний і командний workspace для п�
 
 - Google OAuth, ізоляція даних користувачів і системні ролі `user`, `pm`, `admin`.
 - Повноекранний адаптивний редактор задач із deep link `?task=<id>`, autosave, описом, коментарями, активністю та розширеними підзадачами.
+- Daily Task Continuity 2.0: одна довга задача має окремі плани на кожен день, незмінну історію перенесень із причинами та фактичний журнал роботи з типом результату, витраченим часом і наступним кроком.
 - Пріоритети, дедлайни, планові дата/час, оцінки, теги, повторення, залежності, виконавці, проєкти та workflow stages.
 - Global Create Hub для задачі, плану на сьогодні, Inbox-запису, стікера чи проєкту без втрати контексту поточної сторінки.
 - Спільні проєкти із запрошеннями та ролями `editor` і `viewer`.
@@ -61,7 +62,7 @@ app/data/          репозиторії й типізовані запити �
 
 Компоненти працюють зі станом через application layer, а мережеві запити зосереджені в data layer. Серверні маршрути розташовані в `server/api/`, авторизація та правила доступу — у `server/utils/`, схема бази — у `server/db/schema.ts`, а SQL-міграції — у `server/db/migrations/`.
 
-Ключові агреговані workspace read models (`Today`, `Calendar`, `Review`) формуються окремими domain services та API endpoints. Review snapshots зберігаються в D1, а точний час завершення задач і підзадач дозволяє відтворити фактичні результати дня без припущень за `updatedAt`.
+Ключові агреговані workspace read models (`Today`, `Calendar`, `Review`) формуються окремими domain services та API endpoints. `task_day_plans` зберігає історію денного планування незалежно від поточного стану задачі, а `review_progress_entries` — фактичний внесок за конкретну дату. Тому дейлік відтворюється з реальних даних навіть для задач, які тривали або переносилися кілька днів.
 
 UI primitives розділені на `base`, `form`, `layout` і `overlay`; правила повторного використання описані в [`docs/ui-components.md`](docs/ui-components.md).
 Сторінки використовують directory-first Nuxt routing (`<route>/index.vue`, `[param]/index.vue`); конвенції описані в [`docs/page-routing.md`](docs/page-routing.md).
@@ -193,7 +194,7 @@ pnpm deploy
 
 Push у гілку `main` автоматично запускає GitHub Actions workflow: frozen install, повний quality gate, перевірку Cloudflare credentials, recovery metadata, D1 migrations, Worker deploy, перевірку сайту та D1-aware API health check. Workflow також можна запустити вручну через **Actions → Deploy production → Run workflow**.
 
-Migration і Worker публікуються як одна delivery-послідовність. Не застосовуйте нову remote migration задовго до deploy коду, який її використовує. Для поточного Review 2.0 production має отримати `0014_nice_nightcrawler.sql` через стандартний workflow.
+Migration і Worker публікуються як одна delivery-послідовність. Не застосовуйте нову remote migration задовго до deploy коду, який її використовує. Для Daily Task Continuity 2.0 production має отримати `0023_task_day_plans.sql` через стандартний workflow.
 
 ## Основні клавіатурні команди
 
@@ -246,6 +247,7 @@ wrangler.toml           Cloudflare Worker, observability та D1 bindings
 - [Page routing](docs/page-routing.md) — directory-first Nuxt routing.
 - [Localization](docs/localization.md) — правила i18n та словників.
 - [Upgrade roadmap](docs/upgrade-roadmap-2026-08.md) — технічний аудит і послідовність розвитку.
+- [Dev Log — 2026-09-05](updates/2026-09-05.md) — багатоденне планування задач і фактичний журнал роботи.
 - [Dev Log — 2026-08-12](updates/2026-08-12.md) — Review 2.0, issue reference та delivery verification.
 - [Dev Log — 2026-08-11](updates/2026-08-11.md) — Today, Inbox, Week Board, Brand, Calendar та cross-page integration.
 

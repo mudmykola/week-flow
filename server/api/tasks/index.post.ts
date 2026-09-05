@@ -6,6 +6,7 @@ import { isAdmin, requireAppUser } from '../../utils/auth'
 import { logActivity } from '../../utils/activity'
 import { runTaskAutomations } from '../../utils/automations'
 import { requireAssignableUser } from '../../utils/assigneeAccess'
+import { upsertTaskDayPlan } from '../../utils/taskDayPlans'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
@@ -73,6 +74,12 @@ export default defineEventHandler(async (event) => {
   }
 
   await db.insert(tasks).values(task)
+  if (task.plannedDate) {
+    await upsertTaskDayPlan(event, task, {
+      plannedDate: task.plannedDate,
+      status: task.status === 'done' ? 'completed' : 'planned'
+    })
+  }
   await logActivity(event, {
     ownerId: task.assigneeId,
     actorId: user.id,

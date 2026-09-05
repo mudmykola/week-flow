@@ -4,6 +4,7 @@ import { tasks } from '../../db/schema'
 import { bulkTaskSchema } from '../../utils/validators'
 import { requireTaskAccess } from '../../utils/taskAccess'
 import { requireAssignableUser } from '../../utils/assigneeAccess'
+import { syncTaskDayPlans } from '../../utils/taskDayPlans'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
@@ -18,18 +19,28 @@ export default defineEventHandler(async (event) => {
   await requireAssignableUser(event, body.patch.reviewerId)
   const updated = []
   for (const id of body.ids) {
-    await requireTaskAccess(event, id, { write: true })
+    const { task: existing } = await requireTaskAccess(event, id, { write: true })
+    const planChanged = body.patch.plannedDate !== undefined && body.patch.plannedDate !== existing.plannedDate
     await db
       .update(tasks)
       .set({
         ...body.patch,
+        ...(planChanged
+          ? {
+              originalPlannedDate: existing.originalPlannedDate ?? existing.plannedDate ?? body.patch.plannedDate,
+              rescheduleCount: existing.plannedDate ? existing.rescheduleCount + 1 : existing.rescheduleCount
+            }
+          : {}),
         ...(body.patch.status ? { doneAt: body.patch.status === 'done' ? Date.now() : null } : {}),
         ...(body.patch.workState === 'review' ? { reviewRequestedAt: Date.now() } : {}),
         ...(body.patch.workState === 'active' ? { approvedAt: Date.now() } : {})
       })
       .where(eq(tasks.id, id))
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id))
-    if (task) updated.push(task)
+    if (task) {
+      await syncTaskDayPlans(event, existing, task)
+      updated.push(task)
+    }
   }
   return updated
 })

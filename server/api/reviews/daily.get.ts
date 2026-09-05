@@ -1,7 +1,15 @@
 import { and, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
 import { buildDailyReview } from '../../../app/domain/services/dailyReview'
 import { useDb } from '../../db'
-import { activityLogs, focusSessions, projects, reviewProgressEntries, subtasks, tasks } from '../../db/schema'
+import {
+  activityLogs,
+  focusSessions,
+  projects,
+  reviewProgressEntries,
+  subtasks,
+  taskDayPlans,
+  tasks
+} from '../../db/schema'
 import { dateSchema } from '../../utils/validators'
 import { resolveReviewUser } from '../../utils/reviewAccess'
 
@@ -69,7 +77,7 @@ export default defineEventHandler(async (event) => {
   const historyStart = new Date(`${date}T12:00:00`)
   historyStart.setDate(historyStart.getDate() - 30)
   const historyStartDate = historyStart.toISOString().slice(0, 10)
-  const [activity, progressHistory, completedSubtasks, focus, taskSubtasks] = await Promise.all([
+  const [activity, progressHistory, completedSubtasks, focus, taskSubtasks, dayPlans] = await Promise.all([
     taskIds.length
       ? db
           .select({
@@ -151,6 +159,19 @@ export default defineEventHandler(async (event) => {
           })
           .from(subtasks)
           .where(inArray(subtasks.taskId, taskIds))
+      : [],
+    taskIds.length
+      ? db
+          .select()
+          .from(taskDayPlans)
+          .where(
+            and(
+              eq(taskDayPlans.ownerId, target.id),
+              inArray(taskDayPlans.taskId, taskIds),
+              gte(taskDayPlans.plannedDate, historyStartDate),
+              lte(taskDayPlans.plannedDate, date)
+            )
+          )
       : []
   ])
   const progressEntries = progressHistory.filter((item) => item.workDate === date)
@@ -186,6 +207,7 @@ export default defineEventHandler(async (event) => {
       })),
     progressEntries,
     progressHistory,
+    dayPlans,
     taskSubtasks,
     dayStart,
     dayEnd

@@ -1,6 +1,6 @@
 import { and, count, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import { useDb } from '../../db'
-import { comments, focusSessions, subtasks, tasks } from '../../db/schema'
+import { comments, focusSessions, subtasks, taskDayPlans, tasks } from '../../db/schema'
 import { requireAppUser } from '../../utils/auth'
 import { taskIsolationCondition } from '../../utils/taskIsolation'
 import { dateSchema } from '../../utils/validators'
@@ -21,6 +21,16 @@ export default defineEventHandler(async (event) => {
   }
   const db = useDb(event)
   const access = taskIsolationCondition(user)
+  const plannedTaskIds = await db
+    .select({ taskId: taskDayPlans.taskId })
+    .from(taskDayPlans)
+    .where(
+      and(
+        eq(taskDayPlans.ownerId, user.id),
+        eq(taskDayPlans.plannedDate, date),
+        or(eq(taskDayPlans.status, 'planned'), eq(taskDayPlans.status, 'completed'))
+      )
+    )
   const rows = await db
     .select()
     .from(tasks)
@@ -28,7 +38,16 @@ export default defineEventHandler(async (event) => {
       and(
         access,
         isNull(tasks.archivedAt),
-        or(eq(tasks.plannedDate, date), and(lte(tasks.dueDate, date), ne(tasks.status, 'done')))
+        or(
+          eq(tasks.plannedDate, date),
+          plannedTaskIds.length
+            ? inArray(
+                tasks.id,
+                plannedTaskIds.map((item) => item.taskId)
+              )
+            : undefined,
+          and(lte(tasks.dueDate, date), ne(tasks.status, 'done'))
+        )
       )
     )
     .orderBy(tasks.dayRank, tasks.plannedTime, tasks.sort)

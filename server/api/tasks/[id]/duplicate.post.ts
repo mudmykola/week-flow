@@ -3,6 +3,7 @@ import { useDb } from '../../../db'
 import { tasks } from '../../../db/schema'
 import { requireTaskAccess } from '../../../utils/taskAccess'
 import { getServerMessages } from '../../../utils/i18n'
+import { upsertTaskDayPlan } from '../../../utils/taskDayPlans'
 
 export default defineEventHandler(async (event) => {
   const db = useDb(event)
@@ -19,5 +20,8 @@ export default defineEventHandler(async (event) => {
     sort: task.sort + 1
   }
   await db.insert(tasks).values(copy)
+  if (copy.plannedDate) {
+    await upsertTaskDayPlan(event, copy, { plannedDate: copy.plannedDate, status: 'planned' })
+  }
   return copy
 })

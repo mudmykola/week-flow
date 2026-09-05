@@ -10,6 +10,10 @@ const taskPatch = read('server/api/tasks/[id].patch.ts')
 const subtaskPatch = read('server/api/subtasks/[id].patch.ts')
 const workLog = read('app/presentation/components/task/TaskWorkLogComposer.vue')
 const taskOverview = read('app/presentation/components/task/TaskOverview.vue')
+const dayPlans = read('app/presentation/components/task/TaskDayPlans.vue')
+const dayPlanApi = read('server/api/tasks/[id]/day-plans/index.post.ts')
+const dayPlanPatchApi = read('server/api/task-day-plans/[id].patch.ts')
+const migration = read('server/db/migrations/0023_task_day_plans.sql')
 
 describe('daily work continuity contract', () => {
   it('keeps independent planning and carry-over metadata for subtasks', () => {
@@ -32,5 +36,21 @@ describe('daily work continuity contract', () => {
     expect(workLog).toContain('createReviewProgress')
     expect(workLog).toContain('localDateKey()')
     expect(workLog).toContain('subtaskId')
+    expect(workLog).toContain('nextStep')
+    expect(workLog).toContain('kind')
+  })
+
+  it('stores one immutable planning record per task and day', () => {
+    expect(schema).toContain('export const taskDayPlans = sqliteTable(')
+    expect(migration).toContain('CREATE TABLE `task_day_plans`')
+    expect(migration).toContain('CREATE UNIQUE INDEX `task_day_plans_task_date_idx`')
+    expect(taskOverview).toContain('<TaskDayPlans')
+    expect(dayPlans).toContain('fetchTaskDayPlans')
+    expect(dayPlans).toContain('carryoverReason')
+  })
+
+  it('guards every day-plan mutation through task access', () => {
+    expect(dayPlanApi).toContain('requireTaskAccess(event, taskId, { write: true })')
+    expect(dayPlanPatchApi).toContain('requireTaskAccess(event, existing.taskId, { write: true })')
   })
 })
