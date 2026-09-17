@@ -1,0 +1,181 @@
+.week-board-page__modebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+.week-board-page__modes,
+.week-board-page__density {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.75rem;
+  background: var(--color-panel-bg);
+}
+.week-board-page__modes button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.55rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.week-board-page__mode--active,
+.week-board-page__density-button--active {
+  background: var(--color-bg-alt);
+  color: var(--color-accent) !important;
+}
+.week-board-page__density button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: var(--color-text-secondary);
+}
+.week-board-page__overview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.week-board-page__overview-toggle:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-alt);
+}
+.week-board-page__insights {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.week-board-page__insights > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.05rem 0.45rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.75rem;
+  background: var(--color-panel-bg);
+}
+.week-board-page__insights svg {
+  grid-row: 1/3;
+  color: var(--color-accent);
+}
+.week-board-page__insights strong {
+  font-size: 0.9rem;
+}
+.week-board-page__insights span {
+  color: var(--color-text-secondary);
+  font-size: 0.63rem;
+}
+.week-board-page__insight--warning {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-panel-border)) !important;
+}
+.week-board-page__insight--warning svg,
+.week-board-page__insight--warning strong {
+  color: var(--color-danger);
+}
+.week-board-page__top {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-panel-border));
+  border-radius: 0.85rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 7%, var(--color-panel-bg)),
+    var(--color-panel-bg)
+  );
+}
+.week-board-page__top header > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.week-board-page__top header svg {
+  color: var(--color-accent);
+}
+.week-board-page__top h2 {
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.week-board-page__top header span {
+  color: var(--color-text-secondary);
+  font-size: 0.65rem;
+}
+.week-board-page__top header p {
+  color: var(--color-text-secondary);
+  font-size: 0.62rem;
+}
+.week-board-page__top-list {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+.week-board-page__top-list button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 16rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.6rem;
+  background: var(--color-panel-bg);
+  font-size: 0.7rem;
+}
+.week-board-page__top-list b {
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 0.35rem;
+  background: var(--color-accent);
+  color: white;
+}
+.week-board-page__top-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.week-board-page__top-add {
+  border-style: dashed !important;
+  color: var(--color-text-secondary);
+}
+@media (max-width: 760px) {
+  .week-board-page__modebar {
+    align-items: flex-start;
+  }
+  .week-board-page__modes {
+    max-width: calc(100vw - 5.5rem);
+    overflow-x: auto;
+  }
+  .week-board-page__modes button span {
+    display: none;
+  }
+  .week-board-page__insights {
+    grid-template-columns: 1fr 1fr;
+  }
+  .week-board-page__top {
+    grid-template-columns: 1fr;
+  }
+  .week-board-page__top-list {
+    justify-content: flex-start;
+  }
+  .week-board-page__top header p {
+    display: none;
+  }
+}

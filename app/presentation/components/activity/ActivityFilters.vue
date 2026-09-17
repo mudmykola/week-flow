@@ -112,36 +112,4 @@ function update(key: keyof ActivityFiltersState, value: string) {
   </section>
 </template>
 
-<style scoped>
-.activity-filters {
-  padding: 0.55rem;
-  margin-top: 0.65rem;
-}
-.activity-filters__primary {
-  display: grid;
-  grid-template-columns: minmax(14rem, 1fr) minmax(9rem, 12rem) minmax(8rem, 10rem) auto;
-  gap: 0.4rem;
-}
-.activity-filters__advanced {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.4rem;
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid var(--color-panel-border);
-}
-@media (max-width: 850px) {
-  .activity-filters__primary {
-    grid-template-columns: 1fr 1fr;
-  }
-  .activity-filters__search {
-    grid-column: 1 / -1;
-  }
-}
-@media (max-width: 560px) {
-  .activity-filters__primary,
-  .activity-filters__advanced {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/activity/activity-filters.css"></style>

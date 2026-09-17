@@ -19,9 +19,9 @@ describe('semantic labels UI contract', () => {
     'app/presentation/components/today/TodayTimeTaskCard.vue',
     'app/presentation/components/week/WeekBoardV3.vue',
     'app/presentation/components/review/ReviewTaskSection.vue',
-    'app/presentation/pages/admin/index.vue',
-    'app/presentation/pages/workflows/index.vue',
-    'app/presentation/pages/analytics/index.vue'
+    'app/presentation/components/admin/AdminUsersPanel.vue',
+    'app/presentation/components/workflow/WorkflowWorkspace.vue',
+    'app/presentation/components/analytics/AnalyticsAttention.vue'
   ])('uses semantic indicators in %s', (path) => {
     expect(read(path)).toMatch(/<(SemanticBadge|SemanticDot|PriorityBadge|StatusBadge)/)
   })

@@ -1,0 +1,47 @@
+.sticky-note-card {
+  position: relative;
+  border-radius: 0.35rem 1rem 0.45rem 0.85rem;
+}
+.sticky-note-card::before {
+  position: absolute;
+  top: -0.35rem;
+  left: 50%;
+  width: 3.75rem;
+  height: 0.9rem;
+  content: '';
+  background: rgb(255 255 255 / 0.25);
+  transform: translateX(-50%) rotate(-1deg);
+}
+.sticky-note-card__quick-actions {
+  opacity: 0.48;
+  transition: opacity 0.15s;
+}
+.sticky-note-card__drag-handle {
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  cursor: grab;
+  place-items: center;
+  border-radius: 0.4rem;
+  opacity: 0.5;
+  touch-action: none;
+}
+.sticky-note-card__drag-handle:hover {
+  background: rgb(0 0 0 / 0.06);
+  opacity: 1;
+}
+.sticky-note-card__drag-handle:active {
+  cursor: grabbing;
+}
+.sticky-note-card:hover .sticky-note-card__quick-actions,
+.sticky-note-card:focus-within .sticky-note-card__quick-actions {
+  opacity: 1;
+}
+.sticky-note-card__menu-colors {
+  border-bottom: 1px solid var(--color-panel-border);
+}
+@media (hover: none) {
+  .sticky-note-card__quick-actions {
+    opacity: 1;
+  }
+}

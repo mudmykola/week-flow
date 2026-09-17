@@ -27,34 +27,4 @@ const tabs: Array<{ value: ActivityScope; icon: string }> = [
   </nav>
 </template>
 
-<style scoped>
-.activity-scope-tabs {
-  display: inline-flex;
-  gap: 0.2rem;
-  padding: 0.25rem;
-}
-.activity-scope-tabs button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 0.55rem;
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-.activity-scope-tabs button.is-active {
-  color: var(--color-text-primary);
-  background: var(--color-bg-alt);
-}
-@media (max-width: 640px) {
-  .activity-scope-tabs {
-    display: flex;
-    width: 100%;
-  }
-  .activity-scope-tabs button {
-    flex: 1;
-    justify-content: center;
-  }
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/activity/activity-scope-tabs.css"></style>

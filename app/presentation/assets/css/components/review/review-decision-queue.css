@@ -1,0 +1,83 @@
+.review-decision-queue {
+  padding: 0.75rem;
+  margin-bottom: 0.65rem;
+  border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-panel-border));
+}
+.review-decision-queue header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+.review-decision-queue h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.review-decision-queue h2 svg {
+  color: var(--color-warning);
+}
+.review-decision-queue p,
+.review-decision-queue small {
+  color: var(--color-text-secondary);
+  font-size: 0.62rem;
+}
+.review-decision-queue__list {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+.review-decision-queue article {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  border-radius: 0.65rem;
+  background: var(--color-bg-alt);
+}
+.review-decision-queue__task {
+  min-width: 0;
+  text-align: left;
+}
+.review-decision-queue__task strong,
+.review-decision-queue__task small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-decision-queue__task strong {
+  font-size: 0.72rem;
+}
+.review-decision-queue__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.review-decision-queue label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0.5rem;
+}
+.review-decision-queue input {
+  width: 7.4rem;
+  background: transparent;
+  font-size: 0.62rem;
+}
+@media (max-width: 760px) {
+  .review-decision-queue article {
+    grid-template-columns: 1fr;
+  }
+  .review-decision-queue__actions {
+    flex-wrap: wrap;
+  }
+  .review-decision-queue__actions .app-button {
+    flex: 1;
+  }
+}

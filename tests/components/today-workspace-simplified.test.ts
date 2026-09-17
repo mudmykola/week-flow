@@ -8,7 +8,9 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 describe('Simplified Today workspace', () => {
   const workspace = read('app/presentation/components/today/TodayWorkspace.vue')
   const nowCard = read('app/presentation/components/today/TodayNowCard.vue')
+  const nowCardStyles = read('app/presentation/assets/css/components/today/today-now-card.css')
   const quickCreate = read('app/presentation/components/task/TaskQuickCreate.vue')
+  const quickCreateStyles = read('app/presentation/assets/css/components/task/task-quick-create.css')
 
   it('prioritizes Now, one daily plan and progressive disclosure', () => {
     expect(workspace).toContain('<TodayNowCard')
@@ -28,11 +30,11 @@ describe('Simplified Today workspace', () => {
   })
 
   it('uses calm neutral surfaces instead of warning-like activity borders', () => {
-    expect(nowCard).toContain('border-color: var(--color-panel-border)')
-    expect(nowCard).toContain('background: var(--color-panel-bg)')
-    expect(nowCard).not.toContain('var(--color-accent) 38%')
+    expect(nowCardStyles).toContain('border-color: var(--color-panel-border)')
+    expect(nowCardStyles).toContain('background: var(--color-panel-bg)')
+    expect(nowCardStyles).not.toContain('var(--color-accent) 38%')
     expect(quickCreate).toContain('class="task-quick-create surface-card"')
-    expect(quickCreate).toContain('.task-quick-create:focus-within')
-    expect(quickCreate).not.toContain('shadow-lg')
+    expect(quickCreateStyles).toContain('.task-quick-create:focus-within')
+    expect(quickCreateStyles).not.toContain('shadow-lg')
   })
 })

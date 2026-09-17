@@ -21,7 +21,7 @@ describe('consolidated product navigation', () => {
 
   it('exposes reporting from Review and delegation from Team', () => {
     const review = source('app/presentation/components/review/ReviewWorkspace.vue')
-    const team = source('app/presentation/pages/team/index.vue')
+    const team = source('app/presentation/components/team/TeamWorkspace.vue')
 
     expect(review).toContain('<NuxtLink to="/analytics">')
     expect(review).toContain('<NuxtLink to="/activity">')
@@ -31,7 +31,7 @@ describe('consolidated product navigation', () => {
 
   it('keeps compatibility redirects and protects workflow configuration by role', () => {
     const templates = source('app/presentation/pages/templates/index.vue')
-    const workflows = source('app/presentation/pages/workflows/index.vue')
+    const workflows = source('app/presentation/components/workflow/WorkflowWorkspace.vue')
 
     expect(templates).toContain("navigateTo('/settings#templates'")
     expect(workflows).toContain("user.value?.role !== 'pm'")

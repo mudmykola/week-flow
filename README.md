@@ -62,9 +62,11 @@ app/data/          репозиторії й типізовані запити �
 
 Компоненти працюють зі станом через application layer, а мережеві запити зосереджені в data layer. Серверні маршрути розташовані в `server/api/`, авторизація та правила доступу — у `server/utils/`, схема бази — у `server/db/schema.ts`, а SQL-міграції — у `server/db/migrations/`.
 
+Route-компоненти залишаються тонкими точками входу. Великі робочі простори декомпонуються у feature-папки з окремими toolbar, panels, metrics і dialogs та явними `props`/`emits`.
+
 Ключові агреговані workspace read models (`Today`, `Calendar`, `Review`) формуються окремими domain services та API endpoints. `task_day_plans` зберігає історію денного планування незалежно від поточного стану задачі, а `review_progress_entries` — фактичний внесок за конкретну дату. Тому дейлік відтворюється з реальних даних навіть для задач, які тривали або переносилися кілька днів.
 
-UI primitives розділені на `base`, `form`, `layout` і `overlay`; правила повторного використання описані в [`docs/ui-components.md`](docs/ui-components.md).
+UI primitives розділені на `base`, `form`, `layout` і `overlay`; feature CSS винесений з Vue SFC у `app/presentation/assets/css/components` та `pages`. Правила повторного використання описані в [`docs/ui-components.md`](docs/ui-components.md).
 Сторінки використовують directory-first Nuxt routing (`<route>/index.vue`, `[param]/index.vue`); конвенції описані в [`docs/page-routing.md`](docs/page-routing.md).
 
 UI-тексти локалізуються через Nuxt i18n; правила та структура словників описані в [`docs/localization.md`](docs/localization.md).
@@ -248,6 +250,7 @@ wrangler.toml           Cloudflare Worker, observability та D1 bindings
 - [Localization](docs/localization.md) — правила i18n та словників.
 - [Upgrade roadmap](docs/upgrade-roadmap-2026-08.md) — технічний аудит і послідовність розвитку.
 - [Dev Log — 2026-09-05](updates/2026-09-05.md) — багатоденне планування задач і фактичний журнал роботи.
+- [Dev Log — 2026-09-16](updates/2026-09-16.md) — декомпозиція Workflows workspace та правила тонких route-компонентів.
 - [Dev Log — 2026-08-12](updates/2026-08-12.md) — Review 2.0, issue reference та delivery verification.
 - [Dev Log — 2026-08-11](updates/2026-08-11.md) — Today, Inbox, Week Board, Brand, Calendar та cross-page integration.
 

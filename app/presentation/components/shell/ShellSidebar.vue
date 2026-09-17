@@ -199,13 +199,4 @@ function isActive(item: AppNavigationItem) {
   </aside>
 </template>
 
-<style scoped>
-@media (min-width: 1024px) {
-  .shell-sidebar__logo--collapsed :deep(.brand-logo__wordmark) {
-    display: none;
-  }
-}
-.shell-sidebar__account:not([open]) .shell-sidebar__account-menu {
-  display: none;
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/shell/shell-sidebar.css"></style>

@@ -1,0 +1,103 @@
+.project-page__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+.project-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(17rem, 0.7fr);
+  gap: 0.85rem;
+}
+.project-page__tasks,
+.project-page__side > * {
+  padding: 1rem;
+}
+.project-page__tasks > header,
+.project-page__side header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+.project-page h2 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+.project-page header p {
+  margin-top: 0.15rem;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+.project-page__task-list {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+.project-page__task-list button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.15rem;
+  border-top: 1px solid var(--color-panel-border);
+  text-align: left;
+}
+.project-page__task-list span {
+  min-width: 0;
+}
+.project-page__task-list strong,
+.project-page__task-list small {
+  display: block;
+}
+.project-page__task-list strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-page__task-list small,
+.project-page__empty {
+  margin-top: 0.2rem;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+}
+.project-page__side {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+}
+.project-page__goals {
+  display: grid;
+  gap: 0.65rem;
+}
+.project-page__goals div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-panel-border);
+  font-size: 0.8rem;
+}
+.project-page__links {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.project-page__links :deep(.app-button) {
+  justify-content: flex-start;
+}
+@media (max-width: 960px) {
+  .project-page__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .project-page__layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .project-page__metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+}

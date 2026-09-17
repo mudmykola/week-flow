@@ -1,0 +1,36 @@
+.app-shell__create-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 13rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgb(16 185 129 / 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(16 185 129 / 0.1);
+  color: rgb(5 150 105);
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-0.2rem);
+}
+@media (max-width: 639px) {
+  .app-shell__create-feedback {
+    position: fixed;
+    top: 4rem;
+    right: 0.75rem;
+    z-index: 55;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.16);
+  }
+}

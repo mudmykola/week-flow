@@ -1,0 +1,97 @@
+.today-time-zone {
+  min-height: 13rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 1rem;
+  background: var(--color-panel-bg);
+}
+.today-time-zone--over {
+  border-color: var(--color-danger);
+}
+.today-time-zone--auxiliary {
+  min-height: 0;
+}
+.today-time-zone--tray {
+  min-height: 0;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--color-panel-bg) 78%, transparent);
+}
+.today-time-zone--tray .today-time-zone__tasks {
+  display: flex;
+  min-height: 0;
+  gap: 0.55rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 0.65rem 0 0.15rem;
+  scroll-snap-type: x proximity;
+}
+.today-time-zone--tray .today-time-zone__tasks > div {
+  width: min(19rem, 82vw);
+  flex: none;
+  scroll-snap-align: start;
+}
+.today-time-zone--warning {
+  min-height: 0;
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--color-panel-border));
+  background: color-mix(in srgb, #f59e0b 5%, var(--color-panel-bg));
+}
+.today-time-zone > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.today-time-zone h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+.today-time-zone header p,
+.today-time-zone header span,
+.today-time-zone__load small {
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+}
+.today-time-zone__load {
+  margin: 0.65rem 0;
+}
+.today-time-zone__load i {
+  display: block;
+  height: 4px;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--color-bg-alt);
+}
+.today-time-zone__load b {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+.today-time-zone__tasks {
+  display: grid;
+  gap: 0.45rem;
+  min-height: 10rem;
+}
+.today-time-zone--auxiliary .today-time-zone__tasks {
+  min-height: 0;
+  margin-top: 0.6rem;
+}
+.today-time-zone--empty.today-time-zone--auxiliary .today-time-zone__tasks {
+  min-height: 3.25rem;
+}
+.today-time-zone__empty {
+  align-self: center;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .today-time-zone {
+    min-height: 0;
+  }
+  .today-time-zone__tasks {
+    min-height: 4rem;
+  }
+}

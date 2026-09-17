@@ -123,44 +123,4 @@ function addTask() {
   </section>
 </template>
 
-<style scoped>
-.review-task-timeline {
-  min-width: 0;
-}
-.review-task-timeline__header {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.55rem;
-}
-.review-task-timeline__header h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-  font-weight: 800;
-}
-.review-task-timeline__header p {
-  color: var(--color-text-secondary);
-  font-size: 0.68rem;
-}
-.review-task-timeline__header form {
-  display: grid;
-  grid-template-columns: minmax(11rem, 18rem) auto;
-  gap: 0.35rem;
-}
-.review-task-timeline__list {
-  display: grid;
-  gap: 0.55rem;
-}
-@media (max-width: 650px) {
-  .review-task-timeline__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .review-task-timeline__header form {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/review/review-task-timeline.css"></style>

@@ -1,0 +1,134 @@
+.week-board-v3__mobile-nav {
+  display: none;
+}
+.week-board-v3__lanes {
+  display: flex;
+  gap: 0.65rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.75rem;
+}
+.week-board-v3__lane {
+  display: flex;
+  width: min(22rem, 86vw);
+  min-height: 25rem;
+  flex: none;
+  flex-direction: column;
+  padding: 0.65rem;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-panel-bg) 78%, transparent);
+  scroll-snap-align: start;
+}
+.week-board-v3__lane > header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.15rem 0.2rem 0.65rem;
+}
+.week-board-v3__lane > header h2 {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+.week-board-v3__lane > header > span:nth-of-type(2) {
+  padding: 0.1rem 0.4rem;
+  border-radius: 99px;
+  background: var(--color-bg-alt);
+  font-size: 0.65rem;
+}
+.week-board-v3__lane-icon {
+  color: var(--color-accent);
+}
+.week-board-v3__cards {
+  display: flex;
+  min-height: 3rem;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.week-board-v3__ghost {
+  opacity: 0.25;
+}
+.week-board-v3__add,
+.week-board-v3__quick {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px dashed var(--color-panel-border);
+  border-radius: 0.65rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+.week-board-v3__quick {
+  border-style: solid;
+  border-color: var(--color-accent);
+}
+.week-board-v3__quick input {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  outline: none;
+}
+.week-board-v3__quick kbd {
+  font-size: 0.58rem;
+}
+.week-board-v3__lanes[data-density='titles'] :deep(.task-card) {
+  padding: 0.5rem;
+}
+.week-board-v3__lanes[data-density='titles'] :deep(.task-card .text-secondary),
+.week-board-v3__lanes[data-density='titles'] :deep(.task-card .project-badge) {
+  display: none;
+}
+@media (min-width: 1280px) {
+  .week-board-v3__lane {
+    min-width: 18rem;
+    flex: 1;
+  }
+}
+@media (max-width: 640px) {
+  .week-board-v3__mobile-nav {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    margin-bottom: 0.55rem;
+  }
+  .week-board-v3__mobile-nav button {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: none;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--color-panel-border);
+    border-radius: 0.65rem;
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+  }
+  .week-board-v3__mobile-button--active {
+    border-color: var(--color-accent) !important;
+    color: var(--color-accent) !important;
+  }
+  .week-board-v3__mobile-nav span {
+    padding: 0.05rem 0.3rem;
+    border-radius: 99px;
+    background: var(--color-bg-alt);
+  }
+  .week-board-v3__lanes {
+    overflow: visible;
+  }
+  .week-board-v3__lane {
+    display: none;
+    width: 100%;
+    min-height: 20rem;
+  }
+  .week-board-v3__lane--mobile-active {
+    display: flex;
+  }
+}

@@ -59,40 +59,4 @@ withDefaults(defineProps<{ compact?: boolean; size?: 'sm' | 'md' | 'lg' }>(), { 
   </span>
 </template>
 
-<style scoped>
-.brand-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  min-width: 0;
-}
-.brand-logo__mark {
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: none;
-  filter: drop-shadow(0 6px 12px rgb(254 80 17 / 0.18));
-}
-.brand-logo__wordmark {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 750;
-  letter-spacing: -0.045em;
-}
-.brand-logo__wordmark span {
-  color: #b93800;
-}
-:global(.dark) .brand-logo__wordmark span {
-  color: #ff7138;
-}
-.brand-logo--sm .brand-logo__mark {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-.brand-logo--lg .brand-logo__mark {
-  width: 3rem;
-  height: 3rem;
-}
-.brand-logo--lg .brand-logo__wordmark {
-  font-size: 1.75rem;
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/brand/brand-logo.css"></style>

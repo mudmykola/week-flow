@@ -99,28 +99,4 @@ function submit() {
   </form>
 </template>
 
-<style scoped>
-.review-entry-composer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.45rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--color-panel-border);
-}
-.review-entry-composer__details {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
-}
-@media (max-width: 760px) {
-  .review-entry-composer__details {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-@media (max-width: 480px) {
-  .review-entry-composer__details {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/review/review-entry-composer.css"></style>

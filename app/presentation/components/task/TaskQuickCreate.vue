@@ -143,19 +143,4 @@ function keydown(event: KeyboardEvent) {
   </div>
 </template>
 
-<style scoped>
-.task-quick-create {
-  padding: 0.625rem;
-  border-color: var(--color-panel-border);
-  background: var(--color-panel-bg);
-  box-shadow: var(--shadow-surface);
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.task-quick-create:focus-within {
-  border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-panel-border));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 6%, transparent);
-}
-</style>
+<style scoped src="~/presentation/assets/css/components/task/task-quick-create.css"></style>

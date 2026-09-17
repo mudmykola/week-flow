@@ -1,0 +1,8 @@
+@media (min-width: 1024px) {
+  .shell-sidebar__logo--collapsed :deep(.brand-logo__wordmark) {
+    display: none;
+  }
+}
+.shell-sidebar__account:not([open]) .shell-sidebar__account-menu {
+  display: none;
+}

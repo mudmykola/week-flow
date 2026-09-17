@@ -24,8 +24,8 @@ describe('bounded task list UX contract', () => {
     'app/presentation/components/review/ReviewTaskSection.vue',
     'app/presentation/components/focus/FocusQueue.vue',
     'app/presentation/pages/delegation/index.vue',
-    'app/presentation/pages/analytics/index.vue',
-    'app/presentation/pages/workflows/index.vue'
+    'app/presentation/components/analytics/AnalyticsWorkspace.vue',
+    'app/presentation/components/workflow/WorkflowWorkspace.vue'
   ])('bounds long collections in %s', (path) => {
     expect(read(path)).toContain('<BoundedTaskList')
   })
