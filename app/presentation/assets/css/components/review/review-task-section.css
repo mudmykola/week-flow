@@ -28,7 +28,7 @@
   display: grid;
   gap: 0.3rem;
 }
-.review-task-section__list button {
+.review-task-section__task {
   display: grid;
   grid-template-columns: 0.4rem minmax(0, 1fr) auto;
   align-items: center;
@@ -37,9 +37,6 @@
   padding: 0.5rem;
   border-radius: 0.6rem;
   text-align: left;
-}
-.review-task-section__list button:hover {
-  background: var(--color-bg-alt);
 }
 .review-task-section__list i {
   width: 0.4rem;

@@ -60,15 +60,19 @@ function unique(tasks: ReviewTask[]) {
           <small>{{ section.items.length }}</small>
         </h3>
         <div v-if="section.items.length">
-          <button
+          <div
             v-for="task in section.items.slice(0, 5)"
             :key="task.id"
-            type="button"
-            @click="emit('open', task)"
+            class="review-standup-summary__task"
           >
             <span>{{ task.title }}</span>
-            <UIcon name="i-lucide-chevron-right" />
-          </button>
+            <IconButton
+              icon="i-lucide-square-arrow-out-up-right"
+              :label="$t('pages.review.progress.openTask')"
+              size="sm"
+              @click="emit('open', task)"
+            />
+          </div>
           <p
             v-if="section.items.length > 5"
             class="review-standup-summary__more"

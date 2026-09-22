@@ -30,10 +30,10 @@ defineEmits<{ open: [task: ReviewTask] }>()
       :storage-key="`review-${tone}-${title}`"
     >
       <div class="review-task-section__list">
-        <button
+        <div
           v-for="task in tasks"
           :key="task.id"
-          @click="$emit('open', task)"
+          class="review-task-section__task"
         >
           <i /><span
             ><strong>{{ task.title }}</strong
@@ -41,8 +41,13 @@ defineEmits<{ open: [task: ReviewTask] }>()
               >{{ task.projectName || $t('task.noProject')
               }}<template v-if="task.plannedTime"> · {{ task.plannedTime }}</template></small
             ></span
-          ><UIcon name="i-lucide-chevron-right" />
-        </button>
+          ><IconButton
+            icon="i-lucide-square-arrow-out-up-right"
+            :label="$t('pages.review.progress.openTask')"
+            size="sm"
+            @click="$emit('open', task)"
+          />
+        </div>
       </div>
     </BoundedTaskList>
     <p v-else>{{ empty }}</p>

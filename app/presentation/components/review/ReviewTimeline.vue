@@ -48,12 +48,11 @@ function time(value: number) {
       v-if="visible.length"
       class="review-timeline__list surface-card"
     >
-      <button
+      <article
         v-for="event in visible"
         :key="event.id"
         class="review-timeline__event"
         :class="`is-${event.kind}`"
-        @click="openTask(event.taskId)"
       >
         <time>{{ time(event.createdAt) }}</time
         ><span class="review-timeline__marker"><UIcon :name="icon(event.kind)" /></span
@@ -77,7 +76,13 @@ function time(value: number) {
           size="sm"
           >{{ event.minutes }} {{ $t('pages.review.progress.minShort') }}</SemanticBadge
         >
-      </button>
+        <IconButton
+          icon="i-lucide-square-arrow-out-up-right"
+          :label="$t('pages.review.progress.openTask')"
+          size="sm"
+          @click="openTask(event.taskId)"
+        />
+      </article>
     </div>
     <EmptyState
       v-else

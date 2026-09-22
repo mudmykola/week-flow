@@ -142,11 +142,10 @@ function toggle(id: string) {
           v-if="sectionItem.items.length"
           class="review-daily-brief__list"
         >
-          <button
+          <div
             v-for="briefItem in visible(sectionItem)"
             :key="briefItem.task.id"
-            type="button"
-            @click="emit('open', briefItem.task)"
+            class="review-daily-brief__task"
           >
             <span class="review-daily-brief__marker" />
             <span class="review-daily-brief__content">
@@ -158,8 +157,13 @@ function toggle(id: string) {
                 >{{ briefItem.meta }}</small
               >
             </span>
-            <UIcon name="i-lucide-chevron-right" />
-          </button>
+            <IconButton
+              icon="i-lucide-square-arrow-out-up-right"
+              :label="$t('pages.review.progress.openTask')"
+              size="sm"
+              @click="emit('open', briefItem.task)"
+            />
+          </div>
         </div>
         <p
           v-else

@@ -66,7 +66,7 @@
 .review-standup-summary__section--danger h3 > svg {
   color: #ef4444;
 }
-.review-standup-summary__section button {
+.review-standup-summary__task {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -76,16 +76,12 @@
   text-align: left;
   font-size: 0.68rem;
 }
-.review-standup-summary__section button span {
+.review-standup-summary__task > span {
   min-width: 0;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.review-standup-summary__section button svg {
-  flex: none;
-  color: var(--color-text-secondary);
 }
 .review-standup-summary__empty,
 .review-standup-summary__more {

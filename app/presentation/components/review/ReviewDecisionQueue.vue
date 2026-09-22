@@ -26,14 +26,17 @@ const dates = reactive<Record<string, string>>({})
         v-for="item in items"
         :key="item.id"
       >
-        <button
-          class="review-decision-queue__task"
-          @click="emit('open', item.task)"
-        >
+        <div class="review-decision-queue__task">
           <strong>{{ item.task.title }}</strong
           ><small>{{ $t(`pages.review.final.attentionKind.${item.kind}`, { count: item.count || 0 }) }}</small>
-        </button>
+        </div>
         <div class="review-decision-queue__actions">
+          <IconButton
+            icon="i-lucide-square-arrow-out-up-right"
+            :label="$t('pages.review.progress.openTask')"
+            size="sm"
+            @click="emit('open', item.task)"
+          />
           <AppButton
             size="sm"
             variant="secondary"

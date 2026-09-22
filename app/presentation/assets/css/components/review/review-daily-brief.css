@@ -89,7 +89,7 @@
   display: grid;
   gap: 0.2rem;
 }
-.review-daily-brief__list > button {
+.review-daily-brief__task {
   display: grid;
   grid-template-columns: 0.35rem minmax(0, 1fr) auto;
   align-items: center;
@@ -98,9 +98,6 @@
   padding: 0.45rem 0.35rem;
   border-radius: 0.5rem;
   text-align: left;
-}
-.review-daily-brief__list > button:hover {
-  background: var(--color-bg-alt);
 }
 .review-daily-brief__marker {
   width: 0.35rem;
@@ -128,9 +125,6 @@
 }
 .review-daily-brief__content .review-daily-brief__meta {
   color: var(--brief-tone);
-}
-.review-daily-brief__list > button > svg {
-  color: var(--color-text-secondary);
 }
 .review-daily-brief__empty {
   display: grid;

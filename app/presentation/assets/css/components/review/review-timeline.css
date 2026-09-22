@@ -26,19 +26,14 @@
 }
 .review-timeline__event {
   display: grid;
-  grid-template-columns: 3.3rem 1.8rem minmax(0, 1fr) auto;
+  grid-template-columns: 3.3rem 1.8rem minmax(0, 1fr) auto auto;
   align-items: start;
   gap: 0.45rem;
-  width: 100%;
   padding: 0.6rem 0.7rem;
   border-bottom: 1px solid var(--color-panel-border);
-  text-align: left;
 }
 .review-timeline__event:last-child {
   border-bottom: 0;
-}
-.review-timeline__event:hover {
-  background: var(--color-bg-alt);
 }
 .review-timeline__event > time {
   padding-top: 0.25rem;
@@ -82,7 +77,7 @@
 }
 @media (max-width: 520px) {
   .review-timeline__event {
-    grid-template-columns: 1.7rem minmax(0, 1fr) auto;
+    grid-template-columns: 1.7rem minmax(0, 1fr) auto auto;
   }
   .review-timeline__event > time {
     display: none;
